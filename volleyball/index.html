@@ -11,6 +11,8 @@
   <div id="app">
     <canvas id="game" width="960" height="640" aria-label="Volleyball court"></canvas>
 
+    <div id="net-banner" class="net-banner hidden" role="status" aria-live="polite"></div>
+
     <div id="hud" class="hidden">
       <button id="btn-pause" class="icon-btn" aria-label="Pause">II</button>
     </div>
@@ -22,6 +24,7 @@
         <div class="stars-badge">★ <span data-stars>0</span></div>
         <div class="menu-grid">
           <button id="btn-quick" class="btn primary">Quick match</button>
+          <button id="btn-online" class="btn primary">Play online</button>
           <button id="btn-league" class="btn">League</button>
           <button id="btn-cup" class="btn">Tournament</button>
           <button id="btn-shop" class="btn">Shop</button>
@@ -37,6 +40,37 @@
         <h2 id="teams-title">Choose your team</h2>
         <div id="team-grid" class="team-grid"></div>
         <button class="btn ghost" data-back>Back</button>
+      </div>
+    </section>
+
+    <section id="scr-online" class="screen hidden">
+      <div class="panel online">
+        <h2>Play online</h2>
+        <div id="on-home">
+          <p class="muted">Play a friend on another phone or computer. One of you creates a room and sends the code; the other joins with it.</p>
+          <button id="btn-on-create" class="btn primary block">Create a room</button>
+          <div class="or"><span>or join a friend's room</span></div>
+          <div class="join-row">
+            <input id="on-code" type="text" inputmode="text" maxlength="6" placeholder="ROOM CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Room code">
+            <button id="btn-on-join" class="btn primary">Join</button>
+          </div>
+        </div>
+        <div id="on-teams" class="hidden">
+          <h3 id="on-teams-title">Choose your team</h3>
+          <div id="on-team-grid" class="team-grid"></div>
+        </div>
+        <div id="on-room" class="hidden center">
+          <p class="muted small">Your room code</p>
+          <div id="on-code-big" class="room-code">······</div>
+          <div class="row center">
+            <button id="btn-on-copy" class="btn primary">Copy invite link</button>
+            <button id="btn-on-share" class="btn">Share</button>
+          </div>
+        </div>
+        <p id="on-status" class="status" role="status" aria-live="polite"></p>
+        <div class="row">
+          <button id="btn-on-back" class="btn ghost">Back</button>
+        </div>
       </div>
     </section>
 
@@ -111,6 +145,7 @@
           <li><b>Set.</b> When your team passes, numbers appear over your front-row hitters. Click one, or press 1 to 3, to choose who gets the ball. If you don't, the setter decides.</li>
           <li><b>Attack.</b> While the set is in the air the game slows down. Pick a shot with the buttons or keys 1 to 6, then click where it should land:
             <b>Power</b> is fastest; <b>Line</b> and <b>Cross</b> aim themselves down the sideline or across court; <b>Roll</b> is a slow, high shot over the block into open space; <b>Tip</b> drops it just over the net; <b>Tool</b> hits off the blockers' hands to send the ball out. Aiming right on the lines is risky.</li>
+          <li><b>Online.</b> Choose Play online, create a room and send the code or invite link to a friend. Each of you makes the calls for your own team, and you both see the court from your own end. If the connection drops, the game waits up to 30 seconds for it to come back.</li>
           <li><b>Block.</b> When the other team passes, call your block with the buttons or keys 1 to 4. Commit Left, Middle or Right to stack all three blockers there before the set (a great block if you guess right, an open net if you don't), or choose Read to react with two blockers.</li>
         </ol>
         <p>Rally scoring, win each set by two. Winning the rally on the other team's serve wins you the serve and rotates your team. Press P or Esc to pause.</p>
@@ -153,6 +188,9 @@
   <script src="js/render.js"></script>
   <script src="js/input.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/vendor/peerjs.min.js"></script>
+  <script src="js/net-config.js"></script>
+  <script src="js/net.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

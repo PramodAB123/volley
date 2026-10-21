@@ -14,8 +14,8 @@
     rally.formation(0, 'base');
     rally.formation(1, 'base');
     rally.snap();
-    if (cfg.human === 0) rally.say('SET 1', cfg.home.name + ' vs ' + cfg.away.name, '#ffffff', 2);
-    rally.wait(cfg.human === 0 ? 1.4 : 0.4, function () { rally.startServe({ snap: true }); });
+    if (cfg.human !== -1) rally.say('SET 1', cfg.home.name + ' vs ' + cfg.away.name, '#ffffff', 2);
+    rally.wait(cfg.human !== -1 ? 1.4 : 0.4, function () { rally.startServe({ snap: true }); });
   };
 
   SR.Game.prototype.onPoint = function (winner, info) {
@@ -73,10 +73,11 @@
     var g = SR.game;
     if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; dt = 0; }
     if (g && !g.paused) {
-      acc += dt * g.rally.timeScale * (SR.speed || 1);
+      acc += dt * (g.rally.loopScale || g.rally.timeScale) * (SR.speed || 1);
       var n = 0;
       while (acc >= STEP && n < 4000) { g.rally.update(STEP); acc -= STEP; n++; }
     }
+    if (SR.net) SR.net.tick();
     SR.render.draw(ctx, g);
     window.requestAnimationFrame(frame);
   }
@@ -92,6 +93,7 @@
     SR.ui.init();
     var q = new URLSearchParams(window.location.search);
     if (q.get('speed')) SR.speed = Number(q.get('speed')) || 1;
+    if (SR.net) SR.net.init(q);
     window.requestAnimationFrame(frame);
   });
 })();

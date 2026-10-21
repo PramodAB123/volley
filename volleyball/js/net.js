@@ -1,0 +1,696 @@
+// Online play. One player creates a room and shares its code; a friend joins
+// with it. PeerJS introduces the two browsers, then they talk directly over
+// WebRTC. The host's browser runs the match (team 0 = host, team 1 = friend);
+// the friend sends their calls and receives the game state ~30 times a second,
+// drawn from their own end of the court.
+(function () {
+  var PREFIX = 'spikerally-v1-';
+  var ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  var SNAP_MS = 33, PING_MS = 1000, LOST_MS = 6000, REJOIN_MS = 30000, JOIN_TIMEOUT_MS = 15000;
+  var C = SR.COURT;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function now() { return Date.now(); }
+  function r3(v) { return Math.round((v || 0) * 1000) / 1000; }
+  function num(v) { return typeof v === 'number' && isFinite(v); }
+  function mx(x) { return C.L - x; }
+  function my(y) { return C.W - y; }
+  function lerp(a, b, k) { return a + (b - a) * k; }
+  function lerpAngle(a, b, k) { var d = Math.atan2(Math.sin(b - a), Math.cos(b - a)); return a + d * k; }
+
+  function makeCode() {
+    var s = '';
+    var buf = new Uint32Array(6);
+    (window.crypto || window.msCrypto).getRandomValues(buf);
+    for (var i = 0; i < 6; i++) s += ALPHABET[buf[i] % ALPHABET.length];
+    return s;
+  }
+
+  function cleanCode(c) { return String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); }
+
+  function inviteLink(code) {
+    var u = window.location.href.split('#')[0].split('?')[0];
+    return u + '?room=' + code;
+  }
+
+  var N = {
+    role: null,      // 'host' | 'guest'
+    phase: 'idle',   // idle | waiting | lobby | playing | rejoining | over
+    peer: null,
+    conn: null,
+    code: null,
+    token: null,
+    myTeam: null,
+    oppTeam: null,
+    format: 'standard',
+    lastRecv: 0,
+    lastSnap: 0,
+    lastAim: 0,
+    events: [],
+    timers: {},
+    lostAt: 0,
+    idTries: 0
+  };
+  SR.net = N;
+
+  // ---- small UI helpers ----------------------------------------------------
+
+  function status(text, kind) {
+    var el = $('on-status');
+    if (!el) return;
+    el.textContent = text || '';
+    el.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function banner(text) {
+    var el = $('net-banner');
+    if (!el) return;
+    el.textContent = text || '';
+    el.classList.toggle('hidden', !text);
+  }
+
+  function view(which) {
+    ['on-home', 'on-teams', 'on-room'].forEach(function (id) { $(id).classList.toggle('hidden', id !== which); });
+  }
+
+  function clearTimer(name) {
+    if (N.timers[name]) { clearTimeout(N.timers[name]); clearInterval(N.timers[name]); N.timers[name] = null; }
+  }
+
+  // ---- connection plumbing -------------------------------------------------
+
+  function makePeer(id) {
+    if (typeof window.Peer === 'undefined') throw new Error('nopeer');
+    var c = SR.NET_CONFIG || {};
+    var opts = { debug: 0, config: { iceServers: c.iceServers || [{ urls: 'stun:stun.l.google.com:19302' }] } };
+    if (c.host) { opts.host = c.host; opts.port = c.port; opts.path = c.path || '/'; opts.secure = c.secure !== false; }
+    return id ? new window.Peer(id, opts) : new window.Peer(opts);
+  }
+
+  function send(msg) {
+    var c = N.conn;
+    if (!c || !c.open) return false;
+    try { c.send(msg); return true; } catch (e) { return false; }
+  }
+
+  function dropConn() {
+    var c = N.conn;
+    N.conn = null;
+    if (c) { try { c.close(); } catch (e) { /* already closed */ } }
+  }
+
+  // Tear everything down. Safe to call more than once.
+  function cleanup() {
+    Object.keys(N.timers).forEach(clearTimer);
+    dropConn();
+    if (N.peer) { try { N.peer.destroy(); } catch (e) { /* ignore */ } }
+    N.peer = null;
+    N.role = null;
+    N.phase = 'idle';
+    N.events = [];
+    banner('');
+  }
+
+  // Back to the online screen with a message, ending any online match.
+  function abort(msg) {
+    var wasPlaying = SR.game && SR.game.cfg.online;
+    cleanup();
+    if (wasPlaying) SR.ui.startDemo();
+    openLobby();
+    status(msg, 'error');
+  }
+
+  function attach(c) {
+    N.conn = c;
+    c.on('open', function () {
+      if (N.conn !== c) return;
+      N.lastRecv = now();
+      onOpen(c);
+    });
+    c.on('data', function (msg) {
+      if (N.conn !== c || !msg || typeof msg !== 'object') return;
+      N.lastRecv = now();
+      onData(msg);
+    });
+    c.on('close', function () { if (N.conn === c) lost(); });
+    c.on('error', function () { if (N.conn === c) lost(); });
+  }
+
+  function heartbeat() {
+    clearTimer('beat');
+    N.timers.beat = setInterval(function () {
+      if (N.conn && N.conn.open) send({ t: 'ping' });
+      if (N.conn && N.conn.open && (N.phase === 'lobby' || N.phase === 'playing') && now() - N.lastRecv > LOST_MS) lost();
+      if (N.phase === 'rejoining') {
+        var left = Math.max(0, Math.ceil((REJOIN_MS - (now() - N.lostAt)) / 1000));
+        if (left <= 0) {
+          abort(N.role === 'host' ? 'Your friend did not come back, so the match ended.' : 'Could not reconnect to your friend. The match ended.');
+          return;
+        }
+        banner(N.role === 'host' ? 'Your friend lost connection. Waiting for them to come back… ' + left + 's'
+          : 'Connection lost. Reconnecting… ' + left + 's');
+      }
+      // A peer that lost the signalling server reconnects on its own.
+      if (N.peer && !N.peer.destroyed && N.peer.disconnected) { try { N.peer.reconnect(); } catch (e) { /* retry next beat */ } }
+    }, PING_MS);
+  }
+
+  function onPeerError(err) {
+    var type = err && err.type;
+    if (type === 'unavailable-id' && N.role === 'host' && N.phase === 'waiting' && N.idTries < 4) {
+      // Code already taken: pick another.
+      N.idTries++;
+      startHostPeer();
+      return;
+    }
+    if (type === 'peer-unavailable') {
+      if (N.phase === 'rejoining') return; // keep trying until the window closes
+      abort('Room ' + N.code + ' was not found. Check the code, or ask your friend to create a new room.');
+      return;
+    }
+    if (type === 'browser-incompatible') { abort('This browser cannot play online. Try the latest Chrome, Safari, Edge or Firefox.'); return; }
+    if (type === 'network' || type === 'server-error' || type === 'socket-error' || type === 'socket-closed' || type === 'disconnected') {
+      if (N.phase === 'playing' || N.phase === 'rejoining') return; // the heartbeat reconnects
+      abort('Could not reach the online server. Check your internet connection and try again.');
+      return;
+    }
+    if (N.phase === 'playing' || N.phase === 'rejoining') return;
+    abort('Connection problem (' + (type || 'unknown') + '). Please try again.');
+  }
+
+  // The link to the other player dropped.
+  function lost() {
+    if (N.phase === 'over' || N.phase === 'idle') return;
+    dropConn();
+    if (N.role === 'host') {
+      if (N.phase === 'lobby' || N.phase === 'waiting') {
+        N.phase = 'waiting';
+        status('Your friend disconnected. Waiting for them to join again…');
+        view('on-room');
+        return;
+      }
+      if (N.phase === 'playing') {
+        N.phase = 'rejoining';
+        N.lostAt = now();
+        if (SR.game) SR.game.paused = true;
+        banner('Your friend lost connection. Waiting for them to come back…');
+      }
+      return;
+    }
+    // Guest
+    if (N.phase === 'playing') {
+      N.phase = 'rejoining';
+      N.lostAt = now();
+      banner('Connection lost. Reconnecting…');
+      tryRejoin();
+      return;
+    }
+    if (N.phase !== 'rejoining') abort('Lost the connection to the room. Please try joining again.');
+  }
+
+  function tryRejoin() {
+    clearTimer('rejoin');
+    if (N.phase !== 'rejoining') return;
+    try {
+      if (!N.peer || N.peer.destroyed) {
+        N.peer = makePeer();
+        N.peer.on('open', function () { connectToHost(true); });
+        N.peer.on('error', onPeerError);
+      } else if (N.peer.disconnected) {
+        N.peer.reconnect();
+      } else {
+        connectToHost(true);
+      }
+    } catch (e) { /* try again shortly */ }
+    N.timers.rejoin = setTimeout(tryRejoin, 3000);
+  }
+
+  // ---- host ----------------------------------------------------------------
+
+  function host(team) {
+    cleanup();
+    N.role = 'host';
+    N.myTeam = team;
+    N.token = makeCode() + makeCode();
+    N.format = SR.save.data.settings.format || 'standard';
+    N.idTries = 0;
+    view('on-room');
+    $('on-code-big').textContent = '······';
+    status('Creating your room…');
+    startHostPeer();
+    heartbeat();
+  }
+
+  function startHostPeer() {
+    if (N.peer) { try { N.peer.destroy(); } catch (e) { /* ignore */ } }
+    N.code = makeCode();
+    N.phase = 'waiting';
+    try { N.peer = makePeer(PREFIX + N.code); } catch (e) { abort('Online play could not load. Check your connection and reload the page.'); return; }
+    N.peer.on('open', function () {
+      $('on-code-big').textContent = N.code;
+      status('Waiting for your friend to join. Send them the code or the invite link.');
+    });
+    N.peer.on('connection', onHostConnection);
+    N.peer.on('error', onPeerError);
+  }
+
+  function onHostConnection(c) {
+    var meta = c.metadata || {};
+    var busy = N.conn && N.conn.open;
+    var rejoin = N.phase === 'rejoining' && meta.token === N.token;
+    if ((busy && !rejoin) || (N.phase !== 'waiting' && !rejoin)) {
+      c.on('open', function () { try { c.send({ t: 'full' }); } catch (e) { /* ignore */ } setTimeout(function () { c.close(); }, 400); });
+      return;
+    }
+    dropConn();
+    attach(c);
+  }
+
+  function onOpen() {
+    if (N.role === 'host') {
+      if (N.phase === 'rejoining') {
+        N.phase = 'playing';
+        if (SR.game) SR.game.paused = false;
+        banner('');
+        send({ t: 'start', resume: true, home: N.myTeam.id, away: N.oppTeam.id, format: N.format });
+      } else {
+        N.phase = 'lobby';
+        status('Your friend is here and is choosing a team…');
+        send({ t: 'lobby', team: N.myTeam.id, format: N.format, token: N.token });
+      }
+    } else {
+      clearTimer('join');
+      if (N.phase === 'rejoining') return; // wait for the host's start message
+      status('Connected! Choose your team.');
+    }
+  }
+
+  function startHostMatch(guestTeam) {
+    N.oppTeam = guestTeam;
+    N.phase = 'playing';
+    N.events = [];
+    SR.ui.show(null);
+    SR.game = new SR.Game({ home: N.myTeam, away: guestTeam, format: N.format, difficulty: 'normal', human: 'both', online: 'host', onEnd: hostEnd });
+    send({ t: 'start', home: N.myTeam.id, away: guestTeam.id, format: N.format });
+  }
+
+  function hostEnd(game) {
+    var m = game.match;
+    N.phase = 'over';
+    send({ t: 'end', sets: m.sets, history: m.history, stats: m.stats });
+    var hist = m.history.map(function (s) { return [s[0], s[1]]; });
+    finishOnline({ me: m.teams[0], opp: m.teams[1], mySets: m.sets[0], oppSets: m.sets[1], history: hist, stats: m.stats[0] });
+  }
+
+  function finishOnline(r) {
+    // Leave the link open a moment so the last message gets through.
+    var peer = N.peer;
+    setTimeout(function () { if (N.peer === peer && N.phase === 'over') cleanup(); }, 1500);
+    banner('');
+    SR.ui.onlineResult(r);
+  }
+
+  // Apply a friend's call to team 1.
+  function applyCmd(msg) {
+    var g = SR.game, r = g && g.rally;
+    if (!r || !g.cfg.online) return;
+    var pt = num(msg.x) && num(msg.y) ? { x: msg.x, y: msg.y } : null;
+    switch (msg.c) {
+      case 'aim': if (pt) r.setAim(pt, 1); break;
+      case 'serve': if (pt) r.setAim(pt, 1); r.humanServe(1, num(msg.pw) ? msg.pw : undefined); break;
+      case 'hitter': if (num(msg.i) && r.players[1][msg.i]) r.pickHitter(r.players[1][msg.i], 1); break;
+      case 'shot': if (typeof msg.id === 'string') r.pickShot(msg.id, 1); break;
+      case 'block': if (typeof msg.id === 'string') r.pickBlock(msg.id, 1); break;
+      case 'target': if (pt) r.pickTarget(pt, !!msg.tip, 1); break;
+    }
+  }
+
+  function snapshot(g) {
+    var r = g.rally, m = g.match, u = r.uis[1];
+    var pi = function (p) { return p ? p.team * 6 + p.idx : -1; };
+    var ps = r.all().map(function (p) {
+      var cp = p.contactPt;
+      return [r3(p.x), r3(p.y), r3(p.z), r3(p.yaw), r3(p.vx), r3(p.vy), r3(p.phase),
+        p.act ? p.act.type : 0, p.act ? r3(p.act.t) : 0, p.act ? r3(p.act.dur) : 0,
+        r3(p.jumpAt), p.jumpKind || 0, r3(p.contactAt), p.contactKind || 0,
+        cp ? [r3(cp.x), r3(cp.y), r3(cp.z)] : 0, p.lock ? 1 : 0];
+    });
+    var bn = r.banner;
+    var out = {
+      t: 's', T: r3(r.t), st: r.state, sT: r3(r.stateT), ts: r.timeScale,
+      b: [r3(r.ball.x), r3(r.ball.y), r3(r.ball.z)],
+      sv: pi(r.server), se: pi(r.setter), lt: r.lastTouch,
+      bn: bn ? [bn.text, bn.sub, bn.color, r3(bn.t), bn.dur] : 0,
+      p: ps,
+      m: [m.score, m.sets, m.setNo, m.rot, m.server, m.target(), m.history],
+      u: [u.prompt, r3(u.aim.x), r3(u.aim.y), r3(u.power), u.hitters.map(function (h) { return h.p.idx; }),
+        u.hitterChoice ? u.hitterChoice.idx : -1, u.attackTarget ? [r3(u.attackTarget.x), r3(u.attackTarget.y)] : 0,
+        u.tip ? 1 : 0, u.shot, u.blockCall || 'read', (u.blockThreats || []).map(function (p) { return p.idx; })],
+      ev: N.events
+    };
+    N.events = [];
+    return out;
+  }
+
+  // Sounds and effects on the host are queued with the match time, so the
+  // friend sees them in step with the action.
+  function hookEffects() {
+    var fxEmit = SR.fx.emit, play = SR.audio.play;
+    SR.fx.emit = function (name, d) {
+      fxEmit.call(SR.fx, name, d);
+      if (N.role === 'host' && N.phase === 'playing' && SR.game && SR.game.cfg.online) N.events.push([r3(SR.game.rally.t), 'f', name, d || null]);
+    };
+    SR.audio.play = function (name) {
+      play.apply(SR.audio, arguments);
+      if (name !== 'click' && N.role === 'host' && N.phase === 'playing' && SR.game && SR.game.cfg.online) N.events.push([r3(SR.game.rally.t), 'a', name]);
+    };
+  }
+
+  // ---- guest ---------------------------------------------------------------
+
+  function join(code) {
+    code = cleanCode(code);
+    if (code.length !== 6) { status('Room codes have 6 letters and numbers.', 'error'); return; }
+    cleanup();
+    N.role = 'guest';
+    N.code = code;
+    N.phase = 'waiting';
+    N.token = null;
+    status('Connecting to room ' + code + '…');
+    try { N.peer = makePeer(); } catch (e) { abort('Online play could not load. Check your connection and reload the page.'); return; }
+    N.peer.on('open', function () { connectToHost(false); });
+    N.peer.on('error', onPeerError);
+    N.timers.join = setTimeout(function () {
+      if (N.role === 'guest' && N.phase === 'waiting') abort('Could not connect to room ' + code + '. Make sure your friend\'s room is still open, then try again.');
+    }, JOIN_TIMEOUT_MS);
+    heartbeat();
+  }
+
+  function connectToHost(rejoin) {
+    if (!N.peer || N.peer.destroyed) return;
+    if (rejoin && N.conn && N.conn.open) return;
+    dropConn();
+    var c = N.peer.connect(PREFIX + N.code, { reliable: true, serialization: 'json', metadata: { token: rejoin ? N.token : null, v: 1 } });
+    if (c) attach(c);
+  }
+
+  function onData(msg) {
+    if (msg.t === 'ping') return;
+    if (msg.t === 'bye') {
+      if (N.phase === 'over') return;
+      if (N.role === 'host' && N.phase !== 'playing' && N.phase !== 'rejoining') { lost(); return; }
+      abort(N.role === 'host' ? 'Your friend left the match.' : 'Your friend closed the room.');
+      return;
+    }
+    if (N.role === 'host') {
+      if (msg.t === 'pick' && N.phase === 'lobby') {
+        var t = SR.teamById(msg.team);
+        if (t.id === N.myTeam.id) t = SR.TEAMS.find(function (x) { return x.id !== N.myTeam.id; });
+        startHostMatch(t);
+      } else if (msg.t === 'cmd' && N.phase === 'playing') applyCmd(msg);
+      return;
+    }
+    // Guest
+    if (msg.t === 'full') { abort('That room already has two players.'); return; }
+    if (msg.t === 'lobby') {
+      N.phase = 'lobby';
+      N.token = msg.token;
+      N.format = msg.format;
+      N.oppTeam = SR.teamById(msg.team);
+      $('on-teams-title').textContent = 'Your friend plays ' + N.oppTeam.name + '. Choose your team';
+      SR.ui.teamCards($('on-team-grid'), N.oppTeam.id, function (t) {
+        N.myTeam = t;
+        send({ t: 'pick', team: t.id });
+        status('Starting the match…');
+      });
+      view('on-teams');
+      return;
+    }
+    if (msg.t === 'start') {
+      var resume = msg.resume && SR.game && SR.game.cfg.online === 'guest';
+      N.phase = 'playing';
+      banner('');
+      if (resume) { SR.game.rally.reset(); return; }
+      N.myTeam = SR.teamById(msg.away);
+      N.oppTeam = SR.teamById(msg.home);
+      N.format = msg.format;
+      SR.ui.show(null);
+      SR.game = new GuestGame(N.myTeam, N.oppTeam, N.format);
+      return;
+    }
+    if (msg.t === 's' && SR.game && SR.game.cfg.online === 'guest') { SR.game.rally.push(msg); return; }
+    if (msg.t === 'end') {
+      N.phase = 'over';
+      var hist = (msg.history || []).map(function (s) { return [s[1], s[0]]; });
+      var st = (msg.stats && msg.stats[1]) || { aces: 0, kills: 0, blocks: 0, errors: 0 };
+      finishOnline({ me: N.myTeam, opp: N.oppTeam, mySets: msg.sets[1], oppSets: msg.sets[0], history: hist, stats: st });
+    }
+  }
+
+  // The friend's view of the match: built from the host's snapshots, mirrored
+  // so their own team is always the near side (team 0 here).
+  function GuestGame(me, opp, format) {
+    this.cfg = { human: 0, online: 'guest' };
+    this.paused = false;
+    this.hover = null;
+    this.shift = false;
+    var fmt = SR.FORMATS[format] || SR.FORMATS.standard;
+    this.match = {
+      teams: [me, opp], score: [0, 0], sets: [0, 0], setNo: 1, rot: [0, 0], server: 0, history: [],
+      _tg: fmt.points, target: function () { return this._tg; }
+    };
+    this.rally = new GuestRally(this.match);
+  }
+
+  function GuestRally(match) {
+    this.m = match;
+    this.loopScale = 1;
+    this.timeScale = 1;
+    this.t = 0;
+    this.state = 'idle';
+    this.stateT = 0;
+    this.ball = { x: 9, y: 4.5, z: 1 };
+    this.banner = null;
+    this.server = null;
+    this.setter = null;
+    this.lastTouch = 0;
+    this.ui = { prompt: null, aim: { x: 13.5, y: 4.5 }, power: 0, hitters: [], hitterChoice: null, attackTarget: null, tip: false, shot: 'power', blockThreats: [], blockCall: 'read' };
+    this.holds = {};
+    this.players = [[], []];
+    for (var team = 0; team < 2; team++) {
+      for (var i = 0; i < 6; i++) {
+        this.players[team].push({ team: team, idx: i, role: SR.ROLES[i], num: SR.NUMBERS[i], x: 0, y: 0, z: 0, yaw: 0, vx: 0, vy: 0, phase: 0, act: null, jumpAt: -9, jumpKind: null, contactAt: 0, contactKind: null, contactPt: null, lock: false });
+      }
+    }
+    this.reset();
+  }
+
+  var G = GuestRally.prototype;
+
+  G.reset = function () { this.buf = []; this.ph = null; this.pending = []; };
+  G.all = function () { return this.players[0].concat(this.players[1]); };
+
+  G.push = function (s) {
+    var b = this.buf;
+    if (b.length && s.T < b[b.length - 1].T - 1) this.reset(); // host clock jumped (new match)
+    b.push(s);
+    if (b.length > 40) b.shift();
+    var pend = this.pending;
+    (s.ev || []).forEach(function (e) { pend.push(e); });
+    if (this.ph === null) this.ph = s.T - 0.1;
+  };
+
+  // Guest player for a host player index (team swapped).
+  G.byHost = function (hi) {
+    if (hi < 0) return null;
+    var team = Math.floor(hi / 6), idx = hi % 6;
+    return this.players[1 - team][idx];
+  };
+
+  G.hold = function (field, value) { this.ui[field] = value; this.holds[field] = now() + 400; };
+  G.held = function (field) { return this.holds[field] && this.holds[field] > now(); };
+
+  G.update = function (dt) {
+    var b = this.buf;
+    if (!b.length) return;
+    var newest = b[b.length - 1].T;
+    this.ph += dt * this.timeScale;
+    // Stay ~100 ms behind the newest snapshot so there is always something to blend toward.
+    if (this.ph > newest) this.ph = newest;
+    if (this.ph < newest - 0.4) this.ph = newest - 0.1;
+    var i = 0;
+    while (i < b.length - 2 && b[i + 1].T <= this.ph) i++;
+    var s0 = b[i], s1 = b[Math.min(i + 1, b.length - 1)];
+    var k = s1.T > s0.T ? Math.max(0, Math.min(1, (this.ph - s0.T) / (s1.T - s0.T))) : 1;
+    this.apply(s0, s1, k);
+    // Fire effects whose time has come.
+    var ph = this.ph, keep = [];
+    this.pending.forEach(function (e) {
+      if (e[0] > ph + 0.001) { keep.push(e); return; }
+      if (e[1] === 'a') SR.audio.play(e[2]);
+      else if (e[1] === 'f') SR.fx.emit(e[2], mirrorFx(e[3]));
+    });
+    this.pending = keep;
+  };
+
+  function mirrorFx(d) {
+    if (!d) return d;
+    var o = {};
+    Object.keys(d).forEach(function (k) { o[k] = d[k]; });
+    if (d.pos) o.pos = { x: mx(d.pos.x), y: my(d.pos.y), z: d.pos.z };
+    return o;
+  }
+
+  G.apply = function (s0, s1, k) {
+    var self = this;
+    this.t = lerp(s0.T, s1.T, k);
+    this.state = s0.st;
+    this.stateT = lerp(s0.sT, s1.sT, s0.st === s1.st ? k : 0);
+    this.timeScale = s0.ts || 1;
+    this.ball = { x: mx(lerp(s0.b[0], s1.b[0], k)), y: my(lerp(s0.b[1], s1.b[1], k)), z: lerp(s0.b[2], s1.b[2], k) };
+    this.server = this.byHost(s0.sv);
+    this.setter = this.byHost(s0.se);
+    this.lastTouch = 1 - s0.lt;
+    this.banner = s0.bn ? { text: s0.bn[0], sub: s0.bn[1], color: s0.bn[2], t: s0.bn[3], dur: s0.bn[4] } : null;
+    for (var hi = 0; hi < 12; hi++) {
+      var a = s0.p[hi], c = s1.p[hi], p = this.byHost(hi);
+      if (!a || !c) continue;
+      p.x = mx(lerp(a[0], c[0], k)); p.y = my(lerp(a[1], c[1], k)); p.z = lerp(a[2], c[2], k);
+      p.yaw = lerpAngle(a[3], c[3], k) + Math.PI;
+      p.vx = -lerp(a[4], c[4], k); p.vy = -lerp(a[5], c[5], k);
+      p.phase = lerp(a[6], c[6], k);
+      p.act = a[7] ? { type: a[7], t: a[8], dur: a[9] } : null;
+      p.jumpAt = a[10]; p.jumpKind = a[11] || null;
+      p.contactAt = a[12]; p.contactKind = a[13] || null;
+      p.contactPt = a[14] ? { x: mx(a[14][0]), y: my(a[14][1]), z: a[14][2] } : null;
+      p.lock = !!a[15];
+    }
+    var M = s0.m, m = this.m;
+    m.score = [M[0][1], M[0][0]]; m.sets = [M[1][1], M[1][0]]; m.setNo = M[2]; m.rot = [M[3][1], M[3][0]];
+    m.server = 1 - M[4]; m._tg = M[5];
+    m.history = (M[6] || []).map(function (h) { return [h[1], h[0]]; });
+    var U = s0.u, u = this.ui;
+    u.prompt = U[0];
+    if (!this.held('aim')) u.aim = { x: mx(U[1]), y: my(U[2]) };
+    u.power = lerp(U[3], s1.u[3], k);
+    u.hitters = U[4].map(function (i) { return { p: self.players[0][i] }; });
+    if (!this.held('hitterChoice')) u.hitterChoice = U[5] >= 0 ? this.players[0][U[5]] : null;
+    if (!this.held('attackTarget')) { u.attackTarget = U[6] ? { x: mx(U[6][0]), y: my(U[6][1]) } : null; u.tip = !!U[7]; }
+    if (!this.held('shot')) u.shot = U[8] || 'power';
+    if (!this.held('blockCall')) u.blockCall = U[9] || 'read';
+    u.blockThreats = (U[10] || []).map(function (i) { return self.players[1][i]; });
+  };
+
+  // Input from this player, sent to the host in the host's coordinates.
+  G.setAim = function (pt) {
+    if (this.ui.prompt !== 'serve') return;
+    var a = { x: Math.max(C.NET_X + 0.3, Math.min(C.L + 1, pt.x)), y: Math.max(-1, Math.min(C.W + 1, pt.y)) };
+    this.hold('aim', a);
+    if (now() - N.lastAim > 60) { N.lastAim = now(); send({ t: 'cmd', c: 'aim', x: mx(a.x), y: my(a.y) }); }
+  };
+  G.humanServe = function () {
+    if (this.ui.prompt !== 'serve') return;
+    var a = this.ui.aim;
+    send({ t: 'cmd', c: 'serve', x: mx(a.x), y: my(a.y), pw: this.ui.power });
+  };
+  G.pickHitter = function (p) {
+    if (this.ui.prompt !== 'hitter' || !this.ui.hitters.some(function (h) { return h.p === p; })) return;
+    this.hold('hitterChoice', p);
+    SR.audio.play('click');
+    send({ t: 'cmd', c: 'hitter', i: p.idx });
+  };
+  G.pickHitterIndex = function (i) { var h = this.ui.hitters[i]; if (h) this.pickHitter(h.p); };
+  G.pickShot = function (id) {
+    if (this.ui.prompt !== 'target' || !SR.SHOTS[id]) return;
+    this.hold('shot', id);
+    SR.audio.play('click');
+    send({ t: 'cmd', c: 'shot', id: id });
+  };
+  G.pickBlock = function (id) {
+    if (this.ui.prompt !== 'block') return;
+    this.hold('blockCall', id);
+    SR.audio.play('click');
+    send({ t: 'cmd', c: 'block', id: id });
+  };
+  G.pickTarget = function (pt, tip) {
+    if (this.ui.prompt !== 'target') return;
+    this.hold('attackTarget', { x: pt.x, y: pt.y });
+    this.ui.tip = !!tip;
+    SR.audio.play('click');
+    send({ t: 'cmd', c: 'target', x: mx(pt.x), y: my(pt.y), tip: !!tip });
+  };
+
+  // ---- lobby screen --------------------------------------------------------
+
+  function openLobby() {
+    if (N.phase === 'idle') { view('on-home'); status(''); }
+    SR.ui.show('scr-online');
+  }
+
+  function leave() {
+    if (N.phase !== 'idle') send({ t: 'bye' });
+    var wasPlaying = SR.game && SR.game.cfg.online;
+    // Give the goodbye a moment to leave before closing.
+    var peer = N.peer, conn = N.conn;
+    N.peer = null; N.conn = null;
+    cleanup();
+    setTimeout(function () {
+      if (conn) { try { conn.close(); } catch (e) { /* ignore */ } }
+      if (peer) { try { peer.destroy(); } catch (e) { /* ignore */ } }
+    }, 300);
+    if (wasPlaying) SR.ui.startDemo();
+    SR.ui.show('scr-menu');
+  }
+
+  N.openLobby = openLobby;
+  N.leave = leave;
+  N.host = host;
+  N.join = join;
+
+  // Called every frame: the host streams snapshots.
+  N.tick = function () {
+    if (N.role !== 'host' || N.phase !== 'playing') return;
+    var g = SR.game;
+    if (!g || g.cfg.online !== 'host' || !N.conn || !N.conn.open) return;
+    if (now() - N.lastSnap < SNAP_MS) return;
+    N.lastSnap = now();
+    send(snapshot(g));
+  };
+
+  N.init = function (query) {
+    hookEffects();
+    $('btn-on-create').addEventListener('click', function () {
+      SR.audio.play('click');
+      $('on-teams-title').textContent = 'Choose your team';
+      SR.ui.teamCards($('on-team-grid'), null, function (t) { host(t); });
+      view('on-teams');
+      status('');
+    });
+    $('btn-on-join').addEventListener('click', function () { SR.audio.play('click'); join($('on-code').value); });
+    $('on-code').addEventListener('keydown', function (e) { if (e.key === 'Enter') join($('on-code').value); });
+    $('on-code').addEventListener('input', function (e) { var v = cleanCode(e.target.value); if (v !== e.target.value) e.target.value = v; });
+    $('btn-on-copy').addEventListener('click', function () {
+      var link = inviteLink(N.code), btn = $('btn-on-copy');
+      var done = function () { btn.textContent = 'Link copied!'; setTimeout(function () { btn.textContent = 'Copy invite link'; }, 1800); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { window.prompt('Copy this link', link); });
+      else window.prompt('Copy this link', link);
+    });
+    var share = $('btn-on-share');
+    if (navigator.share) {
+      share.addEventListener('click', function () {
+        navigator.share({ title: 'Spike Rally', text: 'Play volleyball with me! Room code ' + N.code, url: inviteLink(N.code) }).catch(function () { /* cancelled */ });
+      });
+    } else share.classList.add('hidden');
+    $('btn-on-back').addEventListener('click', function () {
+      SR.audio.play('click');
+      if (N.phase !== 'idle') leave(); else SR.ui.show('scr-menu');
+    });
+    window.addEventListener('beforeunload', function () { if (N.phase !== 'idle') send({ t: 'bye' }); });
+    var room = cleanCode(query && query.get('room'));
+    if (room.length === 6) {
+      $('on-code').value = room;
+      openLobby();
+      join(room);
+    }
+  };
+})();

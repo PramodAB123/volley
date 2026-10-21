@@ -32,7 +32,8 @@
 
   SR.Rally = function (match, opts) {
     this.m = match;
-    this.human = opts.human;          // 0 = you control team 0, -1 = CPU plays both
+    this.human = opts.human;          // 0 = you control team 0, 'both' = online, -1 = CPU plays both
+    this.humans = [opts.human === 0 || opts.human === 'both', opts.human === 'both'];
     this.onPoint = opts.onPoint || function () {};
     this.t = 0;
     this.state = 'idle';
@@ -46,7 +47,11 @@
     this.touches = [0, 0];
     this.lastTouch = 0;
     this.lastOffense = null;
-    this.ui = { prompt: null, aim: { x: 13.5, y: 4.5 }, power: 0, hitters: [], hitterChoice: null, attackTarget: null, tip: false, shot: 'power', blockThreats: [] };
+    // One set of prompts per team; `ui` is the local player's (team 0).
+    this.uis = [0, 1].map(function (t) {
+      return { prompt: null, aim: { x: t === 0 ? 13.5 : 4.5, y: 4.5 }, power: 0, hitters: [], hitterChoice: null, attackTarget: null, tip: false, shot: 'power', blockThreats: [], blockCall: 'read' };
+    });
+    this.ui = this.uis[0];
     this.commit = 'read';
     this.players = [[], []];
     for (var team = 0; team < 2; team++) {
@@ -69,7 +74,9 @@
   R.pos = function (p) { return this.m.posOf(p.team, p.idx); };
   R.isFront = function (p) { var q = this.pos(p); return q >= 2 && q <= 4; };
   R.setterOf = function (team) { return this.players[team][0]; };
-  R.isHuman = function (team) { return this.human === team; };
+  R.isHuman = function (team) { return !!this.humans[team]; };
+  R.uiOf = function (team) { return this.uis[team || 0]; };
+  R.clearPrompts = function () { this.uis.forEach(function (u) { u.prompt = null; }); };
 
   R.say = function (text, sub, color, dur) {
     this.banner = { text: text, sub: sub || '', color: color || '#ffffff', t: 0, dur: dur || 1.6 };
@@ -124,9 +131,7 @@
     this.state = 'serve';
     this.stateT = 0;
     this.serveReady = false;
-    this.ui.prompt = null;
-    this.ui.attackTarget = null;
-    this.ui.hitterChoice = null;
+    this.uis.forEach(function (u) { u.prompt = null; u.attackTarget = null; u.hitterChoice = null; });
     this.server = this.players[s][this.m.playerAt(s, 1)];
     this.all().forEach(function (p) { p.contactAt = 0; });
   };
@@ -151,7 +156,7 @@
     this.fx('serve', { pos: cp });
     this.launch(cp, tgt, T);
     this.state = 'rally';
-    this.ui.prompt = null;
+    this.uis[s].prompt = null;
     this.lastTouch = s;
     this.lastOffense = { team: s, type: 'serve' };
     this.servePower = power;
@@ -300,19 +305,20 @@
     this.passQ = q;
     this.formation(team, 'attack');
     this.formation(1 - team, 'defense');
-    this.ui.hitters = this.hitterOptions(team, s, q);
-    if (this.isHuman(team)) { this.ui.prompt = 'hitter'; this.ui.hitterChoice = null; }
+    var hitters = this.hitterOptions(team, s, q), ua = this.uis[team], ud = this.uis[1 - team];
+    ua.hitters = hitters;
+    if (this.isHuman(team)) { ua.prompt = 'hitter'; ua.hitterChoice = null; }
     // The defending side decides its block: you pick, the CPU sometimes guesses early.
     var def = 1 - team;
     this.commit = 'read';
     this.players[def].forEach(function (b) { b.jumpKind = null; });
     if (this.isHuman(def)) {
-      this.ui.prompt = 'block';
-      this.ui.blockCall = 'read';
-      this.ui.blockThreats = this.ui.hitters.map(function (h) { return h.p; });
+      ud.prompt = 'block';
+      ud.blockCall = 'read';
+      ud.blockThreats = hitters.map(function (h) { return h.p; });
       this.timeScale = 0.5;
-    } else if (Math.random() < 0.22 && this.ui.hitters.length) {
-      this.commitBlock(def, this.ui.hitters[Math.floor(Math.random() * this.ui.hitters.length)].slot);
+    } else if (Math.random() < 0.22 && hitters.length) {
+      this.commitBlock(def, hitters[Math.floor(Math.random() * hitters.length)].slot);
     }
     var self = this;
     this.at(T, function () { self.setBall(s); });
@@ -355,8 +361,9 @@
     if (!opts.length) { this.freeBall(team, { x: this.ball.x, y: this.ball.y, z: this.ball.z }); return; }
 
     var pick = null;
-    if (this.isHuman(team) && this.ui.hitterChoice) {
-      pick = opts.find(function (h) { return h.p === self.ui.hitterChoice; }) || null;
+    var ua = this.uis[team];
+    if (this.isHuman(team) && ua.hitterChoice) {
+      pick = opts.find(function (h) { return h.p === ua.hitterChoice; }) || null;
     }
     if (!pick) {
       var bestScore = -1e9, q = this.passQ;
@@ -367,7 +374,7 @@
         if (sc > bestScore) { bestScore = sc; pick = h; }
       });
     }
-    this.ui.prompt = null;
+    ua.prompt = null;
     var rt = this.m.ratings[team];
     var qs = clamp(0.35 + rt.pass / 100 * 0.4 + this.passQ * 0.25 + rnd(-0.15, 0.15), 0, 1);
     var e = 1 - qs, hx = clamp(HIT[pick.slot][0] + gauss() * e * 0.7, 6.5, 8.7), hy = clamp(HIT[pick.slot][1] + gauss() * e * 0.7, 0.3, 8.7);
@@ -410,12 +417,13 @@
       b.tx = bw.x; b.ty = bw.y;
       if (late) b.delayUntil = this.t + 0.35;
     }
-    if (this.isHuman(def)) this.ui.prompt = null;
-    if (this.isHuman(def) && commit !== 'read') this.say(commit === pick.slot ? 'READ IT!' : 'WRONG GUESS', '', commit === pick.slot ? '#ffd23f' : '#ff9e9e', 0.9);
+    if (this.isHuman(def)) this.uis[def].prompt = null;
+    // Online both players see banners, so name the team that made the call.
+    if (this.isHuman(def) && commit !== 'read') this.say(commit === pick.slot ? 'READ IT!' : 'WRONG GUESS', this.human === 'both' ? this.m.teams[def].name : '', commit === pick.slot ? '#ffd23f' : '#ff9e9e', 0.9);
 
     this.hitSlot = pick.slot;
     this.timeScale = 1;
-    if (this.isHuman(team)) { this.ui.prompt = 'target'; this.ui.attackTarget = null; this.ui.tip = false; this.ui.shot = 'power'; this.timeScale = 0.35; }
+    if (this.isHuman(team)) { ua.prompt = 'target'; ua.attackTarget = null; ua.tip = false; ua.shot = 'power'; this.timeScale = 0.35; }
     this.at(T, function () { self.attack(h); });
   };
 
@@ -468,12 +476,13 @@
     var team = h.team, def = 1 - team, rt = this.m.ratings[team], self = this;
     h.lock = false;
     this.timeScale = 1;
-    this.ui.prompt = null;
+    var ua = this.uis[team];
+    ua.prompt = null;
     var cp = { x: this.ball.x, y: this.ball.y, z: this.ball.z };
     var shot, aim;
     if (this.isHuman(team)) {
-      shot = this.ui.tip ? 'tip' : (this.ui.shot || 'power');
-      aim = this.ui.attackTarget || this.shotTarget(team, shot, cp);
+      shot = ua.tip ? 'tip' : (ua.shot || 'power');
+      aim = ua.attackTarget || this.shotTarget(team, shot, cp);
     } else {
       shot = this.aiShot();
       aim = this.shotTarget(team, shot, cp);
@@ -560,7 +569,7 @@
     this.launch(from, tgt, T);
     this.lastTouch = team;
     this.lastOffense = null;
-    this.ui.prompt = null;
+    this.clearPrompts();
     this.formation(team, 'defense');
     this.formation(opp, 'defense');
     this.planReception(opp, 0.25);
@@ -582,7 +591,7 @@
     this.state = 'dead';
     this.stateT = 0;
     this.timeScale = 1;
-    this.ui.prompt = null;
+    this.clearPrompts();
     var v = f ? P.vel(f.v, f.t) : { x: 0, y: 0, z: -3 };
     this.bounce = { x: b.x, y: b.y, z: 0, vx: v.x * 0.5, vy: v.y * 0.5, vz: Math.abs(v.z) * 0.45 };
     this.flight = null;
@@ -605,55 +614,69 @@
 
   // ---- player input -------------------------------------------------------
 
-  R.setAim = function (pt) {
+  // Each takes the team making the call; the local player is team 0.
+  R.setAim = function (pt, team) {
+    var u = this.uiOf(team);
     var lo = this.m.server === 0 ? C.NET_X + 0.3 : -1, hi = this.m.server === 0 ? C.L + 1 : C.NET_X - 0.3;
-    this.ui.aim = { x: clamp(pt.x, lo, hi), y: clamp(pt.y, -1, C.W + 1) };
+    u.aim = { x: clamp(pt.x, lo, hi), y: clamp(pt.y, -1, C.W + 1) };
   };
 
-  R.humanServe = function () {
-    if (this.state === 'serve' && this.serveReady && this.isHuman(this.m.server) && this.stateT - this.readyT > 0.2) this.serve(this.ui.aim, this.ui.power);
+  // `power` lets an online player send the power they saw when they pressed.
+  R.humanServe = function (team, power) {
+    team = team || 0;
+    if (this.state === 'serve' && this.serveReady && this.m.server === team && this.isHuman(team) && this.stateT - this.readyT > 0.2) {
+      var u = this.uiOf(team);
+      this.serve(u.aim, typeof power === 'number' ? clamp(power, 0, 1) : u.power);
+    }
   };
 
-  R.pickHitter = function (p) {
-    if (this.ui.prompt !== 'hitter') return;
-    if (this.ui.hitters.some(function (h) { return h.p === p; })) { this.ui.hitterChoice = p; SR.audio.play('click'); }
+  R.pickHitter = function (p, team) {
+    var u = this.uiOf(team);
+    if (u.prompt !== 'hitter') return;
+    if (u.hitters.some(function (h) { return h.p === p; })) { u.hitterChoice = p; if (!team) SR.audio.play('click'); }
   };
 
-  R.pickHitterIndex = function (i) {
-    var h = this.ui.hitters[i];
-    if (h) this.pickHitter(h.p);
+  R.pickHitterIndex = function (i, team) {
+    var h = this.uiOf(team).hitters[i];
+    if (h) this.pickHitter(h.p, team);
   };
 
-  R.pickShot = function (id) {
-    if (this.ui.prompt !== 'target' || !SR.SHOTS[id]) return;
-    this.ui.shot = id;
-    this.ui.tip = false;
-    SR.audio.play('click');
+  R.pickShot = function (id, team) {
+    var u = this.uiOf(team);
+    if (u.prompt !== 'target' || !SR.SHOTS[id]) return;
+    u.shot = id;
+    u.tip = false;
+    if (!team) SR.audio.play('click');
     if (SR.SHOTS[id].auto && this.hitter) {
-      this.ui.attackTarget = this.shotTarget(this.hitter.team, id, this.hitter);
+      u.attackTarget = this.shotTarget(this.hitter.team, id, this.hitter);
       this.timeScale = 1;
     }
   };
 
-  // Block call, named by screen side: Left / Middle / Right / Read.
-  R.pickBlock = function (id) {
-    if (this.ui.prompt !== 'block') return;
-    var def = this.human, slotFor = def === 0 ? { left: 'right', middle: 'middle', right: 'left' } : { left: 'left', middle: 'middle', right: 'right' };
+  // Block call, named by screen side as seen from the caller's own end:
+  // Left / Middle / Right / Read.
+  R.pickBlock = function (id, team) {
+    team = team || 0;
+    var u = this.uiOf(team);
+    if (u.prompt !== 'block') return;
+    var slotFor = { left: 'right', middle: 'middle', right: 'left' };
     var slot = id === 'read' ? 'read' : slotFor[id];
-    this.ui.blockCall = id;
-    this.commitBlock(def, slot);
+    if (!slot) return;
+    u.blockCall = id;
+    this.commitBlock(team, slot);
     this.timeScale = 1;
-    SR.audio.play('click');
+    if (!team) SR.audio.play('click');
   };
 
-  R.pickTarget = function (pt, tip) {
-    if (this.ui.prompt !== 'target') return;
-    this.ui.attackTarget = { x: pt.x, y: pt.y };
-    this.ui.tip = !!tip;
-    if (tip) this.ui.shot = 'tip';
-    if (SR.SHOTS[this.ui.shot].auto) this.ui.shot = 'power';
+  R.pickTarget = function (pt, tip, team) {
+    var u = this.uiOf(team);
+    if (u.prompt !== 'target') return;
+    u.attackTarget = { x: pt.x, y: pt.y };
+    u.tip = !!tip;
+    if (tip) u.shot = 'tip';
+    if (SR.SHOTS[u.shot].auto) u.shot = 'power';
     this.timeScale = 1;
-    SR.audio.play('click');
+    if (!team) SR.audio.play('click');
   };
 
   // ---- simulation step ----------------------------------------------------
@@ -669,16 +692,18 @@
     this.movePlayers(dt);
 
     if (this.state === 'serve') {
-      this.ui.power = this.serveReady ? (1 - Math.cos((this.stateT - this.readyT) * 3.4)) / 2 : 0;
+      this.uis[this.m.server].power = this.serveReady ? (1 - Math.cos((this.stateT - this.readyT) * 3.4)) / 2 : 0;
       var sp = this.server, dir = sp.team === 0 ? 1 : -1;
       this.ball = { x: sp.x + dir * 0.35, y: sp.y, z: 1.15 + Math.abs(Math.sin(this.stateT * 4)) * 0.25 };
       if (!this.serveReady && dist(sp, { x: sp.tx, y: sp.ty }) < 0.12) {
         this.serveReady = true;
         this.readyT = this.stateT;
         this.cpuServeAt = this.stateT + rnd(0.6, 1.1);
-        if (this.isHuman(this.m.server)) this.ui.prompt = 'serve';
+        if (this.isHuman(this.m.server)) this.uis[this.m.server].prompt = 'serve';
       }
       if (this.serveReady && !this.isHuman(this.m.server) && this.stateT > this.cpuServeAt) this.cpuServe();
+      // Online, nobody can stall the match: an idle server serves after 15 s.
+      if (this.serveReady && this.human === 'both' && this.stateT - this.readyT > 15) this.serve(this.uis[this.m.server].aim, 0.5);
     }
 
     var f = this.flight;
