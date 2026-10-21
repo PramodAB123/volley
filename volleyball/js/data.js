@@ -45,6 +45,21 @@ SR.FORMATS = {
   full:     { label: 'Full (best of 5 to 25)',       sets: 5, points: 25, last: 15 }
 };
 
+// Custom match rules: points per set and number of sets, stored as ids like
+// 'p11s3'. Every set, including a deciding one, is played to the same score.
+SR.POINT_OPTIONS = [5, 11, 15];
+SR.SET_OPTIONS = [1, 3, 5];
+SR.formatId = function (points, sets) { return 'p' + points + 's' + sets; };
+SR.formatOf = function (id) {
+  if (SR.FORMATS[id]) return SR.FORMATS[id];
+  var m = /^p(\d+)s(\d)$/.exec(id || '');
+  if (!m) return SR.FORMATS.standard;
+  var points = +m[1], sets = +m[2];
+  if (SR.POINT_OPTIONS.indexOf(points) < 0 || SR.SET_OPTIONS.indexOf(sets) < 0) return SR.FORMATS.standard;
+  return { sets: sets, points: points, last: points,
+    label: (sets === 1 ? '1 set to ' + points : 'Best of ' + sets + ', sets to ' + points) };
+};
+
 // Added to every CPU rating.
 SR.DIFFICULTY = {
   easy:   { label: 'Easy',   boost: -14 },

@@ -441,6 +441,8 @@
       N.format = msg.format;
       N.oppTeam = SR.teamById(msg.team);
       $('on-teams-title').textContent = 'Your friend plays ' + N.oppTeam.name + '. Choose your team';
+      // The host sets the rules; the friend just sees them.
+      $('on-rules').innerHTML = '<p class="rules-fixed">Match: <b>' + SR.formatOf(N.format).label + '</b></p>';
       SR.ui.teamCards($('on-team-grid'), N.oppTeam.id, function (t) {
         N.myTeam = t;
         send({ t: 'pick', team: t.id });
@@ -478,7 +480,7 @@
     this.paused = false;
     this.hover = null;
     this.shift = false;
-    var fmt = SR.FORMATS[format] || SR.FORMATS.standard;
+    var fmt = SR.formatOf(format);
     this.match = {
       teams: [me, opp], score: [0, 0], sets: [0, 0], setNo: 1, rot: [0, 0], server: 0, history: [],
       _tg: fmt.points, target: function () { return this._tg; }
@@ -717,6 +719,7 @@
     $('btn-on-create').addEventListener('click', function () {
       SR.audio.play('click');
       $('on-teams-title').textContent = 'Choose your team';
+      SR.ui.rulesPicker($('on-rules'));
       SR.ui.teamCards($('on-team-grid'), null, function (t) { host(t); });
       view('on-teams');
       status('');

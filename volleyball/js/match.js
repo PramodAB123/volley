@@ -1,7 +1,7 @@
 // Match rules: rally scoring, sets, side-out rotation, serve order.
 (function () {
   SR.Match = function (teamA, teamB, formatId, cpuBoost) {
-    this.format = SR.FORMATS[formatId] || SR.FORMATS.standard;
+    this.format = SR.formatOf(formatId);
     this.teams = [teamA, teamB];
     // Effective ratings: the CPU side (index 1) gets the difficulty boost.
     this.ratings = [Object.assign({}, teamA.r), {}];
@@ -72,7 +72,7 @@
 
   // Quick off-screen result for CPU vs CPU fixtures in league and tournament.
   SR.simMatch = function (teamA, teamB, formatId) {
-    var f = SR.FORMATS[formatId] || SR.FORMATS.standard, need = Math.ceil(f.sets / 2);
+    var f = SR.formatOf(formatId), need = Math.ceil(f.sets / 2);
     var pa = SR.teamPower(teamA), pb = SR.teamPower(teamB);
     var pRally = 0.5 + (pa - pb) * 0.012;
     var sets = [0, 0], scores = [];

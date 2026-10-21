@@ -91,6 +91,16 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 .row.center { justify-content: center; }
 
+.rules { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin: 0 0 14px; }
+.rule { display: flex; align-items: center; gap: 8px; }
+.rule-name { font-size: 13px; font-weight: 700; opacity: 0.8; }
+.seg { display: inline-flex; border-radius: 10px; overflow: hidden; border: 1px solid rgba(127,127,127,0.35); }
+.seg button { background: rgba(127,127,127,0.1); color: inherit; border: 0; padding: 8px 12px; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; min-width: 44px; min-height: 36px; }
+.seg button + button { border-left: 1px solid rgba(127,127,127,0.3); }
+.seg button.on { background: #ffd23f; color: #241a00; }
+.seg button:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+.rule-sum { flex-basis: 100%; margin: 0; }
+.rules-fixed { margin: 0; }
 .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px; }
 .team-card {
   display: grid; grid-template-columns: 52px 1fr; grid-template-rows: auto auto auto; column-gap: 12px; row-gap: 2px;

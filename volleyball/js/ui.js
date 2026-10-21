@@ -46,6 +46,30 @@
       (mode === 'league' ? 'League: choose your team' : 'Tournament: choose your team');
     $('teams-title').textContent = title;
     teamCards($('team-grid'), pickStep === 1 && pickedHome ? pickedHome.id : null, pickTeam);
+    rulesPicker($('team-rules'));
+  }
+
+  // Points-per-set and number-of-sets choices, saved as the match format.
+  function rulesPicker(box) {
+    var s = data().settings, f0 = SR.formatOf(s.format), f = SR.formatOf(SR.formatId(f0.points, f0.sets));
+    function group(name, opts, cur, fmt) {
+      return '<div class="rule"><span class="rule-name">' + name + '</span><div class="seg" role="radiogroup" aria-label="' + name + '">' +
+        opts.map(function (o) { return '<button type="button" role="radio" aria-checked="' + (o === cur) + '" class="' + (o === cur ? 'on' : '') + '" data-v="' + o + '">' + fmt(o) + '</button>'; }).join('') + '</div></div>';
+    }
+    box.innerHTML = group('Points per set', SR.POINT_OPTIONS, f.points, String) +
+      group('Sets', SR.SET_OPTIONS, f.sets, function (n) { return n === 1 ? '1' : 'Best of ' + n; }) +
+      '<p class="rule-sum muted small">' + f.label + '</p>';
+    box.querySelectorAll('.rule').forEach(function (r, gi) {
+      r.querySelectorAll('button').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var v = +b.getAttribute('data-v'), cur = SR.formatOf(data().settings.format);
+          data().settings.format = gi === 0 ? SR.formatId(v, cur.sets) : SR.formatId(cur.points, v);
+          save();
+          SR.audio.play('click');
+          rulesPicker(box);
+        });
+      });
+    });
   }
 
   // Fill `grid` with a card per team (skipping `skipId`); onPick(team) on click.
@@ -307,7 +331,12 @@
 
   function fillSettings() {
     var s = data().settings;
-    $('set-format').innerHTML = Object.keys(SR.FORMATS).map(function (k) { return '<option value="' + k + '">' + SR.FORMATS[k].label + '</option>'; }).join('');
+    var ids = [];
+    SR.SET_OPTIONS.forEach(function (n) { SR.POINT_OPTIONS.forEach(function (pt) { ids.push(SR.formatId(pt, n)); }); });
+    // Older saves used named formats; map them onto the same choices.
+    var cf = SR.formatOf(s.format);
+    s.format = SR.formatId(cf.points, cf.sets);
+    $('set-format').innerHTML = ids.map(function (k) { return '<option value="' + k + '">' + SR.formatOf(k).label + '</option>'; }).join('');
     $('set-diff').innerHTML = Object.keys(SR.DIFFICULTY).map(function (k) { return '<option value="' + k + '">' + SR.DIFFICULTY[k].label + '</option>'; }).join('');
     $('set-format').value = s.format;
     $('set-diff').value = s.difficulty;
@@ -362,6 +391,7 @@
     current: function () { return current; },
     startDemo: startDemo,
     teamCards: teamCards,
+    rulesPicker: rulesPicker,
     onlineResult: onlineResult,
     init: function () {
       refreshStars();
