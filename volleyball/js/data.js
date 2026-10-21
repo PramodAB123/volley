@@ -1,5 +1,7 @@
 // Static game data: court constants, teams, shop items, match formats.
 window.SR = window.SR || {};
+// Touch-first devices get tap wording and no keyboard hints.
+SR.touch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
 SR.COURT = {
   L: 18,        // court length (m)

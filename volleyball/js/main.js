@@ -49,13 +49,22 @@
   var canvas, ctx, last = 0, acc = 0;
 
   function resize() {
-    var s = Math.min(window.innerWidth / SR.render.W, window.innerHeight / SR.render.H);
+    var vw = window.innerWidth, vh = window.innerHeight;
+    SR.render.setView(vw, vh);
+    var s = Math.min(vw / SR.render.W, vh / SR.render.H);
     var dpr = window.devicePixelRatio || 1;
     canvas.style.width = Math.floor(SR.render.W * s) + 'px';
     canvas.style.height = Math.floor(SR.render.H * s) + 'px';
     canvas.width = Math.floor(SR.render.W * s * dpr);
     canvas.height = Math.floor(SR.render.H * s * dpr);
     SR.render.scale = s * dpr;
+    // Pause button sits on the canvas corner: top right in landscape,
+    // bottom right in portrait where the scoreboard fills the top.
+    var cw = SR.render.W * s, ch = SR.render.H * s, left = (vw - cw) / 2, top = (vh - ch) / 2;
+    var hud = document.getElementById('hud');
+    hud.style.left = (left + cw - 56) + 'px';
+    hud.style.top = (SR.render.portrait ? top + ch - 56 : top + 12) + 'px';
+    hud.style.right = 'auto';
   }
 
   function frame(ts) {
@@ -78,6 +87,7 @@
     ctx = canvas.getContext('2d');
     resize();
     window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', function () { setTimeout(resize, 150); });
     SR.input.init(canvas);
     SR.ui.init();
     var q = new URLSearchParams(window.location.search);

@@ -38,14 +38,14 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
-body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--text); -webkit-tap-highlight-color: transparent; }
+body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--text); -webkit-tap-highlight-color: transparent; touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 
 #app { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
 #game { display: block; touch-action: none; user-select: none; }
 
 .hidden { display: none !important; }
 
-#hud { position: absolute; top: 12px; right: 12px; }
+#hud { position: absolute; top: 12px; right: 12px; z-index: 2; }
 .icon-btn {
   width: 44px; height: 44px; border-radius: 12px; border: 0; cursor: pointer;
   background: rgba(8, 12, 20, 0.75); color: #fff; font-weight: 800; font-size: 15px; letter-spacing: 1px;
@@ -53,7 +53,8 @@ body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; co
 
 .screen {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  padding: 16px; background: rgba(5, 9, 18, 0.35); overflow-y: auto;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: rgba(5, 9, 18, 0.35); overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 .panel {
   width: min(720px, 100%); max-height: 100%; overflow-y: auto;
@@ -153,7 +154,37 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 .stars-earned { color: var(--gold); font-weight: 800; font-size: 18px; }
 
 @media (max-width: 560px) {
-  .panel { padding: 18px 16px; }
+  .screen { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+  .panel { padding: 18px 16px; border-radius: 16px; }
   h1 { font-size: 36px; }
+  h2 { font-size: 21px; }
   .bracket { grid-template-columns: 1fr; }
+  .team-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .team-card { grid-template-columns: 1fr; text-align: center; padding: 10px 8px; }
+  .jersey { grid-row: auto; height: 40px; margin-bottom: 6px; }
+  .shop-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .table { font-size: 13px; }
+  .table th, .table td { padding: 7px 4px; }
+  .row .btn { flex: 1 1 auto; }
+  .field { flex-wrap: wrap; }
+}
+@media (max-width: 360px) {
+  .team-grid { grid-template-columns: 1fr; }
+  .team-card { grid-template-columns: 52px 1fr; text-align: left; }
+  .jersey { grid-row: 1 / 4; height: auto; margin: 0; }
+}
+/* Phones held sideways: short screens get compact panels. */
+@media (max-height: 520px) {
+  .screen { padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+  .panel { padding: 14px 18px; border-radius: 14px; }
+  .panel.menu { width: min(620px, 100%); }
+  h1 { font-size: 30px; }
+  .tag { margin: 2px 0 8px; font-size: 14px; }
+  .stars-badge { margin-bottom: 8px; }
+  .menu-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .menu-grid .wide { grid-column: auto; }
+  .btn { padding: 9px 12px; min-height: 40px; }
+  #result-title { font-size: 28px; }
+  .help li { margin-bottom: 6px; }
 }

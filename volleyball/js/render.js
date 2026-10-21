@@ -3,7 +3,7 @@
 (function () {
   var C = SR.COURT;
   var W = 960, H = 640;
-  var FOC = 1250, CY = 290;
+  var FOC = 1250, CY = 290, PAN = 9, portrait = false, UI = 1;
   var cam = { x: -16, y: 4.5, z: 17 }, look = { x: 9.8, y: 4.5, z: 0 };
   var f, r, u, camFollow = 4.5, lastNow = 0, spin = 0, trail = [], lastBall = null;
 
@@ -158,13 +158,13 @@
     g.addColorStop(0, style.wall); g.addColorStop(0.45, style.wall); g.addColorStop(1, '#000');
     ctx.fillStyle = g; ctx.fillRect(-80, 0, W + 160, H);
     // Ceiling lights
-    for (var i = 0; i < 6; i++) {
+    for (var i = 0; i < Math.ceil(W / 144); i++) {
       var lx = 120 + i * 144, lg = ctx.createRadialGradient(lx, 6, 0, lx, 6, 70);
       lg.addColorStop(0, 'rgba(255,255,235,0.35)'); lg.addColorStop(1, 'rgba(255,255,235,0)');
       ctx.fillStyle = lg; ctx.fillRect(lx - 70, 0, 140, 80);
     }
     drawStands(ctx, style, t, cheer);
-    poly(ctx, [[-4, -3.5], [21.6, -3.5], [21.6, 12.6], [-4, 12.6]], style.floor);
+    poly(ctx, [[-12, -3.5], [21.6, -3.5], [21.6, 12.6], [-12, 12.6]], style.floor);
     poly(ctx, [[0, 0], [18, 0], [18, 9], [0, 9]], style.court);
     poly(ctx, [[6, 0], [12, 0], [12, 9], [6, 9]], style.zone);
     // Floor sheen under the arena lights
@@ -187,7 +187,7 @@
   var cache = { cv: null, key: '' };
   function arenaLayer(ctx, style, t, cheer) {
     if (cheer > 0 || typeof document === 'undefined') { drawArena(ctx, style, t, cheer); return; }
-    var sc = SR.render.scale, key = style.id + '|' + sc, PAD = 70;
+    var sc = SR.render.scale, key = style.id + '|' + sc + '|' + W + 'x' + H, PAD = 70;
     if (cache.key !== key) {
       cache.cv = cache.cv || document.createElement('canvas');
       cache.cv.width = Math.ceil((W + PAD * 2) * sc); cache.cv.height = Math.ceil(H * sc);
@@ -304,7 +304,17 @@
 
   var lastScore = [0, 0], popAt = [-9, -9];
 
+  // Scoreboard scale: bigger on small screens, never wider than the canvas.
+  function sbScale() { return Math.min(UI, (W - 20) / 500); }
+
   function drawScoreboard(ctx, game) {
+    var k = sbScale();
+    ctx.save(); ctx.translate(W / 2, 0); ctx.scale(k, k); ctx.translate(-W / 2, 0);
+    drawScoreboardInner(ctx, game);
+    ctx.restore();
+  }
+
+  function drawScoreboardInner(ctx, game) {
     var m = game.match, cx = W / 2, y0 = 10, w = 500, h = 52, now = performance.now() / 1000;
     roundRect(ctx, cx - w / 2, y0, w, h, 12);
     ctx.fillStyle = 'rgba(6,10,18,0.88)'; ctx.fill();
@@ -349,27 +359,46 @@
     ctx.fillText('TO ' + m.target(), cx, y0 + 35);
   }
 
+  // Instruction pill under the scoreboard; wraps onto extra lines on narrow screens.
   function hint(ctx, text) {
-    ctx.font = '600 15px system-ui, sans-serif';
-    var w = ctx.measureText(text).width + 32;
-    roundRect(ctx, W / 2 - w / 2, 70, w, 34, 17);
+    var fs = Math.round(15 * UI), lh = fs + 7, maxW = W - 28;
+    ctx.font = '600 ' + fs + 'px system-ui, sans-serif';
+    var words = text.split(' '), lines = [], cur = '';
+    words.forEach(function (wd) {
+      var t = cur ? cur + ' ' + wd : wd;
+      if (cur && ctx.measureText(t).width > maxW - 32) { lines.push(cur); cur = wd; } else cur = t;
+    });
+    lines.push(cur);
+    var w = 0;
+    lines.forEach(function (l) { w = Math.max(w, ctx.measureText(l).width); });
+    w += 32;
+    var h = lines.length * lh + 12, y = 10 + 52 * sbScale() + 8;
+    roundRect(ctx, W / 2 - w / 2, y, w, h, Math.min(17, h / 2));
     ctx.fillStyle = 'rgba(6,10,18,0.8)'; ctx.fill();
     ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(text, W / 2, 87);
+    lines.forEach(function (l, i) { ctx.fillText(l, W / 2, y + 6 + lh * (i + 0.5)); });
   }
 
   // A row of pill buttons along the bottom; returns their hit boxes.
   function buttonRow(ctx, items, active, kind) {
-    var w = 104, h = 40, gap = 10, total = items.length * w + (items.length - 1) * gap, x0 = W / 2 - total / 2, y0 = H - 62, out = [];
+    var gap = 10, w = 104 * UI, h = 40 * UI;
+    var perRow = Math.max(1, Math.min(items.length, Math.floor((W - 20 + gap) / (w + gap))));
+    var rows = Math.ceil(items.length / perRow);
+    perRow = Math.ceil(items.length / rows);
+    w = Math.min(w * 1.3, (W - 20 - gap * (perRow - 1)) / perRow);
+    // Portrait keeps the bottom-right corner free for the pause button.
+    var bottom = portrait ? H - 74 : H - 22, out = [];
     items.forEach(function (it, i) {
-      var x = x0 + i * (w + gap), on = it.id === active;
+      var row = Math.floor(i / perRow), col = i % perRow, inRow = Math.min(perRow, items.length - row * perRow);
+      var x0 = W / 2 - (inRow * w + (inRow - 1) * gap) / 2, y0 = bottom - (rows - row) * h - (rows - row - 1) * gap;
+      var x = x0 + col * (w + gap), on = it.id === active;
       roundRect(ctx, x, y0, w, h, 12);
       ctx.fillStyle = on ? '#ffd23f' : 'rgba(6,10,18,0.85)'; ctx.fill();
       ctx.strokeStyle = on ? '#ffd23f' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5; ctx.stroke();
-      ctx.fillStyle = on ? '#111' : 'rgba(255,255,255,0.55)'; ctx.font = '700 11px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillText(String(i + 1), x + 10, y0 + h / 2);
-      ctx.fillStyle = on ? '#111' : '#fff'; ctx.font = '700 15px system-ui, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(it.label, x + w / 2 + 6, y0 + h / 2);
+      ctx.fillStyle = on ? '#111' : 'rgba(255,255,255,0.55)'; ctx.font = '700 ' + Math.round(11 * UI) + 'px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      if (!SR.touch) ctx.fillText(String(i + 1), x + 10, y0 + h / 2);
+      ctx.fillStyle = on ? '#111' : '#fff'; ctx.font = '700 ' + Math.round(15 * UI) + 'px system-ui, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(it.label, x + w / 2 + (SR.touch ? 0 : 6), y0 + h / 2);
       out.push({ x: x, y: y0, w: w, h: h, id: it.id, kind: kind });
     });
     return out;
@@ -377,7 +406,7 @@
 
   // Segmented capsule power meter: green at the bottom to red at the top.
   function drawPower(ctx, power) {
-    var x = 34, y0 = 300, w = 34, h = 250, n = 16, gap = 3, segH = (h - 16 - gap * (n - 1)) / n;
+    var x = portrait ? 14 : 34, y0 = portrait ? CY + 30 : 300, w = 34, h = 250, n = 16, gap = 3, segH = (h - 16 - gap * (n - 1)) / n;
     roundRect(ctx, x, y0, w, h, 17); ctx.fillStyle = 'rgba(6,10,18,0.88)'; ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.5; ctx.stroke();
     var lit = Math.round(power * n);
@@ -398,7 +427,7 @@
     var sc = k < 0.12 ? 0.5 + (k / 0.12) * 0.65 : k < 0.2 ? 1.15 - ((k - 0.12) / 0.08) * 0.15 : 1;
     ctx.save();
     ctx.globalAlpha = Math.max(0, a);
-    ctx.translate(W / 2, 205); ctx.scale(sc, sc); ctx.rotate(-0.04);
+    ctx.translate(W / 2, CY - 85); ctx.scale(sc, sc); ctx.rotate(-0.04);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'italic 900 72px system-ui, sans-serif';
     ctx.shadowColor = b.color; ctx.shadowBlur = 28;
@@ -429,6 +458,20 @@
 
   SR.render = {
     W: W, H: H,
+    portrait: false,
+    // Pick a logical canvas size that suits the screen: wide for landscape,
+    // tall for portrait phones, with the camera re-framed to keep the court in view.
+    setView: function (vw, vh) {
+      var a = vw / Math.max(1, vh);
+      if (a >= 1.1) {
+        portrait = false; H = 640; W = Math.round(Math.max(880, Math.min(1280, 640 * a)));
+        FOC = 1250; CY = 290; PAN = 9; UI = vh < 520 ? 1.4 : 1;
+      } else {
+        portrait = true; W = 540; H = Math.round(Math.max(720, Math.min(1170, 540 / a)));
+        FOC = 1180; CY = 300 + (H - 700) * 0.55; PAN = 4; UI = 1.25;
+      }
+      this.W = W; this.H = H; this.portrait = portrait;
+    },
     proj: proj,
     unproject: unproject,
     BLOCK_ZONES: BLOCK_ZONES,
@@ -453,7 +496,7 @@
 
       // The view pans gently toward the ball.
       if (rally) camFollow += (Math.max(-1, Math.min(10, rally.ball.y)) - camFollow) * Math.min(1, dt * 2);
-      panX = (camFollow - 4.5) * 9;
+      panX = (camFollow - 4.5) * PAN;
 
       ctx.setTransform(SR.render.scale, 0, 0, SR.render.scale, 0, 0);
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
@@ -521,13 +564,13 @@
       ctx.setTransform(SR.render.scale, 0, 0, SR.render.scale, 0, 0);
       drawOverlay(ctx, rally);
       drawScoreboard(ctx, game);
-      if (ui.prompt === 'serve') { drawPower(ctx, ui.power); hint(ctx, 'Aim on their court, click or tap to serve (Space)'); }
-      else if (ui.prompt === 'hitter') hint(ctx, ui.hitterChoice ? 'Hitter chosen' : 'Pick your hitter: click a player or press 1-' + ui.hitters.length);
+      if (ui.prompt === 'serve') { drawPower(ctx, ui.power); hint(ctx, SR.touch ? 'Tap their court to aim and serve' : 'Aim on their court, click or tap to serve (Space)'); }
+      else if (ui.prompt === 'hitter') hint(ctx, ui.hitterChoice ? 'Hitter chosen' : SR.touch ? 'Tap a numbered player to set them' : 'Pick your hitter: click a player or press 1-' + ui.hitters.length);
       else if (ui.prompt === 'target') {
-        hint(ctx, ui.attackTarget ? shotName + ' locked in' : 'Pick a shot (1-6), then click where it goes. Line, Cross and Tool aim themselves');
+        hint(ctx, ui.attackTarget ? shotName + ' locked in' : SR.touch ? 'Pick a shot, then tap where it goes. Line, Cross and Tool aim themselves' : 'Pick a shot (1-6), then click where it goes. Line, Cross and Tool aim themselves');
         this.buttons = buttonRow(ctx, SR.SHOT_ORDER.map(function (id) { return { id: id, label: SR.SHOTS[id].label }; }), ui.tip ? 'tip' : ui.shot, 'shot');
       } else if (ui.prompt === 'block') {
-        hint(ctx, 'Call the block (1-4 or tap a B zone): commit to a side, or Read the set');
+        hint(ctx, SR.touch ? 'Call the block: commit to a side, or Read the set' : 'Call the block (1-4 or tap a B zone): commit to a side, or Read the set');
         this.buttons = buttonRow(ctx, [{ id: 'left', label: 'Left' }, { id: 'middle', label: 'Middle' }, { id: 'right', label: 'Right' }, { id: 'read', label: 'Read' }], ui.blockCall, 'block');
       }
       if (rally.banner) drawBanner(ctx, rally.banner);
