@@ -238,6 +238,7 @@
   }
 
   var squashAt = -9, lastVel = null;
+  var frameAvg = 0.016, slowFor = 0;
 
   function drawBall(ctx, b, style) {
     var hgt = b.z, nowS = performance.now() / 1000;
@@ -298,71 +299,6 @@
       else { ctx.beginPath(); ctx.arc(q.x, q.y, sz, 0, Math.PI * 2); ctx.fill(); }
     });
     ctx.globalAlpha = 1;
-  }
-
-  // Dotted flight path from time t0 to t1, its shadow line on the floor and
-  // a spot where it comes down. Dots fade the further ahead they are.
-  function drawArc(ctx, p0, v, t0, t1, color, alpha) {
-    var P = SR.phys, n = Math.max(2, Math.ceil((t1 - t0) / 0.035)), i, q, g;
-    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
-    ctx.globalAlpha = alpha * 0.35;
-    ctx.setLineDash([4, 6]);
-    ctx.beginPath();
-    for (i = 0; i <= n; i++) {
-      var pt = P.at(p0, v, t0 + (t1 - t0) * i / n);
-      g = proj(pt.x, pt.y, 0);
-      if (i) ctx.lineTo(g.x, g.y); else ctx.moveTo(g.x, g.y);
-    }
-    ctx.stroke();
-    ctx.setLineDash([]);
-    // Thin glowing line through the air, dots on top.
-    ctx.globalAlpha = alpha * 0.45; ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    for (i = 0; i <= n; i++) {
-      var ap = P.at(p0, v, t0 + (t1 - t0) * i / n), aq = proj(ap.x, ap.y, Math.max(0, ap.z));
-      if (i) ctx.lineTo(aq.x, aq.y); else ctx.moveTo(aq.x, aq.y);
-    }
-    ctx.stroke();
-    for (i = 1; i <= n; i++) {
-      var k = i / n, b = P.at(p0, v, t0 + (t1 - t0) * k);
-      q = proj(b.x, b.y, Math.max(0, b.z));
-      ctx.globalAlpha = alpha * (1 - k * 0.55);
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(1.8, 0.07 * q.s), 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function landSpot(ctx, x, y, color, k, t) {
-    // Shrinks onto the spot as the ball comes down.
-    var r = 0.32 + 0.55 * k, spin = t * 3;
-    ctx.globalAlpha = 0.22;
-    groundEllipse(ctx, x, y, r, color);
-    ctx.globalAlpha = 0.95;
-    groundEllipse(ctx, x, y, r, null, color, 2);
-    groundEllipse(ctx, x, y, 0.1, color);
-    // Four ticks around the ring turn slowly.
-    for (var i = 0; i < 4; i++) {
-      var a = spin + i * Math.PI / 2;
-      line(ctx, proj(x + Math.cos(a) * (r + 0.08), y + Math.sin(a) * (r + 0.08), 0), proj(x + Math.cos(a) * (r + 0.28), y + Math.sin(a) * (r + 0.28), 0), color, 2);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function drawFlight(ctx, f, t) {
-    var P = SR.phys, now = Math.min(f.t, f.landT), L = P.at(f.p0, f.v, f.landT);
-    var total = Math.max(0.2, f.landT), left = Math.max(0, f.landT - now);
-    if (left < 0.02) return;
-    var fast = P.speed(f.v) > 15;
-    drawArc(ctx, f.p0, f.v, now, f.landT, fast ? '#ffb15c' : '#ffffff', 0.75);
-    landSpot(ctx, L.x, L.y, fast ? '#ffb15c' : '#ffe066', Math.min(1, left / Math.min(total, 1.2)), t);
-  }
-
-  // Preview of a planned hit from p0 to the aim point.
-  function previewHit(ctx, p0, aim, T, margin, color) {
-    var P = SR.phys, tgt = { x: aim.x, y: aim.y, z: 0 };
-    T = P.clearNet(p0, tgt, T, margin);
-    drawArc(ctx, p0, P.solve(p0, tgt, T), 0, T, color, 0.85);
   }
 
   function reticle(ctx, x, y, color, label, t) {
@@ -587,6 +523,8 @@
     draw: function (ctx, game) {
       var now = performance.now() / 1000, dt = lastNow ? Math.min(0.05, now - lastNow) : 0;
       lastNow = now;
+      // If the device can't keep up, switch to cheaper effects for the session.
+      if (dt > 0) { frameAvg += (dt - frameAvg) * 0.05; slowFor = frameAvg > 0.027 ? slowFor + dt : 0; if (slowFor > 3) SR.lowFx = true; }
       var rally = game && game.rally, paused = game && game.paused;
       var simDt = paused ? 0 : dt * (rally ? rally.timeScale : 1) * (SR.speed || 1);
       SR.fx.update(Math.min(0.1, simDt));
@@ -625,35 +563,17 @@
         trail.push({ x: b.x, y: b.y, z: b.z, v: dd / simDt });
         if (trail.length > 16) trail.shift();
       } else if (rally.state !== 'rally') { trail.length = 0; lastVel = null; }
-      // Floor scuffs where the dead ball bounces again.
-      if (lastBall && rally.state !== 'rally' && rally.state !== 'serve' && lastBall.z < 0.3) {
-        if (lastBall.dz < 0 && b.z > lastBall.z + 0.001) SR.fx.mark(lastBall.x, lastBall.y, 0.7);
-      }
-      lastBall = { x: b.x, y: b.y, z: b.z, dz: lastBall ? b.z - lastBall.z : 0 };
+      lastBall = { x: b.x, y: b.y, z: b.z };
 
       // Ground markers under everything else
       drawFx(ctx, 'ground');
       if (ui.prompt === 'block') drawBlockZones(ctx, ui.blockCall === 'read' ? null : ui.blockCall, now);
       if (ui.prompt === 'serve') reticle(ctx, ui.aim.x, ui.aim.y, '#ff4d3d', 'SERVE', now);
-      // Serve preview: the arc from the server's hand to the aim point.
-      if (ui.prompt === 'serve' && rally.server) {
-        var sv = rally.server, sd = sv.x < C.NET_X ? 1 : -1;
-        previewHit(ctx, { x: sv.x + sd * 0.9, y: sv.y, z: 2.9 }, ui.aim, 1.6 - 0.65 * ui.power, 0.15, '#ff7a6b');
-      }
-      // Attack preview from where the set will be hit.
-      var fl = rally.flight, aimPt = ui.attackTarget || (ui.prompt === 'target' && !SR.SHOTS[ui.shot].auto ? game.hover : null);
-      if (ui.prompt === 'target' && fl && aimPt) {
-        var tH = SR.phys.timeAtHeight(fl.p0, fl.v, 2.9);
-        if (tH) {
-          var hp = SR.phys.at(fl.p0, fl.v, tH), soft = ui.tip || ui.shot === 'tip';
-          var d3 = Math.hypot(aimPt.x - hp.x, aimPt.y - hp.y, hp.z);
-          previewHit(ctx, hp, aimPt, soft ? 0.95 : d3 / (ui.shot === 'roll' ? 13 : 21), ui.shot === 'roll' ? 0.5 : 0.12, soft ? '#36c5ff' : '#ff7a6b');
-        }
-      } else if (fl && rally.state === 'rally' && ui.prompt !== 'target') drawFlight(ctx, fl, now);
       var shotName = SR.SHOTS[ui.tip ? 'tip' : ui.shot].label.toUpperCase();
       if (ui.attackTarget && rally.state === 'rally') reticle(ctx, ui.attackTarget.x, ui.attackTarget.y, ui.tip || ui.shot === 'tip' ? '#36c5ff' : '#ff4d3d', shotName, now);
       if (ui.prompt === 'target' && game.hover && !ui.attackTarget && !SR.SHOTS[ui.shot].auto) reticle(ctx, game.hover.x, game.hover.y, game.shift ? '#36c5ff' : '#ff4d3d', null, now);
 
+      if (SR.sprites.shadows) SR.sprites.shadows(ctx, rally.all(), rally, proj);
       var hitterSet = {};
       if (ui.prompt === 'hitter') ui.hitters.forEach(function (h, i) { hitterSet[h.p.idx] = i + 1; });
 

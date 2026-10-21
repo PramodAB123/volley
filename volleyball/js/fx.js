@@ -6,7 +6,7 @@
   var fx = {
     parts: [],
     rings: [],
-    marks: [],     // ball marks left on the floor where it landed or bounced
+    marks: [],     // ball mark left on the floor where it landed
     shake: 0,
     hitStop: 0,
     punch: 0,      // brief camera push-in on big hits
@@ -70,11 +70,6 @@
         }
         this.cheer = 3;
       }
-    },
-
-    mark: function (x, y, size) {
-      if (this.marks.length > 12) this.marks.shift();
-      this.marks.push({ x: x, y: y, life: 0, max: 2.2, size: size, call: null });
     },
 
     update: function (dt) {

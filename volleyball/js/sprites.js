@@ -53,7 +53,7 @@
   // Build the pose: returns local joint positions.
   function pose(p, rally) {
     var t = rally.t, inAir = p.z > 0.05;
-    var hipZ = 0.88, lean = 0.04, side = 0.12, twist = 0, headF = 0, plat = null, platK = 0, tilt = 0;
+    var hipZ = 0.88, lean = 0.04, side = 0.12, twist = 0, headF = 0, plat = null, platK = 0, tilt = 0, hipTw = null;
     var footL = v(0.05, 0.24, 0), footR = v(-0.02, -0.24, 0);
     var handL = v(0.32, 0.2, 1.0), handR = v(0.32, -0.2, 1.0);
     var elbowDir = v(-0.2, 1, -1), kneeDir = v(1, 0, 0.1);
@@ -201,6 +201,8 @@
       handL = v(0.16 - sw, 0.24, 1.05 + Math.max(0, -sn) * 0.08); handR = v(0.16 + sw, -0.24, 1.05 + Math.max(0, sn) * 0.08);
       elbowDir = v(-1, 0.4, -0.6);
       twist = -sn * 0.12 * mf;
+      // The pelvis swings with the legs, against the shoulders.
+      hipTw = sn * 0.16 * mf;
       // Hustling to a ball: stay low with the arms ready to form the platform.
       if (p.lock && toContact < 1.4 && toContact > 0 && rally.setter !== p) {
         hipZ -= 0.07; lean += 0.05; twist *= 0.3;
@@ -235,7 +237,8 @@
     var ct = Math.cos(twist), st = Math.sin(twist);
     var j = {};
     // Hips turn a little with the shoulders, the shoulders counter-rotate.
-    j.hipL = v(-side * st * 0.5, side * ct, hipZ); j.hipR = v(side * st * 0.5, -side * ct, hipZ);
+    var hTw = hipTw === null ? twist * 0.5 : hipTw, hc = Math.cos(hTw), hs = Math.sin(hTw);
+    j.hipL = v(-side * hs, side * hc, hipZ); j.hipR = v(side * hs, -side * hc, hipZ);
     j.shL = v(lean - 0.2 * st, 0.2 * ct, shZ - tilt * 0.2); j.shR = v(lean + 0.2 * st, -0.2 * ct, shZ + tilt * 0.2);
     // Forearm platform: both arms straight, hands together, pointing at the ball.
     if (plat && platK > 0) {
@@ -256,149 +259,279 @@
     return j;
   }
 
-  function darken(hex, k) {
-    var n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-    return 'rgb(' + Math.round(r * k) + ',' + Math.round(g * k) + ',' + Math.round(b * k) + ')';
-  }
-
-  function seg(ctx, a, b, w, color) {
-    ctx.strokeStyle = color; ctx.lineWidth = w;
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  function rgb(hex) { var n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+  function tone(hex, k) {
+    // k < 1 darkens, k > 1 mixes toward white.
+    var c = rgb(hex), f = function (x) { return Math.round(k <= 1 ? x * k : x + (255 - x) * (k - 1)); };
+    return 'rgb(' + f(c[0]) + ',' + f(c[1]) + ',' + f(c[2]) + ')';
   }
   function along(a, b, k) { return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k }; }
 
-  SR.sprites = {
-    draw: function (ctx, p, team, rally, proj, hl) {
-      var j = pose(p, rally), S = {}, w = j._w;
-      delete j._w;
-      // Each joint follows its target on a critically damped spring, so poses
-      // flow into each other with natural ease-in and ease-out.
-      var dtp = rally.t - (p._jt || 0);
-      if (!p._j || dtp < 0 || dtp > 0.5) {
-        p._j = {}; p._jv = {};
-        Object.keys(j).forEach(function (k) { p._j[k] = v(j[k].f, j[k].s, j[k].z); p._jv[k] = v(0, 0, 0); });
-      } else if (dtp > 0) {
-        var n = Math.ceil(dtp / (1 / 240)), h = dtp / n;
-        Object.keys(j).forEach(function (k) {
-          var x = p._j[k], vel = p._jv[k], g = j[k];
-          if (!x) { p._j[k] = v(g.f, g.s, g.z); p._jv[k] = v(0, 0, 0); return; }
-          for (var i = 0; i < n; i++) {
-            vel.f += (w * w * (g.f - x.f) - 2 * w * vel.f) * h; x.f += vel.f * h;
-            vel.s += (w * w * (g.s - x.s) - 2 * w * vel.s) * h; x.s += vel.s * h;
-            vel.z += (w * w * (g.z - x.z) - 2 * w * vel.z) * h; x.z += vel.z * h;
-          }
-        });
-      }
-      p._jt = rally.t;
-      // Limb lengths stay exact: re-solve knees and elbows from the smoothed ends.
-      var J = p._j;
-      j = {};
-      Object.keys(J).forEach(function (k) { j[k] = v(J[k].f, J[k].s, J[k].z); });
-      function resolve(root, mid, end, l1, l2, bias) {
-        var hint = v(j[mid].f - (j[root].f + j[end].f) / 2 + bias.f * 0.05, j[mid].s - (j[root].s + j[end].s) / 2 + bias.s * 0.05, j[mid].z - (j[root].z + j[end].z) / 2 + bias.z * 0.05);
-        var r = ik(j[root], j[end], l1, l2, hint);
-        j[mid] = r.joint; j[end] = r.end;
-      }
-      resolve('hipL', 'kneeL', 'footL', THIGH, SHIN, v(1, 0.15, 0));
-      resolve('hipR', 'kneeR', 'footR', THIGH, SHIN, v(1, -0.15, 0));
-      resolve('shL', 'elbowL', 'handL', UPPER, FORE, v(0, 1, -1));
-      resolve('shR', 'elbowR', 'handR', UPPER, FORE, v(0, -1, -1));
-      var cy = Math.cos(p.yaw), sy = Math.sin(p.yaw);
+  // Light comes from the upper left of the screen.
+  var LX = -0.6, LY = -0.8;
+
+  // A tapered, rounded limb segment with a shaded edge and a soft highlight.
+  function limb(ctx, a, b, w0, w1, base, dark, light) {
+    var dx = b.x - a.x, dy = b.y - a.y, l = Math.sqrt(dx * dx + dy * dy) || 1e-3, nx = -dy / l, ny = dx / l;
+    var r0 = w0 / 2, r1 = w1 / 2, ang = Math.atan2(dy, dx);
+    function shape(g) {
+      ctx.beginPath();
+      ctx.moveTo(a.x + nx * (r0 + g), a.y + ny * (r0 + g));
+      ctx.lineTo(b.x + nx * (r1 + g), b.y + ny * (r1 + g));
+      ctx.arc(b.x, b.y, r1 + g, ang + Math.PI / 2, ang - Math.PI / 2, true);
+      ctx.lineTo(a.x - nx * (r0 + g), a.y - ny * (r0 + g));
+      ctx.arc(a.x, a.y, r0 + g, ang - Math.PI / 2, ang + Math.PI / 2, true);
+      ctx.closePath();
+    }
+    if (w0 > 3.5) { shape(0.5); ctx.fillStyle = dark; ctx.fill(); shape(-0.2); }
+    else shape(0);
+    ctx.fillStyle = base; ctx.fill();
+    // Highlight on the side facing the light.
+    var side = nx * LX + ny * LY > 0 ? 1 : -1, hk = 0.38;
+    if (w1 > 2.2) {
+      ctx.strokeStyle = light; ctx.lineWidth = Math.max(0.8, Math.min(w0, w1) * 0.28);
+      ctx.beginPath();
+      ctx.moveTo(a.x + nx * side * r0 * hk + dx * 0.1, a.y + ny * side * r0 * hk + dy * 0.1);
+      ctx.lineTo(b.x + nx * side * r1 * hk - dx * 0.12, b.y + ny * side * r1 * hk - dy * 0.12);
+      ctx.stroke();
+    }
+  }
+
+  // Pose, smoothing and world positions for one player, once per frame.
+  function prepare(p, rally) {
+    if (p._prepT === rally.t && p._W) return p._W;
+    var j = pose(p, rally), w = j._w;
+    delete j._w;
+    // Each joint follows its target on a critically damped spring, so poses
+    // flow into each other with natural ease-in and ease-out.
+    var dtp = rally.t - (p._jt || 0);
+    if (!p._j || dtp < 0 || dtp > 0.5) {
+      p._j = {}; p._jv = {};
+      Object.keys(j).forEach(function (k) { p._j[k] = v(j[k].f, j[k].s, j[k].z); p._jv[k] = v(0, 0, 0); });
+    } else if (dtp > 0) {
+      var n = Math.ceil(dtp / (1 / 240)), h = dtp / n;
       Object.keys(j).forEach(function (k) {
-        var q = j[k];
-        S[k] = proj(p.x + q.f * cy - q.s * sy, p.y + q.f * sy + q.s * cy, p.z + q.z);
+        var x = p._j[k], vel = p._jv[k], g = j[k];
+        if (!x) { p._j[k] = v(g.f, g.s, g.z); p._jv[k] = v(0, 0, 0); return; }
+        for (var i = 0; i < n; i++) {
+          vel.f += (w * w * (g.f - x.f) - 2 * w * vel.f) * h; x.f += vel.f * h;
+          vel.s += (w * w * (g.s - x.s) - 2 * w * vel.s) * h; x.s += vel.s * h;
+          vel.z += (w * w * (g.z - x.z) - 2 * w * vel.z) * h; x.z += vel.z * h;
+        }
       });
+    }
+    p._jt = rally.t;
+    // Limb lengths stay exact: re-solve knees and elbows from the smoothed ends.
+    var J = p._j;
+    j = {};
+    Object.keys(J).forEach(function (k) { j[k] = v(J[k].f, J[k].s, J[k].z); });
+    function resolve(root, mid, end, l1, l2, bias) {
+      var hint = v(j[mid].f - (j[root].f + j[end].f) / 2 + bias.f * 0.05, j[mid].s - (j[root].s + j[end].s) / 2 + bias.s * 0.05, j[mid].z - (j[root].z + j[end].z) / 2 + bias.z * 0.05);
+      var r = ik(j[root], j[end], l1, l2, hint);
+      j[mid] = r.joint; j[end] = r.end;
+    }
+    resolve('hipL', 'kneeL', 'footL', THIGH, SHIN, v(1, 0.15, 0));
+    resolve('hipR', 'kneeR', 'footR', THIGH, SHIN, v(1, -0.15, 0));
+    resolve('shL', 'elbowL', 'handL', UPPER, FORE, v(0, 1, -1));
+    resolve('shR', 'elbowR', 'handR', UPPER, FORE, v(0, -1, -1));
+    // Toes: the shoe points forward from the ankle, rolling down when the
+    // foot is lifted behind (heel up) and flat when planted.
+    ['L', 'R'].forEach(function (sd) {
+      var ft = j['foot' + sd], kn = j['knee' + sd], up = clamp(ft.z * 2.5, 0, 1);
+      var fx = ft.f - kn.f, len = 0.15;
+      var pitch = up * (fx < 0 ? 0.9 : 0.35);
+      j['toe' + sd] = v(ft.f + Math.cos(pitch) * len, ft.s + (sd === 'L' ? 0.01 : -0.01), Math.max(0, ft.z - Math.sin(pitch) * len));
+    });
+    // Pelvis centre for the shorts and the cast shadow.
+    var cy = Math.cos(p.yaw), sy = Math.sin(p.yaw), W = {};
+    Object.keys(j).forEach(function (k) {
+      var q = j[k];
+      W[k] = { x: p.x + q.f * cy - q.s * sy, y: p.y + q.f * sy + q.s * cy, z: p.z + q.z };
+    });
+    p._W = W; p._prepT = rally.t;
+    return W;
+  }
+
+  // Where a point at height z casts its shadow on the floor.
+  var SHX = -0.42, SHY = 0.32;
+  function shadowPt(proj, w) { return proj(w.x + w.z * SHX, w.y + w.z * SHY, 0); }
+
+  var shadowCanvas = null;
+
+  SR.sprites = {
+    prepare: prepare,
+
+    // Long soft shadows for every player, drawn as one layer so overlapping
+    // limbs don't stack up into dark blotches.
+    shadows: function (ctx, players, rally, proj) {
+      var cv = ctx.canvas, direct = !!SR.lowFx;
+      if (direct) {
+        // Slow device: draw straight onto the court (overlaps darken a little).
+        ctx.save(); ctx.globalAlpha = 0.22; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'; ctx.fillStyle = '#000';
+        players.forEach(function (p) {
+          var W = prepare(p, rally), s = proj(p.x, p.y, 0).s, S = {};
+          Object.keys(W).forEach(function (k) { S[k] = shadowPt(proj, W[k]); });
+          ctx.lineWidth = Math.max(1, 0.13 * s); ctx.beginPath();
+          [['hipL', 'kneeL'], ['kneeL', 'footL'], ['hipR', 'kneeR'], ['kneeR', 'footR'], ['shL', 'elbowL'], ['elbowL', 'handL'], ['shR', 'elbowR'], ['elbowR', 'handR'], ['neck', 'head'], ['neck', 'hipL'], ['neck', 'hipR']].forEach(function (sg) {
+            ctx.moveTo(S[sg[0]].x, S[sg[0]].y); ctx.lineTo(S[sg[1]].x, S[sg[1]].y);
+          });
+          ctx.stroke();
+        });
+        ctx.restore();
+        return;
+      }
+      if (!shadowCanvas) shadowCanvas = document.createElement('canvas');
+      // Half resolution: cheaper, and the upscale softens the edges.
+      var sw = Math.ceil(cv.width / 2), shh = Math.ceil(cv.height / 2);
+      if (shadowCanvas.width !== sw || shadowCanvas.height !== shh) { shadowCanvas.width = sw; shadowCanvas.height = shh; }
+      else if (shadowCanvas._dirty) { var c0 = shadowCanvas.getContext('2d'); c0.setTransform(1, 0, 0, 1, 0, 0); c0.clearRect(0, 0, sw, shh); }
+      shadowCanvas._dirty = true;
+      var sc = shadowCanvas.getContext('2d');
+      var mt = ctx.getTransform(), bx0 = 1e9, by0 = 1e9, bx1 = -1e9, by1 = -1e9;
+      sc.setTransform(mt.a / 2, mt.b / 2, mt.c / 2, mt.d / 2, mt.e / 2, mt.f / 2);
+      sc.lineCap = 'round'; sc.lineJoin = 'round';
+      sc.strokeStyle = '#000'; sc.fillStyle = '#000';
+      players.forEach(function (p) {
+        var W = prepare(p, rally), s = proj(p.x, p.y, 0).s, S = {};
+        Object.keys(W).forEach(function (k) {
+          var q = S[k] = shadowPt(proj, W[k]);
+          if (q.x < bx0) bx0 = q.x; if (q.x > bx1) bx1 = q.x; if (q.y < by0) by0 = q.y; if (q.y > by1) by1 = q.y;
+        });
+        function sg(a, b, w) { sc.lineWidth = Math.max(1, w * s); sc.beginPath(); sc.moveTo(S[a].x, S[a].y); sc.lineTo(S[b].x, S[b].y); sc.stroke(); }
+        sg('hipL', 'kneeL', 0.15); sg('kneeL', 'footL', 0.11); sg('hipR', 'kneeR', 0.15); sg('kneeR', 'footR', 0.11);
+        sg('footL', 'toeL', 0.09); sg('footR', 'toeR', 0.09);
+        sg('shL', 'elbowL', 0.09); sg('elbowL', 'handL', 0.075); sg('shR', 'elbowR', 0.09); sg('elbowR', 'handR', 0.075);
+        sc.beginPath();
+        sc.moveTo(S.shL.x, S.shL.y); sc.lineTo(S.shR.x, S.shR.y); sc.lineTo(S.hipR.x, S.hipR.y); sc.lineTo(S.hipL.x, S.hipL.y); sc.closePath();
+        sc.fill(); sc.lineWidth = Math.max(1, 0.12 * s); sc.stroke();
+        sg('neck', 'head', 0.1);
+        sc.beginPath(); sc.arc(S.head.x, S.head.y, Math.max(1.5, 0.12 * s), 0, Math.PI * 2); sc.fill();
+        // Contact shadow right under the feet.
+        var g = proj(p.x, p.y, 0), r = Math.max(2, (0.3 + p.z * 0.05) * g.s);
+        sc.beginPath(); sc.ellipse(g.x, g.y, r, r * 0.4, 0, 0, Math.PI * 2); sc.fill();
+      });
+      // Copy back only the area the shadows cover (in half-size pixels).
+      var pad = 30, X0 = Math.max(0, Math.floor((mt.a * bx0 + mt.e - pad) / 2)), Y0 = Math.max(0, Math.floor((mt.d * by0 + mt.f - pad) / 2));
+      var X1 = Math.min(sw, Math.ceil((mt.a * bx1 + mt.e + pad) / 2)), Y1 = Math.min(shh, Math.ceil((mt.d * by1 + mt.f + pad) / 2));
+      if (X1 <= X0 || Y1 <= Y0) return;
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 0.3;
+      ctx.drawImage(shadowCanvas, X0, Y0, X1 - X0, Y1 - Y0, X0 * 2, Y0 * 2, (X1 - X0) * 2, (Y1 - Y0) * 2);
+      ctx.restore();
+      sc.setTransform(1, 0, 0, 1, 0, 0);
+      sc.clearRect(X0, Y0, X1 - X0, Y1 - Y0);
+      shadowCanvas._dirty = false;
+    },
+
+    draw: function (ctx, p, team, rally, proj, hl) {
+      var W = prepare(p, rally), S = {};
+      Object.keys(W).forEach(function (k) { S[k] = proj(W[k].x, W[k].y, W[k].z); });
       var s = proj(p.x, p.y, p.z).s;
       var skin = SKIN[(p.idx * 2 + p.team) % SKIN.length], hair = HAIR[(p.idx + p.team * 3) % HAIR.length];
-      var shorts = darken(team.color, 0.35), jersey = team.color, shade = darken(team.color, 0.78);
+      var skinD = tone(skin, 0.72), skinL = tone(skin, 1.35);
+      var jersey = team.color, jerseyD = tone(team.color, 0.62), jerseyL = tone(team.color, 1.3);
+      var shorts = tone(team.color, 0.32), shortsD = tone(team.color, 0.2), shortsL = tone(team.color, 0.5);
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-      // Shadow stretches with height so jumps read clearly.
-      var gs = proj(p.x, p.y, 0), shR = Math.max(3, (0.34 + p.z * 0.1) * gs.s);
-      ctx.fillStyle = 'rgba(0,0,0,' + Math.max(0.12, 0.32 - p.z * 0.12) + ')';
-      ctx.beginPath(); ctx.ellipse(gs.x, gs.y, shR, shR * 0.38, 0, 0, Math.PI * 2); ctx.fill();
-      if (hl) { ctx.strokeStyle = hl; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(gs.x, gs.y, shR * 1.6, shR * 0.62, 0, 0, Math.PI * 2); ctx.stroke(); }
+      if (hl) {
+        var gs = proj(p.x, p.y, 0), shR = Math.max(3, 0.36 * gs.s);
+        ctx.strokeStyle = hl; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(gs.x, gs.y, shR * 1.6, shR * 0.62, 0, 0, Math.PI * 2); ctx.stroke();
+      }
 
-      var wThigh = Math.max(2, 0.15 * s), wShin = Math.max(1.6, 0.115 * s), wUp = Math.max(1.5, 0.1 * s), wFore = Math.max(1.3, 0.085 * s);
+      var wThigh = Math.max(2.2, 0.16 * s), wKnee = Math.max(1.8, 0.11 * s), wAnkle = Math.max(1.4, 0.075 * s);
+      var wUp = Math.max(1.6, 0.1 * s), wElbow = Math.max(1.3, 0.075 * s), wWrist = Math.max(1.1, 0.06 * s);
       function leg(side) {
-        var hip = S['hip' + side], knee = S['knee' + side], foot = S['foot' + side];
-        seg(ctx, hip, knee, wThigh, skin);
-        seg(ctx, knee, foot, wShin, skin);
-        seg(ctx, along(knee, foot, 0.62), foot, wShin * 1.05, '#f2f2f2');        // sock
-        seg(ctx, along(hip, knee, 0.82), along(knee, foot, 0.14), wThigh * 1.12, '#22262e'); // knee pad
-        ctx.fillStyle = '#e9edf2';                                                     // shoe
-        ctx.beginPath(); ctx.ellipse(foot.x, foot.y, wShin * 0.85, wShin * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+        var hip = S['hip' + side], knee = S['knee' + side], foot = S['foot' + side], toe = S['toe' + side];
+        limb(ctx, hip, knee, wThigh, wKnee * 1.15, skin, skinD, skinL);
+        limb(ctx, knee, foot, wKnee * 1.05, wAnkle, skin, skinD, skinL);
+        limb(ctx, along(knee, foot, 0.62), foot, wAnkle * 1.25, wAnkle * 1.2, '#f4f4f4', '#b9bec6', '#ffffff');   // sock
+        limb(ctx, along(hip, knee, 0.86), along(knee, foot, 0.12), wKnee * 1.5, wKnee * 1.4, '#2a2e36', '#14161b', '#4a505c'); // knee pad
+        limb(ctx, foot, toe, wAnkle * 1.6, wAnkle * 1.3, '#eef1f5', '#8d96a3', '#ffffff');                     // shoe
+        ctx.strokeStyle = team.color; ctx.lineWidth = Math.max(0.6, wAnkle * 0.35);
+        ctx.beginPath(); var m0 = along(foot, toe, 0.2), m1 = along(foot, toe, 0.75); ctx.moveTo(m0.x, m0.y); ctx.lineTo(m1.x, m1.y); ctx.stroke();
       }
       function arm(side) {
         var sh = S['sh' + side], el = S['elbow' + side], hd = S['hand' + side];
-        seg(ctx, sh, el, wUp, skin);
-        seg(ctx, el, hd, wFore, skin);
-        seg(ctx, sh, along(sh, el, 0.45), wUp * 1.35, shade); // sleeve
-        ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(hd.x, hd.y, wFore * 0.7, 0, Math.PI * 2); ctx.fill();
+        limb(ctx, sh, el, wUp, wElbow, skin, skinD, skinL);
+        limb(ctx, el, hd, wElbow, wWrist, skin, skinD, skinL);
+        limb(ctx, sh, along(sh, el, 0.42), wUp * 1.45, wUp * 1.3, jersey, jerseyD, jerseyL); // sleeve
+        ctx.fillStyle = skinD; ctx.beginPath(); ctx.arc(hd.x, hd.y, wWrist * 0.85, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(hd.x, hd.y, wWrist * 0.7, 0, Math.PI * 2); ctx.fill();
       }
       // Far side first.
       var leftFar = S.shL.d > S.shR.d;
       var far = leftFar ? 'L' : 'R', near = leftFar ? 'R' : 'L';
       leg(far); leg(near);
-      // Shorts
-      ctx.fillStyle = shorts;
-      ctx.beginPath();
-      var hl1 = S.hipL, hr1 = S.hipR, tl = along(S.hipL, S.kneeL, 0.42), tr = along(S.hipR, S.kneeR, 0.42);
-      ctx.moveTo(hl1.x, hl1.y); ctx.lineTo(hr1.x, hr1.y); ctx.lineTo(tr.x, tr.y); ctx.lineTo(tl.x, tl.y); ctx.closePath(); ctx.fill();
-      seg(ctx, hl1, tl, wThigh * 1.2, shorts); seg(ctx, hr1, tr, wThigh * 1.2, shorts);
+      // Shorts: a rounded pelvis with short legs.
+      var tl = along(S.hipL, S.kneeL, 0.4), tr = along(S.hipR, S.kneeR, 0.4);
+      limb(ctx, S.hipL, tl, wThigh * 1.22, wThigh * 1.18, shorts, shortsD, shortsL);
+      limb(ctx, S.hipR, tr, wThigh * 1.22, wThigh * 1.18, shorts, shortsD, shortsL);
+      limb(ctx, S.hipL, S.hipR, wThigh * 1.15, wThigh * 1.15, shorts, shortsD, shortsL);
       // Arm hidden behind the torso
       var armBehind = S['sh' + far].d > S.neck.d + 0.02;
       if (armBehind) arm(far);
-      // Torso
-      ctx.fillStyle = jersey;
-      ctx.beginPath();
-      ctx.moveTo(S.shL.x, S.shL.y); ctx.lineTo(S.shR.x, S.shR.y);
-      ctx.lineTo(S.hipR.x, S.hipR.y); ctx.lineTo(S.hipL.x, S.hipL.y); ctx.closePath(); ctx.fill();
-      seg(ctx, S.shL, S.shR, wUp * 1.4, jersey);
-      seg(ctx, along(S.shL, S.hipL, 0.1), S.hipL, wUp * 0.9, jersey);
-      seg(ctx, along(S.shR, S.hipR, 0.1), S.hipR, wUp * 0.9, jersey);
-      seg(ctx, S.hipL, S.hipR, wUp * 0.6, shade);
+      // Torso: broad shoulders tapering to the waist, shaded across.
+      var waistL = along(S.hipR, S.hipL, 0.92), waistR = along(S.hipL, S.hipR, 0.92);
+      var cxs = (S.shL.x + S.shR.x) / 2, cys = (S.shL.y + S.shR.y) / 2, cxh = (S.hipL.x + S.hipR.x) / 2, cyh = (S.hipL.y + S.hipR.y) / 2;
+      var gr = ctx.createLinearGradient(S.shL.x, S.shL.y, S.shR.x, S.shR.y);
+      var lightOnL = (S.shL.x - S.shR.x) * LX + (S.shL.y - S.shR.y) * LY > 0;
+      gr.addColorStop(0, lightOnL ? jerseyL : jerseyD); gr.addColorStop(0.45, jersey); gr.addColorStop(1, lightOnL ? jerseyD : jerseyL);
+      function torsoPath(g) {
+        var ox = (cxs - cxh), oy = (cys - cyh);
+        ctx.beginPath();
+        ctx.moveTo(S.shL.x, S.shL.y);
+        ctx.quadraticCurveTo(cxs + (S.shL.x - cxs) * 0.2 - oy * 0.0, cys - wUp * 0.55 - g, S.shR.x, S.shR.y);
+        ctx.quadraticCurveTo(S.shR.x + (waistR.x - S.shR.x) * 0.45 + (S.shR.x - cxs) * 0.12, S.shR.y + (waistR.y - S.shR.y) * 0.45 + (S.shR.y - cys) * 0.12, waistR.x, waistR.y);
+        ctx.lineTo(waistL.x, waistL.y);
+        ctx.quadraticCurveTo(S.shL.x + (waistL.x - S.shL.x) * 0.45 + (S.shL.x - cxs) * 0.12, S.shL.y + (waistL.y - S.shL.y) * 0.45 + (S.shL.y - cys) * 0.12, S.shL.x, S.shL.y);
+        ctx.closePath();
+        return ox;
+      }
+      ctx.lineWidth = Math.max(1, wUp * 0.5); ctx.strokeStyle = jerseyD;
+      torsoPath(0); ctx.fillStyle = gr; ctx.fill(); ctx.stroke();
+      limb(ctx, S.shL, S.shR, wUp * 1.25, wUp * 1.25, jersey, jerseyD, jerseyL);
       // Jersey pattern, clipped to the torso.
       if (team.pattern && s > 9) {
         ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(S.shL.x, S.shL.y); ctx.lineTo(S.shR.x, S.shR.y); ctx.lineTo(S.hipR.x, S.hipR.y); ctx.lineTo(S.hipL.x, S.hipL.y); ctx.closePath();
-        ctx.clip();
-        ctx.globalAlpha = 0.55;
+        torsoPath(0); ctx.clip();
+        ctx.globalAlpha = 0.5;
         var bw = Math.max(1.5, 0.06 * s), i2;
         if (team.pattern === 'stripes') {
-          for (i2 = -3; i2 <= 3; i2 += 2) seg(ctx, along(S.shR, S.shL, 0.5 + i2 * 0.1), along(S.hipR, S.hipL, 0.5 + i2 * 0.1), bw, team.trim);
+          for (i2 = -3; i2 <= 3; i2 += 2) { ctx.strokeStyle = team.trim; ctx.lineWidth = bw; ctx.beginPath(); var a1 = along(S.shR, S.shL, 0.5 + i2 * 0.1), a2 = along(S.hipR, S.hipL, 0.5 + i2 * 0.1); ctx.moveTo(a1.x, a1.y); ctx.lineTo(a2.x, a2.y); ctx.stroke(); }
         } else if (team.pattern === 'hoops') {
-          for (i2 = 1; i2 <= 3; i2++) seg(ctx, along(S.shL, S.hipL, i2 * 0.25), along(S.shR, S.hipR, i2 * 0.25), bw * 1.2, team.trim);
+          for (i2 = 1; i2 <= 3; i2++) { ctx.strokeStyle = team.trim; ctx.lineWidth = bw * 1.2; ctx.beginPath(); var b1 = along(S.shL, S.hipL, i2 * 0.25), b2 = along(S.shR, S.hipR, i2 * 0.25); ctx.moveTo(b1.x, b1.y); ctx.lineTo(b2.x, b2.y); ctx.stroke(); }
         } else {
-          ctx.fillStyle = shade; ctx.globalAlpha = 0.8;
+          ctx.fillStyle = jerseyD; ctx.globalAlpha = 0.6;
           ctx.beginPath(); var m1 = along(S.shL, S.shR, 0.5), m2 = along(S.hipL, S.hipR, 0.5);
           ctx.moveTo(m1.x, m1.y); ctx.lineTo(S.shR.x, S.shR.y); ctx.lineTo(S.hipR.x, S.hipR.y); ctx.lineTo(m2.x, m2.y); ctx.closePath(); ctx.fill();
         }
         ctx.restore();
       }
       if (s > 13) {
-        ctx.fillStyle = team.trim; ctx.font = '800 ' + Math.round(0.22 * s) + 'px system-ui, sans-serif';
+        ctx.fillStyle = team.trim; ctx.font = '800 ' + Math.round(0.2 * s) + 'px system-ui, sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        var cx = (S.shL.x + S.shR.x + S.hipL.x + S.hipR.x) / 4, cy = (S.shL.y + S.shR.y + S.hipL.y + S.hipR.y) / 4;
-        ctx.fillText(String(p.num), cx, cy);
+        ctx.fillText(String(p.num), (cxs * 0.55 + cxh * 0.45), (cys * 0.55 + cyh * 0.45));
       }
       // Neck and head; the near team shows the back of the head.
-      seg(ctx, S.neck, along(S.neck, S.head, 0.5), wUp * 1.1, skin);
-      var hr = Math.max(2.5, 0.115 * s), hd = S.head;
+      limb(ctx, S.neck, along(S.neck, S.head, 0.55), wUp * 1.05, wUp * 0.95, skin, skinD, skinL);
+      var hr = Math.max(2.5, 0.11 * s), hd = S.head;
+      ctx.fillStyle = skinD; ctx.beginPath(); ctx.arc(hd.x, hd.y, hr + 0.5, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(hd.x, hd.y, hr, 0, Math.PI * 2); ctx.fill();
+      var facing = Math.cos(p.yaw) > 0; // facing away from the camera
       ctx.fillStyle = hair; ctx.beginPath();
-      if (Math.cos(p.yaw) > 0) ctx.arc(hd.x, hd.y - hr * 0.05, hr * 1.02, Math.PI * 0.9, Math.PI * 2.1);
-      else ctx.arc(hd.x, hd.y - hr * 0.25, hr * 0.98, Math.PI * 1.05, Math.PI * 1.95);
+      if (facing) ctx.arc(hd.x, hd.y - hr * 0.05, hr * 1.04, Math.PI * 0.85, Math.PI * 2.15);
+      else ctx.arc(hd.x, hd.y - hr * 0.3, hr * 0.98, Math.PI * 1.02, Math.PI * 1.98);
       ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.beginPath(); ctx.arc(hd.x - hr * 0.3, hd.y - hr * 0.55, hr * 0.35, 0, Math.PI * 2); ctx.fill();
       if (!armBehind) arm(far);
       arm(near);
       // Role tag beside the head, coloured by position.
       if (s > 9) {
         var tag = SR.ROLE_TAGS[p.idx], col = SR.ROLE_COLORS[tag.replace(/[0-9]/g, '')] || '#fff';
-        ctx.font = '800 ' + Math.max(9, Math.round(0.2 * s)) + 'px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.font = '800 ' + Math.max(9, Math.round(0.18 * s)) + 'px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
         ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-        ctx.strokeText(tag, hd.x + hr * 1.5, hd.y - hr * 0.6); ctx.fillStyle = col; ctx.fillText(tag, hd.x + hr * 1.5, hd.y - hr * 0.6);
+        ctx.strokeText(tag, hd.x + hr * 1.6, hd.y - hr * 0.6); ctx.fillStyle = col; ctx.fillText(tag, hd.x + hr * 1.6, hd.y - hr * 0.6);
       }
       return { x: hd.x, y: hd.y };
     }
