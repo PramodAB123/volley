@@ -6,6 +6,7 @@
   var fx = {
     parts: [],
     rings: [],
+    marks: [],     // ball marks left on the floor where it landed or bounced
     shake: 0,
     hitStop: 0,
     punch: 0,      // brief camera push-in on big hits
@@ -52,6 +53,9 @@
         this.burst(p, 12, ['#ffffff', '#cccccc'], 1.5, 0.6, 0.5, 0.05, 6);
       } else if (name === 'land') {
         var big = d.kind === 'kill' || d.kind === 'ace' || d.kind === 'block';
+        // Line call: a scuff where the ball hit, tagged IN or OUT.
+        var call = d.reason === 'in' ? 'IN' : d.reason === 'out' ? 'OUT' : null;
+        this.marks.push({ x: p.x, y: p.y, life: 0, max: 3.2, size: 1, call: call });
         this.ring(p, big ? '#ffd23f' : '#ffffff', big ? 1.8 : 1.0, big ? 0.7 : 0.5);
         this.burst({ x: p.x, y: p.y, z: 0.05 }, big ? 24 : 12, ['#f6d2a8', '#e9b47c', '#ffffff'], big ? 3 : 1.8, big ? 2.2 : 1.2, 0.6, 0.06, 7);
         if (big) { this.shake = Math.max(this.shake, 9); this.cheer = 2.2; this.punch = Math.max(this.punch, 0.6); }
@@ -68,6 +72,11 @@
       }
     },
 
+    mark: function (x, y, size) {
+      if (this.marks.length > 12) this.marks.shift();
+      this.marks.push({ x: x, y: y, life: 0, max: 2.2, size: size, call: null });
+    },
+
     update: function (dt) {
       this.shake = Math.max(0, this.shake - dt * 30);
       this.punch = Math.max(0, this.punch - dt * 3.5);
@@ -82,6 +91,10 @@
         if (q.flutter !== undefined) { q.vx += Math.sin(q.life * 5 + q.flutter) * dt; q.vz = Math.max(q.vz, -1.2); }
         q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt;
         if (q.z < 0) { q.z = 0; q.vz *= -0.3; q.vx *= 0.6; q.vy *= 0.6; }
+      }
+      for (var m = this.marks.length - 1; m >= 0; m--) {
+        this.marks[m].life += dt;
+        if (this.marks[m].life > this.marks[m].max) this.marks.splice(m, 1);
       }
       for (var j = this.rings.length - 1; j >= 0; j--) {
         var r = this.rings[j];

@@ -628,7 +628,7 @@
     this.say(label, name, color, 1.5);
     SR.audio.play('bounce');
     SR.audio.play('whistle');
-    this.fx('land', { pos: { x: b.x, y: b.y }, kind: kind });
+    this.fx('land', { pos: { x: b.x, y: b.y }, kind: kind, reason: reason });
     var self = this, info = { winner: winner, reason: reason, kind: kind };
     this.wait(1.2, function () { self.onPoint(winner, info); });
   };

@@ -362,6 +362,8 @@
     var out = {
       t: 's', T: r3(r.t), w: now(), st: r.state, sT: r3(r.stateT), ts: r.timeScale,
       b: [r3(r.ball.x), r3(r.ball.y), r3(r.ball.z)],
+      // Current ball flight, so the friend can draw its path and landing spot.
+      f: r.flight && r.state === 'rally' ? [r3(r.flight.p0.x), r3(r.flight.p0.y), r3(r.flight.p0.z), r3(r.flight.v.x), r3(r.flight.v.y), r3(r.flight.v.z), r3(r.t - r.flight.t), r3(r.flight.landT)] : 0,
       sv: pi(r.server), se: pi(r.setter), lt: r.lastTouch,
       bn: bn ? [bn.text, bn.sub, bn.color, r3(bn.t), bn.dur] : 0,
       p: ps,
@@ -492,6 +494,7 @@
     this.state = 'idle';
     this.stateT = 0;
     this.ball = { x: 9, y: 4.5, z: 1 };
+    this.flight = null;
     this.banner = null;
     this.server = null;
     this.setter = null;
@@ -588,6 +591,8 @@
     this.stateT = lerp(s0.sT, s1.sT, s0.st === s1.st ? k : 0);
     this.timeScale = s0.ts || 1;
     this.ball = { x: mx(lerp(s0.b[0], s1.b[0], k)), y: my(lerp(s0.b[1], s1.b[1], k)), z: Math.max(0.11, lerp(s0.b[2], s1.b[2], k)) };
+    var F = s0.f;
+    this.flight = F ? { p0: { x: mx(F[0]), y: my(F[1]), z: F[2] }, v: { x: -F[3], y: -F[4], z: F[5] }, t: Math.max(0, this.t - F[6]), landT: F[7] } : null;
     this.server = this.byHost(s0.sv);
     this.setter = this.byHost(s0.se);
     this.lastTouch = 1 - s0.lt;

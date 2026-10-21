@@ -53,7 +53,7 @@
   // Build the pose: returns local joint positions.
   function pose(p, rally) {
     var t = rally.t, inAir = p.z > 0.05;
-    var hipZ = 0.88, lean = 0.04, side = 0.12, twist = 0, headF = 0, plat = null, platK = 0;
+    var hipZ = 0.88, lean = 0.04, side = 0.12, twist = 0, headF = 0, plat = null, platK = 0, tilt = 0;
     var footL = v(0.05, 0.24, 0), footR = v(-0.02, -0.24, 0);
     var handL = v(0.32, 0.2, 1.0), handR = v(0.32, -0.2, 1.0);
     var elbowDir = v(-0.2, 1, -1), kneeDir = v(1, 0, 0.1);
@@ -65,6 +65,10 @@
     var toContact = p.contactAt ? p.contactAt - t : 99;
     var sinceLand = t - p.jumpAt - 0.75;
     var defending = rally.state === 'serve' ? (rally.server && rally.server.team !== p.team) : rally.lastTouch !== p.team;
+    // Time since the other team hit the ball (for the split step), and how fast it's coming.
+    var fl = rally.state === 'rally' ? rally.flight : null;
+    var sinceHit = fl && ((fl.p0.x < SR.COURT.NET_X ? 0 : 1) !== p.team) ? fl.t : 99;
+    var incoming = fl ? Math.sqrt(fl.v.x * fl.v.x + fl.v.y * fl.v.y) : 0;
     var K;
 
     if (act && act.type === 'dive') {
@@ -88,6 +92,10 @@
       handL = v(0.32, 0.2, 1.0); handR = v(0.32, -0.2, 1.0);
       elbowDir = v(0, 1, -0.2);
       twist = -cpt.s * 0.35 * (1 - relax);
+      // Drop the shoulder on the ball side so the platform faces the setter.
+      tilt = clamp(cpt.s * 1.4, -0.45, 0.45) * (1 - relax);
+      // Plant the near foot wider when the ball is off to one side.
+      if (cpt.s > 0.15) footL = v(0.16, 0.42, 0); else if (cpt.s < -0.15) footR = v(-0.1, -0.42, 0);
     } else if (inAir && p.jumpKind === 'block') {
       // Arms shoot up, then press over the net at the top of the jump.
       var press = Math.sin(Math.PI * jt);
@@ -124,9 +132,9 @@
       footL = v(0.1, 0.2, 0); footR = v(-0.08, -0.2, 0);
       handL = v(0.14 + push * 0.04, 0.12, 2.0 + push * 0.22); handR = v(0.14 + push * 0.04, -0.12, 2.0 + push * 0.22);
       elbowDir = v(0.2, 1, -0.2);
-    } else if (toContact < 0.5 && toContact > -0.05) {
+    } else if (toContact < 0.65 && toContact > -0.05) {
       // Reading the ball: drop into a staggered stance and bring the platform to it.
-      var kk = ease(1 - toContact / 0.5);
+      var kk = ease(1 - toContact / 0.65), dig = clamp((incoming - 9) / 8, 0, 1);
       if (p.contactKind === 'dive') {
         var rd = platform(p, 0.3);
         hipZ = 0.8 - kk * 0.3; lean = 0.15 + kk * 0.33;
@@ -135,13 +143,14 @@
         elbowDir = v(0, 1, -0.3);
       } else {
         var pp = platform(p, 0.5);
-        hipZ = 0.82 - kk * (0.13 + Math.max(0, 0.85 - pp.z) * 0.4); lean = 0.1 + kk * 0.18;
+        hipZ = 0.82 - kk * (0.13 + dig * 0.1 + Math.max(0, 0.85 - pp.z) * 0.4); lean = 0.1 + kk * (0.18 + dig * 0.08);
         // Step toward the ball side with the near foot.
         var stepS = clamp(pp.s, -0.25, 0.25) * kk;
         footL = v(0.14, 0.32 + Math.max(0, stepS), 0); footR = v(-0.08, -0.32 + Math.min(0, stepS), 0);
-        handL = v(0.36, 0.2, 0.95); handR = v(0.36, -0.2, 0.95); plat = pp; platK = kk;
+        handL = v(0.36, 0.2, 0.95); handR = v(0.36, -0.2, 0.95); plat = pp; platK = ease((kk - 0.25) / 0.6);
         elbowDir = v(0, 1, -0.2);
         twist = -pp.s * 0.35 * kk;
+        tilt = clamp(pp.s * 1.4, -0.45, 0.45) * kk;
       }
     } else if (sinceLand > 0 && sinceLand < 0.32 && (p.jumpKind === 'spike' || p.jumpKind === 'block' || p.jumpKind === 'serve')) {
       // Soft landing: knees absorb, then rise back to ready.
@@ -192,6 +201,11 @@
       handL = v(0.16 - sw, 0.24, 1.05 + Math.max(0, -sn) * 0.08); handR = v(0.16 + sw, -0.24, 1.05 + Math.max(0, sn) * 0.08);
       elbowDir = v(-1, 0.4, -0.6);
       twist = -sn * 0.12 * mf;
+      // Hustling to a ball: stay low with the arms ready to form the platform.
+      if (p.lock && toContact < 1.4 && toContact > 0 && rally.setter !== p) {
+        hipZ -= 0.07; lean += 0.05; twist *= 0.3;
+        handL = v(0.3, 0.16, 0.9 + Math.max(0, -sn) * 0.03); handR = v(0.3, -0.16, 0.9 + Math.max(0, sn) * 0.03); elbowDir = v(-0.3, 1, -0.4);
+      }
       // Side shuffles stay low with arms ready instead of a full sprint.
       if (Math.abs(ms) > 0.7) {
         hipZ = 0.8 - Math.abs(sn) * 0.02; handL = v(0.32, 0.22, 0.98); handR = v(0.32, -0.22, 0.98); lean = 0.1; twist = 0;
@@ -206,6 +220,13 @@
       var shift = Math.sin(t * 1.6 + p.idx * 1.3) * 0.02;
       footL.z += Math.max(0, -shift) * 0.4; footR.z += Math.max(0, shift) * 0.4;
       if (rally.state === 'rally' && p.jumpKind === 'block') { handL = v(0.15, 0.24, 1.62); handR = v(0.15, -0.24, 1.62); elbowDir = v(-0.2, 1, -0.6); }
+      // Split step: a small hop as the other team hits, landing wide and low.
+      else if (sinceHit < 0.42) {
+        var sk = sinceHit / 0.42, hop = sk < 0.45 ? Math.sin(Math.PI * sk / 0.45) * 0.07 : 0, sink = sk >= 0.45 ? Math.sin(Math.PI * (sk - 0.45) / 0.55) * 0.08 : 0;
+        hipZ += hop - sink; footL = v(0.08, 0.33, hop); footR = v(-0.04, -0.33, hop);
+        handL = v(0.36, 0.24, 0.92 + hop); handR = v(0.36, -0.24, 0.92 + hop);
+        lean = 0.14;
+      }
     }
 
     // Keep the torso a fixed length however far the player leans.
@@ -215,10 +236,10 @@
     var j = {};
     // Hips turn a little with the shoulders, the shoulders counter-rotate.
     j.hipL = v(-side * st * 0.5, side * ct, hipZ); j.hipR = v(side * st * 0.5, -side * ct, hipZ);
-    j.shL = v(lean - 0.2 * st, 0.2 * ct, shZ); j.shR = v(lean + 0.2 * st, -0.2 * ct, shZ);
+    j.shL = v(lean - 0.2 * st, 0.2 * ct, shZ - tilt * 0.2); j.shR = v(lean + 0.2 * st, -0.2 * ct, shZ + tilt * 0.2);
     // Forearm platform: both arms straight, hands together, pointing at the ball.
     if (plat && platK > 0) {
-      var mc = v(lean, 0, shZ), df = plat.f - mc.f, ds = plat.s - mc.s, dz = plat.z - mc.z, dl = Math.sqrt(df * df + ds * ds + dz * dz) || 1;
+      var mc = v(lean, 0, shZ - tilt * 0.05), df = plat.f - mc.f, ds = plat.s - mc.s, dz = plat.z - mc.z, dl = Math.sqrt(df * df + ds * ds + dz * dz) || 1;
       var arm = (UPPER + FORE) * 0.97, pk = ease(platK);
       var pt = v(mc.f + df / dl * arm, mc.s + ds / dl * arm, mc.z + dz / dl * arm);
       handL = lv(handL, v(pt.f, pt.s + 0.04, pt.z), pk); handR = lv(handR, v(pt.f, pt.s - 0.04, pt.z), pk);
@@ -230,7 +251,7 @@
     j.kneeL = lL.joint; j.footL = lL.end; j.kneeR = lR.joint; j.footR = lR.end;
     var eL = ik(j.shL, handL, UPPER, FORE, elbowDir), eR = ik(j.shR, handR, UPPER, FORE, v(elbowDir.f, -elbowDir.s, elbowDir.z));
     j.elbowL = eL.joint; j.handL = eL.end; j.elbowR = eR.joint; j.handR = eR.end;
-    j._w = (act && (act.type === 'pass' || act.type === 'dive' || act.type === 'set')) || toContact < 0.5 ? 28
+    j._w = (act && (act.type === 'pass' || act.type === 'dive' || act.type === 'set')) || toContact < 0.65 ? 28 : sinceHit < 0.42 ? 30
       : inAir ? 34 : speed > 0.6 ? 42 : 14;
     return j;
   }
