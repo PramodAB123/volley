@@ -103,7 +103,7 @@
   };
 
   R.snap = function () {
-    this.all().forEach(function (p) { p.x = p.tx; p.y = p.ty; p.z = 0; p.dive = 0; });
+    this.all().forEach(function (p) { p.x = p.tx; p.y = p.ty; p.z = 0; p.dive = 0; p.mvx = 0; p.mvy = 0; });
   };
 
   // ---- serve --------------------------------------------------------------
@@ -236,8 +236,16 @@
       if (arr2 > t2 + 0.15) return; // nobody gets there
       tc = t2; pc = p2; stretch = true;
     }
-    best.lock = true; best.tx = pc.x; best.ty = pc.y;
+    // Stand so the ball meets the forearm platform out in front, not the chest.
+    // A dive is aimed so the ball lands on the outstretched arms.
+    var fd = team === 0 ? 1 : -1, sx = pc.x - fd * 0.55, sy = pc.y;
+    if (stretch) {
+      var ddx = pc.x - best.x, ddy = pc.y - best.y, dl = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
+      sx = pc.x - ddx / dl * 0.95; sy = pc.y - ddy / dl * 0.95;
+    }
+    best.lock = true; best.tx = sx; best.ty = sy;
     best.contactAt = this.t + tc - f.t; best.contactKind = stretch ? 'dive' : 'pass';
+    best.contactPt = { x: pc.x, y: pc.y, z: pc.z };
     this.at(tc, function () { self.touch1(best, { stretch: stretch, bonus: bonus }); });
   };
 
@@ -252,6 +260,7 @@
     var q = clamp(0.28 + rating / 100 * 0.62 + rnd(-0.22, 0.22) - Math.max(0, spd - 11) * 0.022 - (o.stretch ? 0.2 : 0) + (o.bonus || 0) - serveHeat, 0, 1);
     p.lock = false;
     p.contactAt = 0;
+    p.contactPt = { x: this.ball.x, y: this.ball.y, z: Math.max(0.3, this.ball.z) };
     p.dive = o.stretch ? 1 : 0;
     this.act(p, o.stretch ? 'dive' : 'pass', o.stretch ? 0.9 : 0.55);
     this.touches[team] = 1;
@@ -702,15 +711,26 @@
     this.all().forEach(function (p) {
       var dx = p.tx - p.x, dy = p.ty - p.y, d = Math.sqrt(dx * dx + dy * dy);
       var hurry = (self.state === 'serve' || self.state === 'dead') ? 1.45 : 1;
-      var sp = p.speed * (p.lock ? 1.7 : hurry) * dt, ox = p.x, oy = p.y;
-      if (t < p.delayUntil) sp = 0;
-      if (d > 0.001) { var k = Math.min(1, sp / d); p.x += dx * k; p.y += dy * k; }
+      var ox = p.x, oy = p.y;
+      // Accelerate into a run and ease off on arrival instead of starting and
+      // stopping at full speed.
+      var vmax = p.speed * (p.lock ? 1.7 : hurry), acc = p.lock ? 24 : 12, dec = p.lock ? 16 : 7;
+      // A receiver hustles hard enough to be set before the ball arrives.
+      if (p.lock && p.contactAt > t + 0.02) { vmax = Math.min(11, Math.max(vmax, d / (p.contactAt - t - 0.02) * 1.2)); acc = 40; dec = 30; }
+      var want = (t < p.delayUntil || d < 0.002) ? 0 : Math.min(vmax, Math.sqrt(2 * dec * d));
+      var wx = d > 0.002 ? dx / d * want : 0, wy = d > 0.002 ? dy / d * want : 0;
+      var mx = p.mvx || 0, my = p.mvy || 0, ex = wx - mx, ey = wy - my, el = Math.sqrt(ex * ex + ey * ey), dv = acc * dt;
+      if (el > dv) { mx += ex / el * dv; my += ey / el * dv; } else { mx = wx; my = wy; }
+      p.mvx = mx; p.mvy = my;
+      var stx = mx * dt, sty = my * dt;
+      if (stx * stx + sty * sty >= d * d && stx * dx + sty * dy > 0) { p.x = p.tx; p.y = p.ty; } else { p.x += stx; p.y += sty; }
       // Smoothed velocity drives the running animation.
       p.vx += ((p.x - ox) / dt - p.vx) * Math.min(1, dt * 12);
       p.vy += ((p.y - oy) / dt - p.vy) * Math.min(1, dt * 12);
       p.phase += Math.sqrt((p.x - ox) * (p.x - ox) + (p.y - oy) * (p.y - oy)) * 5.2;
       // Turn to track the ball (within 70 degrees of facing the net).
-      var base = p.team === 0 ? 0 : Math.PI, want = base;
+      var base = p.team === 0 ? 0 : Math.PI;
+      want = base;
       var bdx = ball.x - p.x, bdy = ball.y - p.y;
       if (bdx * bdx + bdy * bdy > 0.4) {
         var off = Math.atan2(bdy, bdx) - base;
