@@ -6,12 +6,13 @@
 (function () {
   var PREFIX = 'spikerally-v1-';
   var ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  var SNAP_MS = 33, PING_MS = 1000, LOST_MS = 6000, REJOIN_MS = 30000, JOIN_TIMEOUT_MS = 15000;
+  var SNAP_MS = 33, FAST_ID = 7, PING_MS = 1000, LOST_MS = 6000, REJOIN_MS = 30000, JOIN_TIMEOUT_MS = 15000;
   var C = SR.COURT;
   var $ = function (id) { return document.getElementById(id); };
 
   function now() { return Date.now(); }
   function r3(v) { return Math.round((v || 0) * 1000) / 1000; }
+  function r2(v) { return Math.round((v || 0) * 100) / 100; }
   function num(v) { return typeof v === 'number' && isFinite(v); }
   function mx(x) { return C.L - x; }
   function my(y) { return C.W - y; }
@@ -46,6 +47,7 @@
     lastRecv: 0,
     lastSnap: 0,
     lastAim: 0,
+    fast: null,      // unreliable, unordered channel for snapshots
     events: [],
     timers: {},
     lostAt: 0,
@@ -94,8 +96,10 @@
   }
 
   function dropConn() {
-    var c = N.conn;
+    var c = N.conn, f = N.fast;
     N.conn = null;
+    N.fast = null;
+    if (f) { try { f.close(); } catch (e) { /* already closed */ } }
     if (c) { try { c.close(); } catch (e) { /* already closed */ } }
   }
 
@@ -120,11 +124,30 @@
     status(msg, 'error');
   }
 
+  // Snapshots go over a second data channel on the same connection that never
+  // retransmits or waits for order: a lost update is simply replaced by the next
+  // one instead of holding up everything behind it. Both sides create it with
+  // the same id, so no extra signalling is needed.
+  function openFast(c) {
+    try {
+      var dc = c.peerConnection.createDataChannel('snap', { negotiated: true, id: FAST_ID, ordered: false, maxRetransmits: 0 });
+      dc.onmessage = function (e) {
+        if (N.conn !== c) return;
+        N.lastRecv = now();
+        var msg;
+        try { msg = JSON.parse(e.data); } catch (err) { return; }
+        if (msg && typeof msg === 'object') onData(msg);
+      };
+      N.fast = dc;
+    } catch (e) { N.fast = null; }
+  }
+
   function attach(c) {
     N.conn = c;
     c.on('open', function () {
       if (N.conn !== c) return;
       N.lastRecv = now();
+      openFast(c);
       onOpen(c);
     });
     c.on('data', function (msg) {
@@ -330,14 +353,14 @@
     var pi = function (p) { return p ? p.team * 6 + p.idx : -1; };
     var ps = r.all().map(function (p) {
       var cp = p.contactPt;
-      return [r3(p.x), r3(p.y), r3(p.z), r3(p.yaw), r3(p.vx), r3(p.vy), r3(p.phase),
+      return [r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.vx), r2(p.vy), r2(p.phase),
         p.act ? p.act.type : 0, p.act ? r3(p.act.t) : 0, p.act ? r3(p.act.dur) : 0,
         r3(p.jumpAt), p.jumpKind || 0, r3(p.contactAt), p.contactKind || 0,
         cp ? [r3(cp.x), r3(cp.y), r3(cp.z)] : 0, p.lock ? 1 : 0];
     });
     var bn = r.banner;
     var out = {
-      t: 's', T: r3(r.t), st: r.state, sT: r3(r.stateT), ts: r.timeScale,
+      t: 's', T: r3(r.t), w: now(), st: r.state, sT: r3(r.stateT), ts: r.timeScale,
       b: [r3(r.ball.x), r3(r.ball.y), r3(r.ball.z)],
       sv: pi(r.server), se: pi(r.setter), lt: r.lastTouch,
       bn: bn ? [bn.text, bn.sub, bn.color, r3(bn.t), bn.dur] : 0,
@@ -345,10 +368,8 @@
       m: [m.score, m.sets, m.setNo, m.rot, m.server, m.target(), m.history],
       u: [u.prompt, r3(u.aim.x), r3(u.aim.y), r3(u.power), u.hitters.map(function (h) { return h.p.idx; }),
         u.hitterChoice ? u.hitterChoice.idx : -1, u.attackTarget ? [r3(u.attackTarget.x), r3(u.attackTarget.y)] : 0,
-        u.tip ? 1 : 0, u.shot, u.blockCall || 'read', (u.blockThreats || []).map(function (p) { return p.idx; })],
-      ev: N.events
+        u.tip ? 1 : 0, u.shot, u.blockCall || 'read', (u.blockThreats || []).map(function (p) { return p.idx; })]
     };
-    N.events = [];
     return out;
   }
 
@@ -439,6 +460,7 @@
       return;
     }
     if (msg.t === 's' && SR.game && SR.game.cfg.online === 'guest') { SR.game.rally.push(msg); return; }
+    if (msg.t === 'ev' && SR.game && SR.game.cfg.online === 'guest') { SR.game.rally.addEvents(msg.e || []); return; }
     if (msg.t === 'end') {
       N.phase = 'over';
       var hist = (msg.history || []).map(function (s) { return [s[1], s[0]]; });
@@ -487,17 +509,27 @@
 
   var G = GuestRally.prototype;
 
-  G.reset = function () { this.buf = []; this.ph = null; this.pending = []; };
+  G.reset = function () { this.buf = []; this.ph = null; this.pending = []; this.jit = 0.01; this.lastArr = 0; };
   G.all = function () { return this.players[0].concat(this.players[1]); };
 
   G.push = function (s) {
-    var b = this.buf;
-    if (b.length && s.T < b[b.length - 1].T - 1) this.reset(); // host clock jumped (new match)
+    var b = this.buf, last = b[b.length - 1], t = now();
+    if (last && s.T < last.T - 1) { this.reset(); b = this.buf; last = null; } // host clock jumped (new match)
+    if (last && s.T <= last.T) return; // late or duplicate: a newer one is already here
+    // Network jitter estimate: how unevenly snapshots arrive compared with how they were sent.
+    if (last && this.lastArr) {
+      var j = Math.abs((t - this.lastArr) - (s.w - last.w)) / 1000;
+      this.jit += (Math.min(0.3, j) - this.jit) * 0.08;
+    }
+    this.lastArr = t;
     b.push(s);
     if (b.length > 40) b.shift();
+    if (this.ph === null) this.ph = s.T - 0.08;
+  };
+
+  G.addEvents = function (list) {
     var pend = this.pending;
-    (s.ev || []).forEach(function (e) { pend.push(e); });
-    if (this.ph === null) this.ph = s.T - 0.1;
+    list.forEach(function (e) { pend.push(e); });
   };
 
   // Guest player for a host player index (team swapped).
@@ -513,15 +545,23 @@
   G.update = function (dt) {
     var b = this.buf;
     if (!b.length) return;
-    var newest = b[b.length - 1].T;
-    this.ph += dt * this.timeScale;
-    // Stay ~100 ms behind the newest snapshot so there is always something to blend toward.
-    if (this.ph > newest) this.ph = newest;
-    if (this.ph < newest - 0.4) this.ph = newest - 0.1;
+    var newest = b[b.length - 1], ts = newest.ts || 1;
+    // Play a little behind the host: just enough to cover jitter (50-200 ms).
+    // The playback clock speeds up or slows down slightly to hold that gap, so
+    // hiccups never build up into a growing delay.
+    var delay = Math.max(0.05, Math.min(0.2, 0.035 + this.jit * 2.5)) * ts;
+    var since = Math.min(0.25, (now() - this.lastArr) / 1000) * ts;
+    var target = newest.T + since - delay;
+    var err = target - this.ph;
+    if (Math.abs(err) > 0.35) this.ph = target;
+    else this.ph += dt * this.timeScale * (1 + Math.max(-0.3, Math.min(0.3, err * 3)));
+    // Never run more than 120 ms past the newest data.
+    if (this.ph > newest.T + 0.12 * ts) this.ph = newest.T + 0.12 * ts;
     var i = 0;
     while (i < b.length - 2 && b[i + 1].T <= this.ph) i++;
     var s0 = b[i], s1 = b[Math.min(i + 1, b.length - 1)];
-    var k = s1.T > s0.T ? Math.max(0, Math.min(1, (this.ph - s0.T) / (s1.T - s0.T))) : 1;
+    // Past the newest snapshot we keep moving along the last known motion.
+    var k = s1.T > s0.T ? Math.max(0, Math.min(1.6, (this.ph - s0.T) / (s1.T - s0.T))) : 1;
     this.apply(s0, s1, k);
     // Fire effects whose time has come.
     var ph = this.ph, keep = [];
@@ -547,7 +587,7 @@
     this.state = s0.st;
     this.stateT = lerp(s0.sT, s1.sT, s0.st === s1.st ? k : 0);
     this.timeScale = s0.ts || 1;
-    this.ball = { x: mx(lerp(s0.b[0], s1.b[0], k)), y: my(lerp(s0.b[1], s1.b[1], k)), z: lerp(s0.b[2], s1.b[2], k) };
+    this.ball = { x: mx(lerp(s0.b[0], s1.b[0], k)), y: my(lerp(s0.b[1], s1.b[1], k)), z: Math.max(0.11, lerp(s0.b[2], s1.b[2], k)) };
     this.server = this.byHost(s0.sv);
     this.setter = this.byHost(s0.se);
     this.lastTouch = 1 - s0.lt;
@@ -555,7 +595,7 @@
     for (var hi = 0; hi < 12; hi++) {
       var a = s0.p[hi], c = s1.p[hi], p = this.byHost(hi);
       if (!a || !c) continue;
-      p.x = mx(lerp(a[0], c[0], k)); p.y = my(lerp(a[1], c[1], k)); p.z = lerp(a[2], c[2], k);
+      p.x = mx(lerp(a[0], c[0], k)); p.y = my(lerp(a[1], c[1], k)); p.z = Math.max(0, lerp(a[2], c[2], k));
       p.yaw = lerpAngle(a[3], c[3], k) + Math.PI;
       p.vx = -lerp(a[4], c[4], k); p.vy = -lerp(a[5], c[5], k);
       p.phase = lerp(a[6], c[6], k);
@@ -570,9 +610,9 @@
     m.server = 1 - M[4]; m._tg = M[5];
     m.history = (M[6] || []).map(function (h) { return [h[1], h[0]]; });
     var U = s0.u, u = this.ui;
-    u.prompt = U[0];
+    if (!this.held('prompt')) u.prompt = U[0];
     if (!this.held('aim')) u.aim = { x: mx(U[1]), y: my(U[2]) };
-    u.power = lerp(U[3], s1.u[3], k);
+    u.power = Math.max(0, Math.min(1, lerp(U[3], s1.u[3], Math.min(1, k))));
     u.hitters = U[4].map(function (i) { return { p: self.players[0][i] }; });
     if (!this.held('hitterChoice')) u.hitterChoice = U[5] >= 0 ? this.players[0][U[5]] : null;
     if (!this.held('attackTarget')) { u.attackTarget = U[6] ? { x: mx(U[6][0]), y: my(U[6][1]) } : null; u.tip = !!U[7]; }
@@ -592,6 +632,7 @@
     if (this.ui.prompt !== 'serve') return;
     var a = this.ui.aim;
     send({ t: 'cmd', c: 'serve', x: mx(a.x), y: my(a.y), pw: this.ui.power });
+    this.hold('prompt', null); // the meter goes away at once instead of after the round trip
   };
   G.pickHitter = function (p) {
     if (this.ui.prompt !== 'hitter' || !this.ui.hitters.some(function (h) { return h.p === p; })) return;
@@ -652,9 +693,17 @@
     if (N.role !== 'host' || N.phase !== 'playing') return;
     var g = SR.game;
     if (!g || g.cfg.online !== 'host' || !N.conn || !N.conn.open) return;
+    if (N.events.length) { send({ t: 'ev', e: N.events }); N.events = []; }
     if (now() - N.lastSnap < SNAP_MS) return;
     N.lastSnap = now();
-    send(snapshot(g));
+    var f = N.fast, msg = snapshot(g);
+    if (f && f.readyState === 'open') {
+      // Skip a beat rather than queue snapshots behind a slow network.
+      if (f.bufferedAmount < 8000) { try { f.send(JSON.stringify(msg)); } catch (e) { /* next one */ } }
+      return;
+    }
+    var dc = N.conn.dataChannel;
+    if ((!dc || dc.bufferedAmount < 8000) && !N.conn.bufferSize) send(msg);
   };
 
   N.init = function (query) {
