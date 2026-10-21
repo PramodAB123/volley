@@ -1,0 +1,87 @@
+// Boot, the Game controller (one match) and the fixed-step loop.
+(function () {
+  var STEP = 1 / 120;
+
+  SR.Game = function (cfg) {
+    var boost = (SR.DIFFICULTY[cfg.difficulty] || SR.DIFFICULTY.normal).boost;
+    this.cfg = cfg;
+    this.match = new SR.Match(cfg.home, cfg.away, cfg.format, cfg.human === 0 ? boost : 0);
+    this.rally = new SR.Rally(this.match, { human: cfg.human, onPoint: this.onPoint.bind(this) });
+    this.paused = false;
+    this.hover = null;
+    this.shift = false;
+    var rally = this.rally;
+    rally.formation(0, 'base');
+    rally.formation(1, 'base');
+    rally.snap();
+    if (cfg.human === 0) rally.say('SET 1', cfg.home.name + ' vs ' + cfg.away.name, '#ffffff', 2);
+    rally.wait(cfg.human === 0 ? 1.4 : 0.4, function () { rally.startServe({ snap: true }); });
+  };
+
+  SR.Game.prototype.onPoint = function (winner, info) {
+    var m = this.match, rally = this.rally, self = this;
+    var st = m.stats[winner];
+    if (info.kind === 'ace') st.aces++;
+    else if (info.kind === 'kill') st.kills++;
+    else if (info.kind === 'block') st.blocks++;
+    else if (info.kind === 'error') m.stats[1 - winner].errors++;
+    var res = m.point(winner);
+    if (res.matchOver) {
+      var t = m.teams[winner];
+      rally.say(t.short + ' WIN', m.history.map(function (s) { return s[0] + '-' + s[1]; }).join('  '), t.color, 3);
+      SR.audio.play('cheer');
+      SR.fx.emit('confetti', { color: t.color });
+      rally.wait(2.6, function () { if (self.cfg.onEnd) self.cfg.onEnd(self); });
+    } else if (res.setOver) {
+      var w = m.teams[res.setWinner], last = m.history[m.history.length - 1];
+      rally.say('SET ' + w.short, last[0] + ' - ' + last[1], w.color, 2.2);
+      SR.audio.play('cheer');
+      SR.fx.emit('confetti', { color: w.color });
+      rally.wait(2.0, function () {
+        rally.say('SET ' + m.setNo, 'to ' + m.target(), '#ffffff', 1.6);
+        rally.startServe();
+      });
+    } else {
+      rally.startServe();
+    }
+  };
+
+  var canvas, ctx, last = 0, acc = 0;
+
+  function resize() {
+    var s = Math.min(window.innerWidth / SR.render.W, window.innerHeight / SR.render.H);
+    var dpr = window.devicePixelRatio || 1;
+    canvas.style.width = Math.floor(SR.render.W * s) + 'px';
+    canvas.style.height = Math.floor(SR.render.H * s) + 'px';
+    canvas.width = Math.floor(SR.render.W * s * dpr);
+    canvas.height = Math.floor(SR.render.H * s * dpr);
+    SR.render.scale = s * dpr;
+  }
+
+  function frame(ts) {
+    var dt = last ? Math.min(0.05, (ts - last) / 1000) : 0;
+    last = ts;
+    var g = SR.game;
+    if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; dt = 0; }
+    if (g && !g.paused) {
+      acc += dt * g.rally.timeScale * (SR.speed || 1);
+      var n = 0;
+      while (acc >= STEP && n < 4000) { g.rally.update(STEP); acc -= STEP; n++; }
+    }
+    SR.render.draw(ctx, g);
+    window.requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('load', function () {
+    SR.save.load();
+    canvas = document.getElementById('game');
+    ctx = canvas.getContext('2d');
+    resize();
+    window.addEventListener('resize', resize);
+    SR.input.init(canvas);
+    SR.ui.init();
+    var q = new URLSearchParams(window.location.search);
+    if (q.get('speed')) SR.speed = Number(q.get('speed')) || 1;
+    window.requestAnimationFrame(frame);
+  });
+})();
