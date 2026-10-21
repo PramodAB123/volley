@@ -57,7 +57,7 @@
     var footL = v(0.05, 0.24, 0), footR = v(-0.02, -0.24, 0);
     var handL = v(0.32, 0.2, 1.0), handR = v(0.32, -0.2, 1.0);
     var elbowDir = v(-0.2, 1, -1), kneeDir = v(1, 0, 0.1);
-    var act = p.act && t - p.act.t < p.act.dur ? p.act : null;
+    var act = p.act && t >= p.act.t && t - p.act.t < p.act.dur ? p.act : null;
     var a = act ? (t - act.t) / act.dur : 0;
     var jt = clamp((t - p.jumpAt) / 0.75, 0, 1);
     var speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
@@ -108,6 +108,15 @@
       ], jt);
       hipZ = 0.92; lean = K.lean; handR = K.hR; handL = K.hL; footL = K.fL; footR = K.fR; elbowDir = v(K.el.f, -K.el.s, K.el.z);
       twist = jt < tc ? -0.12 : 0.1;
+      // Follow-through depends on the shot: a tip is a soft push with the arm
+      // staying up, a roll shot a short brushing swing, a power shot the full arc.
+      if (jt > tc && (p.shotKind === 'tip' || p.shotKind === 'roll')) {
+        var fk = ease((jt - tc) / 0.25), soft = p.shotKind === 'tip';
+        handR = lv(v(0.24, -0.12, 2.4), soft ? v(0.42, -0.08, 2.2) : v(0.5, -0.04, 1.72), fk);
+        if (jt > tc + 0.3) handR = lv(handR, v(0.28, -0.24, 0.98), ease((jt - tc - 0.3) / 0.25));
+        lean = lerp(0.06, soft ? 0.08 : 0.13, fk);
+        twist = soft ? 0 : 0.05;
+      }
     } else if ((act && act.type === 'set') || (rally.setter === p && p.lock)) {
       // Hands form a window above the forehead, then push up and out.
       var push = act ? Math.sin(Math.PI * clamp(a / 0.6, 0, 1)) : 0;
@@ -150,13 +159,19 @@
       hipZ = 0.86 + bob * 0.1; lean = -0.03;
       handL = v(0.05 + bob * 0.05, 0.36, 2.0 + bob * 0.15); handR = v(0.05 + bob * 0.05, -0.36, 2.0 + bob * 0.15);
       elbowDir = v(0, 1, 0);
-    } else if (p.jumpKind === 'spike' && p.jumpAt > t && p.jumpAt - t < 0.42) {
+    } else if ((p.jumpKind === 'spike' || p.jumpKind === 'serve') && p.jumpAt > t && p.jumpAt - t < (p.jumpKind === 'serve' ? 0.6 : 0.42)) {
       // Approach: last two steps, arms swing back as the knees load, then drive up.
       var k = ease(1 - (p.jumpAt - t) / 0.42), back = Math.sin(Math.PI * k * 0.9);
       hipZ = 0.88 - k * 0.24; lean = 0.12 + k * 0.2;
       footL = v(0.22 * k, 0.2, 0); footR = v(-0.1 + 0.15 * k, -0.2, 0);
       handL = v(0.2 - 0.6 * back, 0.28, 0.95 - back * 0.05); handR = v(0.2 - 0.65 * back, -0.28, 0.95 - back * 0.05);
       elbowDir = v(-0.2, 1, -0.2);
+      if (p.jumpKind === 'serve') {
+        // Toss: the left arm lifts the ball high, then both arms swing for the jump.
+        var tk = clamp(1 - (p.jumpAt - t) / 0.6, 0, 1), lift = Math.sin(Math.PI * clamp(tk / 0.55, 0, 1));
+        handL = lv(handL, v(0.38, 0.08, 2.15), lift);
+        if (tk < 0.45) { handR = v(-0.05, -0.3, 1.0); hipZ = 0.88; lean = 0.05; footL = v(0.15 * tk, 0.2, 0); footR = v(-0.05, -0.2, 0); }
+      }
     } else if (rally.state === 'serve' && rally.server === p) {
       var toss = Math.abs(Math.sin(rally.stateT * 4));
       hipZ = 0.9;

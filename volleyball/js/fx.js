@@ -8,6 +8,7 @@
     rings: [],
     shake: 0,
     hitStop: 0,
+    punch: 0,      // brief camera push-in on big hits
     cheer: 0,
     flash: 0,
     flashColor: '#ffffff',
@@ -37,20 +38,23 @@
       } else if (name === 'spike') {
         var hard = d.shot === 'power' || d.shot === 'line' || d.shot === 'cross' || d.shot === 'tool';
         this.burst(p, hard ? 26 : 10, hard ? ['#fff7c2', '#ffd23f', '#ff9b3d', '#ffffff'] : ['#ffffff', '#bfe9ff'], hard ? 5 : 2, hard ? 3 : 1.5, 0.45, hard ? 0.07 : 0.05, 6);
-        if (hard) { this.shake = Math.max(this.shake, 4); this.flash = 0.18; this.flashColor = '#fff4c8'; this.hitStop = 0.06; }
+        if (hard) { this.shake = Math.max(this.shake, 4); this.flash = 0.18; this.flashColor = '#fff4c8'; this.hitStop = 0.06; this.punch = 1; }
       } else if (name === 'block') {
         this.burst(p, 22, ['#9fd4ff', '#ffffff', '#5aa9ff'], 4, 2.5, 0.5, 0.07, 6);
         this.shake = Math.max(this.shake, 6);
         this.hitStop = 0.08;
+        this.punch = Math.max(this.punch, 0.8);
       } else if (name === 'serve') {
-        this.burst(p, 10, ['#ffffff', '#ffe28a'], 2.2, 1.6, 0.35, 0.05, 5);
+        var pw = d.power || 0.5;
+        this.burst(p, 8 + Math.round(pw * 14), pw > 0.7 ? ['#fff7c2', '#ffd23f', '#ffffff'] : ['#ffffff', '#ffe28a'], 1.6 + pw * 2.4, 1.6, 0.35, 0.05, 5);
+        if (pw > 0.7) { this.shake = Math.max(this.shake, 3); this.punch = Math.max(this.punch, 0.5); }
       } else if (name === 'net') {
         this.burst(p, 12, ['#ffffff', '#cccccc'], 1.5, 0.6, 0.5, 0.05, 6);
       } else if (name === 'land') {
         var big = d.kind === 'kill' || d.kind === 'ace' || d.kind === 'block';
         this.ring(p, big ? '#ffd23f' : '#ffffff', big ? 1.8 : 1.0, big ? 0.7 : 0.5);
         this.burst({ x: p.x, y: p.y, z: 0.05 }, big ? 24 : 12, ['#f6d2a8', '#e9b47c', '#ffffff'], big ? 3 : 1.8, big ? 2.2 : 1.2, 0.6, 0.06, 7);
-        if (big) { this.shake = Math.max(this.shake, 9); this.cheer = 2.2; }
+        if (big) { this.shake = Math.max(this.shake, 9); this.cheer = 2.2; this.punch = Math.max(this.punch, 0.6); }
         else this.cheer = Math.max(this.cheer, 1.2);
       } else if (name === 'confetti') {
         var cols = [d.color, '#ffffff', '#ffd23f', d.color, '#ff6b9a', '#6fe3ff'];
@@ -66,6 +70,7 @@
 
     update: function (dt) {
       this.shake = Math.max(0, this.shake - dt * 30);
+      this.punch = Math.max(0, this.punch - dt * 3.5);
       this.cheer = Math.max(0, this.cheer - dt);
       this.flash = Math.max(0, this.flash - dt);
       var ps = this.parts;

@@ -219,32 +219,48 @@
 
   // ---- ball and effects ----------------------------------------------------
 
+  // Tapered streak behind the ball; hard hits burn orange and glow.
   function drawTrail(ctx, style) {
-    for (var i = 0; i < trail.length; i++) {
-      var tp = trail[i], q = proj(tp.x, tp.y, tp.z), k = (i + 1) / trail.length;
-      ctx.globalAlpha = k * 0.35 * Math.min(1, tp.v / 12);
-      ctx.fillStyle = tp.v > 16 ? '#ffb347' : style.main;
-      ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(2, 0.2 * q.s) * (0.4 + k * 0.6), 0, Math.PI * 2); ctx.fill();
+    if (trail.length < 2) return;
+    ctx.lineCap = 'round';
+    for (var i = 1; i < trail.length; i++) {
+      var a = trail[i - 1], tp = trail[i], q0 = proj(a.x, a.y, a.z), q1 = proj(tp.x, tp.y, tp.z), k = i / trail.length;
+      var fast = tp.v > 16, sp = Math.min(1, tp.v / 14);
+      if (sp < 0.15) continue;
+      ctx.globalAlpha = k * (fast ? 0.7 : 0.4) * sp;
+      ctx.strokeStyle = fast ? (k > 0.7 ? '#fff1b8' : '#ff9a3c') : style.main;
+      ctx.lineWidth = Math.max(1.5, 0.21 * q1.s * 2) * (0.15 + k * 0.85) * (fast ? 1 : 0.7);
+      if (fast && k > 0.5) { ctx.shadowColor = '#ff8a2b'; ctx.shadowBlur = 12; }
+      ctx.beginPath(); ctx.moveTo(q0.x, q0.y); ctx.lineTo(q1.x, q1.y); ctx.stroke();
+      ctx.shadowBlur = 0;
     }
     ctx.globalAlpha = 1;
   }
 
+  var squashAt = -9, lastVel = null;
+
   function drawBall(ctx, b, style) {
-    var hgt = b.z;
+    var hgt = b.z, nowS = performance.now() / 1000;
     groundEllipse(ctx, b.x, b.y, 0.15 + Math.min(0.25, hgt * 0.03), 'rgba(0,0,0,' + Math.max(0.1, 0.42 - hgt * 0.05) + ')');
     var q = proj(b.x, b.y, b.z), rad = Math.max(3, 0.21 * q.s);
+    // A quick squash when the ball is struck, then it springs back round.
+    var sq = Math.max(0, 1 - (nowS - squashAt) / 0.12), sx = 1 + 0.28 * sq, sy = 1 - 0.22 * sq;
     ctx.save();
-    ctx.beginPath(); ctx.arc(q.x, q.y, rad, 0, Math.PI * 2);
+    ctx.translate(q.x, q.y); ctx.scale(sx, sy);
+    ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2);
     ctx.fillStyle = style.main; ctx.fill();
     ctx.clip();
-    ctx.translate(q.x, q.y); ctx.rotate(spin);
+    ctx.rotate(spin);
     ctx.strokeStyle = style.stripe; ctx.lineWidth = rad * 0.42;
     ctx.beginPath(); ctx.arc(-rad * 0.95, 0, rad * 1.1, -0.9, 0.9); ctx.stroke();
     ctx.beginPath(); ctx.arc(rad * 0.95, 0, rad * 1.1, Math.PI - 0.9, Math.PI + 0.9); ctx.stroke();
     ctx.restore();
-    var hl = ctx.createRadialGradient(q.x - rad * 0.4, q.y - rad * 0.45, 0, q.x, q.y, rad);
+    ctx.save();
+    ctx.translate(q.x, q.y); ctx.scale(sx, sy);
+    var hl = ctx.createRadialGradient(-rad * 0.4, -rad * 0.45, 0, 0, 0, rad);
     hl.addColorStop(0, 'rgba(255,255,255,0.55)'); hl.addColorStop(0.5, 'rgba(255,255,255,0)'); hl.addColorStop(1, 'rgba(0,0,0,0.28)');
-    ctx.beginPath(); ctx.arc(q.x, q.y, rad, 0, Math.PI * 2); ctx.fillStyle = hl; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = hl; ctx.fill();
+    ctx.restore();
   }
 
   function drawFx(ctx, pass) {
@@ -502,6 +518,9 @@
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
       var sh = SR.fx.shake;
       ctx.translate(panX + (sh > 0 ? (Math.random() - 0.5) * sh : 0), sh > 0 ? (Math.random() - 0.5) * sh : 0);
+      // Camera push-in on big hits, eased out.
+      var pk = SR.fx.punch, zm = 1 + 0.045 * pk * pk * (3 - 2 * pk);
+      if (zm > 1.0005) { var zc = proj(9, 4.5, 1); ctx.translate(zc.x, zc.y); ctx.scale(zm, zm); ctx.translate(-zc.x, -zc.y); }
       var style = this.courtStyle();
       arenaLayer(ctx, style, now, SR.fx.cheer);
       drawBoards(ctx, now);
@@ -515,9 +534,16 @@
       if (lastBall && rally.state === 'rally' && simDt > 0) {
         var dd = Math.sqrt(Math.pow(b.x - lastBall.x, 2) + Math.pow(b.y - lastBall.y, 2) + Math.pow(b.z - lastBall.z, 2));
         spin += dd * 3;
+        var vel = { x: (b.x - lastBall.x) / simDt, y: (b.y - lastBall.y) / simDt, z: (b.z - lastBall.z) / simDt };
+        if (lastVel) {
+          // A sharp change of direction means someone just hit the ball.
+          var l0 = Math.hypot(lastVel.x, lastVel.y, lastVel.z), l1 = Math.hypot(vel.x, vel.y, vel.z);
+          if (l0 > 2 && l1 > 2 && (lastVel.x * vel.x + lastVel.y * vel.y + lastVel.z * vel.z) / (l0 * l1) < 0.3) { squashAt = now; trail.length = 0; }
+        }
+        lastVel = vel;
         trail.push({ x: b.x, y: b.y, z: b.z, v: dd / simDt });
-        if (trail.length > 12) trail.shift();
-      } else if (rally.state !== 'rally') { trail.length = 0; }
+        if (trail.length > 16) trail.shift();
+      } else if (rally.state !== 'rally') { trail.length = 0; lastVel = null; }
       lastBall = { x: b.x, y: b.y, z: b.z };
 
       // Ground markers under everything else

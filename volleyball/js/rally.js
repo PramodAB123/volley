@@ -131,16 +131,33 @@
     this.state = 'serve';
     this.stateT = 0;
     this.serveReady = false;
+    this.toss = null;
     this.uis.forEach(function (u) { u.prompt = null; u.attackTarget = null; u.hitterChoice = null; });
     this.server = this.players[s][this.m.playerAt(s, 1)];
     this.all().forEach(function (p) { p.contactAt = 0; });
   };
 
+  var TOSS_T = 0.8, TOSS_VZ = 6.05;
+
+  // Start the serve: the server tosses the ball, steps in and jumps; the ball
+  // is struck at the top of the jump (see update), then strike() sends it.
   R.serve = function (aim, power) {
-    if (this.state !== 'serve') return;
+    if (this.state !== 'serve' || this.toss) return;
+    var s = this.m.server, p = this.server, dir = s === 0 ? 1 : -1;
+    this.toss = { t0: this.t, aim: { x: aim.x, y: aim.y }, power: power, x0: p.x + dir * 0.35, y0: p.y };
+    this.uis[s].prompt = null;
+    p.jumpAt = this.t + TOSS_T - 0.2;
+    p.jumpKind = 'serve';
+    p.lock = true; p.tx = p.x + dir * 0.75; p.ty = p.y;
+    SR.audio.play('set');
+  };
+
+  R.strike = function (aim, power) {
     var s = this.m.server, p = this.server, rt = this.m.ratings[s];
     var dir = s === 0 ? 1 : -1;
-    var cp = { x: p.x + dir * 0.3, y: p.y, z: 2.85 };
+    this.toss = null;
+    p.lock = false;
+    var cp = { x: this.ball.x, y: this.ball.y, z: this.ball.z };
     var scatter = (0.3 + 1.0 * power) * (1.3 - rt.serve / 100);
     var tgt = { x: aim.x + gauss() * scatter, y: aim.y + gauss() * scatter, z: 0 };
     var T = 1.6 - 0.65 * power;
@@ -151,9 +168,7 @@
     } else {
       T = P.clearNet(cp, tgt, T, 0.15);
     }
-    p.jumpAt = this.t - 0.2;
-    p.jumpKind = 'serve';
-    this.fx('serve', { pos: cp });
+    this.fx('serve', { pos: cp, power: power });
     this.launch(cp, tgt, T);
     this.state = 'rally';
     this.uis[s].prompt = null;
@@ -489,6 +504,7 @@
     }
     var S = SR.SHOTS[shot], tip = shot === 'tip', qs = this.setQ;
     this.lastShot = shot;
+    h.shotKind = shot;
     var tgt = { x: aim.x, y: aim.y, z: 0 };
 
     var l = local(def, tgt.x, tgt.y), edge = Math.min(l.x, l.y, C.W - l.y);
@@ -598,8 +614,13 @@
     this.all().forEach(function (p) { p.lock = false; });
     this.formation(0, 'base');
     this.formation(1, 'base');
-    var me = this;
-    this.players[winner].forEach(function (p) { me.act(p, 'cheer', 1.3); });
+    var me = this, t0 = this.t;
+    // Winners jog together and celebrate on arrival; the others drop their heads.
+    this.players[winner].forEach(function (p, i) {
+      var a = i / 6 * Math.PI * 2, w = world(winner, 5.2 + Math.cos(a) * 0.95, 4.5 + Math.sin(a) * 0.95);
+      p.tx = w.x; p.ty = w.y;
+      p.act = { type: 'cheer', t: t0 + 0.35 + Math.random() * 0.15, dur: 1.0 };
+    });
     this.players[1 - winner].forEach(function (p) { me.act(p, 'sad', 1.0 + Math.random() * 0.4); p.contactAt = 0; });
 
     var name = this.m.teams[winner].name, color = this.m.teams[winner].color;
@@ -624,7 +645,7 @@
   // `power` lets an online player send the power they saw when they pressed.
   R.humanServe = function (team, power) {
     team = team || 0;
-    if (this.state === 'serve' && this.serveReady && this.m.server === team && this.isHuman(team) && this.stateT - this.readyT > 0.2) {
+    if (this.state === 'serve' && this.serveReady && !this.toss && this.m.server === team && this.isHuman(team) && this.stateT - this.readyT > 0.2) {
       var u = this.uiOf(team);
       this.serve(u.aim, typeof power === 'number' ? clamp(power, 0, 1) : u.power);
     }
@@ -692,18 +713,25 @@
     this.movePlayers(dt);
 
     if (this.state === 'serve') {
-      this.uis[this.m.server].power = this.serveReady ? (1 - Math.cos((this.stateT - this.readyT) * 3.4)) / 2 : 0;
-      var sp = this.server, dir = sp.team === 0 ? 1 : -1;
-      this.ball = { x: sp.x + dir * 0.35, y: sp.y, z: 1.15 + Math.abs(Math.sin(this.stateT * 4)) * 0.25 };
+      var sp = this.server, dir = sp.team === 0 ? 1 : -1, tz = this.toss;
+      if (tz) {
+        // Ball rises from the hand and drifts forward to meet the jumping server.
+        var k = this.t - tz.t0, f = Math.min(1, k / TOSS_T);
+        this.ball = { x: tz.x0 + dir * 0.45 * f, y: tz.y0, z: 1.3 + TOSS_VZ * k - 4.9 * k * k };
+        if (k >= TOSS_T) this.strike(tz.aim, tz.power);
+      } else {
+        this.uis[this.m.server].power = this.serveReady ? (1 - Math.cos((this.stateT - this.readyT) * 3.4)) / 2 : 0;
+        this.ball = { x: sp.x + dir * 0.35, y: sp.y, z: 1.15 + Math.abs(Math.sin(this.stateT * 4)) * 0.25 };
+      }
       if (!this.serveReady && dist(sp, { x: sp.tx, y: sp.ty }) < 0.12) {
         this.serveReady = true;
         this.readyT = this.stateT;
         this.cpuServeAt = this.stateT + rnd(0.6, 1.1);
         if (this.isHuman(this.m.server)) this.uis[this.m.server].prompt = 'serve';
       }
-      if (this.serveReady && !this.isHuman(this.m.server) && this.stateT > this.cpuServeAt) this.cpuServe();
+      if (this.serveReady && !this.toss && !this.isHuman(this.m.server) && this.stateT > this.cpuServeAt) this.cpuServe();
       // Online, nobody can stall the match: an idle server serves after 15 s.
-      if (this.serveReady && this.human === 'both' && this.stateT - this.readyT > 15) this.serve(this.uis[this.m.server].aim, 0.5);
+      if (this.serveReady && !this.toss && this.human === 'both' && this.stateT - this.readyT > 15) this.serve(this.uis[this.m.server].aim, 0.5);
     }
 
     var f = this.flight;

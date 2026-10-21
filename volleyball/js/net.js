@@ -356,7 +356,7 @@
       return [r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.vx), r2(p.vy), r2(p.phase),
         p.act ? p.act.type : 0, p.act ? r3(p.act.t) : 0, p.act ? r3(p.act.dur) : 0,
         r3(p.jumpAt), p.jumpKind || 0, r3(p.contactAt), p.contactKind || 0,
-        cp ? [r3(cp.x), r3(cp.y), r3(cp.z)] : 0, p.lock ? 1 : 0];
+        cp ? [r3(cp.x), r3(cp.y), r3(cp.z)] : 0, p.lock ? 1 : 0, p.shotKind || 0];
     });
     var bn = r.banner;
     var out = {
@@ -604,6 +604,7 @@
       p.contactAt = a[12]; p.contactKind = a[13] || null;
       p.contactPt = a[14] ? { x: mx(a[14][0]), y: my(a[14][1]), z: a[14][2] } : null;
       p.lock = !!a[15];
+      p.shotKind = a[16] || null;
     }
     var M = s0.m, m = this.m;
     m.score = [M[0][1], M[0][0]]; m.sets = [M[1][1], M[1][0]]; m.setNo = M[2]; m.rot = [M[3][1], M[3][0]];
