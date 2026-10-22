@@ -706,14 +706,17 @@
     // Play a little behind the host: just enough to cover jitter (50-200 ms).
     // The playback clock speeds up or slows down slightly to hold that gap, so
     // hiccups never build up into a growing delay.
-    var delay = Math.max(0.05, Math.min(0.2, 0.035 + this.jit * 2.5)) * ts;
+    // Over the relay, updates come less often and less evenly: keep a bigger cushion.
+    var relay = N.via === 'relay';
+    var delay = Math.max(relay ? 0.09 : 0.05, Math.min(relay ? 0.3 : 0.2, (relay ? 0.06 : 0.035) + this.jit * 2.5)) * ts;
     var since = Math.min(0.25, (now() - this.lastArr) / 1000) * ts;
     var target = newest.T + since - delay;
     var err = target - this.ph;
     if (Math.abs(err) > 0.35) this.ph = target;
     else this.ph += dt * this.timeScale * (1 + Math.max(-0.3, Math.min(0.3, err * 3)));
-    // Never run more than 120 ms past the newest data.
-    if (this.ph > newest.T + 0.12 * ts) this.ph = newest.T + 0.12 * ts;
+    // Never run too far past the newest data.
+    var ahead = (relay ? 0.2 : 0.12) * ts;
+    if (this.ph > newest.T + ahead) this.ph = newest.T + ahead;
     var i = 0;
     while (i < b.length - 2 && b[i + 1].T <= this.ph) i++;
     var s0 = b[i], s1 = b[Math.min(i + 1, b.length - 1)];
@@ -854,7 +857,7 @@
     var g = SR.game;
     if (!g || g.cfg.online !== 'host' || !N.conn || !N.conn.open) return;
     if (N.events.length) { send({ t: 'ev', e: N.events }); N.events = []; }
-    if (now() - N.lastSnap < (N.conn.relay ? SNAP_MS * 2 : SNAP_MS)) return;
+    if (now() - N.lastSnap < (N.conn.relay ? 50 : SNAP_MS)) return;
     N.lastSnap = now();
     var f = N.fast, msg = snapshot(g);
     if (f && f.readyState === 'open') {

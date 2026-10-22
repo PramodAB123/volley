@@ -331,7 +331,6 @@
       ud.prompt = 'block';
       ud.blockCall = 'read';
       ud.blockThreats = hitters.map(function (h) { return h.p; });
-      this.timeScale = 0.5;
     } else if (Math.random() < 0.22 && hitters.length) {
       this.commitBlock(def, hitters[Math.floor(Math.random() * hitters.length)].slot);
     }
@@ -438,7 +437,7 @@
 
     this.hitSlot = pick.slot;
     this.timeScale = 1;
-    if (this.isHuman(team)) { ua.prompt = 'target'; ua.attackTarget = null; ua.tip = false; ua.shot = 'power'; this.timeScale = 0.35; }
+    if (this.isHuman(team)) { ua.prompt = 'target'; ua.attackTarget = null; ua.tip = false; ua.shot = 'power'; }
     this.at(T, function () { self.attack(h); });
   };
 

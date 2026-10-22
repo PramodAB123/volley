@@ -67,20 +67,33 @@
     hud.style.right = 'auto';
   }
 
-  function frame(ts) {
-    var dt = last ? Math.min(0.05, (ts - last) / 1000) : 0;
+  function step(ts) {
+    var dt = last ? Math.min(document.hidden ? 0.25 : 0.05, (ts - last) / 1000) : 0;
     last = ts;
     var g = SR.game;
-    if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; dt = 0; }
+    // Hit-stop freeze on big hits; skipped online so the match never stalls.
+    if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; if (!(g && g.cfg.online)) dt = 0; }
     if (g && !g.paused) {
       acc += dt * (g.rally.loopScale || g.rally.timeScale) * (SR.speed || 1);
       var n = 0;
       while (acc >= STEP && n < 4000) { g.rally.update(STEP); acc -= STEP; n++; }
     }
     if (SR.net) SR.net.tick();
-    SR.render.draw(ctx, g);
+    if (!document.hidden) SR.render.draw(ctx, g);
+  }
+
+  function frame(ts) {
+    step(ts);
     window.requestAnimationFrame(frame);
   }
+
+  // A hidden tab stops animation frames. When hosting online, keep the match
+  // running on a timer so the friend's game doesn't freeze.
+  setInterval(function () {
+    var g = SR.game;
+    if (!document.hidden || !g || g.cfg.online !== 'host') return;
+    step(performance.now());
+  }, 50);
 
   window.addEventListener('load', function () {
     SR.save.load();
