@@ -110,7 +110,7 @@
       K = keys([
         { t: 0, lean: 0.02, hR: v(0.3, -0.24, 1.9), hL: v(0.3, 0.24, 1.95), fL: v(0, 0.16, 0.04), fR: v(0, -0.16, 0.04), el: v(-0.5, -1, 0) },
         { t: Math.max(0.06, tc - 0.22), lean: -0.13, hR: v(-0.32, -0.3, 1.92), hL: v(0.36, 0.17, 2.18), fL: v(-0.2, 0.15, 0.28), fR: v(-0.3, -0.12, 0.36), el: v(-1, -0.4, 0.7) },
-        { t: tc, lean: 0.06, hR: v(0.24, -0.12, 2.4), hL: v(0.16, 0.25, 1.36), fL: v(-0.12, 0.16, 0.2), fR: v(-0.16, -0.14, 0.22), el: v(-0.5, -1, 0) },
+        { t: tc, lean: 0.06, hR: v(0.12, -0.16, 2.12), hL: v(0.16, 0.25, 1.36), fL: v(-0.12, 0.16, 0.2), fR: v(-0.16, -0.14, 0.22), el: v(-0.5, -1, 0) },
         { t: tc + 0.17, lean: 0.2, hR: v(0.46, 0.02, 1.14), hL: v(0.06, 0.27, 1.08), fL: v(0.02, 0.18, 0.1), fR: v(0, -0.18, 0.1), el: v(0, -1, -0.4) },
         { t: 1, lean: 0.12, hR: v(0.28, -0.24, 0.98), hL: v(0.28, 0.24, 0.98), fL: v(0.08, 0.2, 0), fR: v(0.06, -0.2, 0), el: v(-0.2, -1, -0.6) }
       ], jt);
@@ -120,7 +120,7 @@
       // staying up, a roll shot a short brushing swing, a power shot the full arc.
       if (jt > tc && (p.shotKind === 'tip' || p.shotKind === 'roll')) {
         var fk = ease((jt - tc) / 0.25), soft = p.shotKind === 'tip';
-        handR = lv(v(0.24, -0.12, 2.4), soft ? v(0.42, -0.08, 2.2) : v(0.5, -0.04, 1.72), fk);
+        handR = lv(v(0.12, -0.16, 2.12), soft ? v(0.4, -0.1, 2.0) : v(0.5, -0.04, 1.72), fk);
         if (jt > tc + 0.3) handR = lv(handR, v(0.28, -0.24, 0.98), ease((jt - tc - 0.3) / 0.25));
         lean = lerp(0.06, soft ? 0.08 : 0.13, fk);
         twist = soft ? 0 : 0.05;
@@ -128,9 +128,10 @@
     } else if ((act && act.type === 'set') || (rally.setter === p && p.lock)) {
       // Hands form a window above the forehead, then push up and out.
       var push = act ? Math.sin(Math.PI * clamp(a / 0.6, 0, 1)) : 0;
-      hipZ = act ? 0.84 + push * 0.1 : 0.82; lean = -0.02;
-      footL = v(0.1, 0.2, 0); footR = v(-0.08, -0.2, 0);
-      handL = v(0.14 + push * 0.04, 0.12, 2.0 + push * 0.22); handR = v(0.14 + push * 0.04, -0.12, 2.0 + push * 0.22);
+      // Up on the toes with the hands making a window right where the ball drops.
+      hipZ = act ? 0.95 + push * 0.04 : 0.93; lean = -0.02;
+      footL = v(0.1, 0.2, 0.04); footR = v(-0.08, -0.2, 0.04);
+      handL = v(0.15 + push * 0.04, 0.1, 2.05 + push * 0.08); handR = v(0.15 + push * 0.04, -0.1, 2.05 + push * 0.08);
       elbowDir = v(0.2, 1, -0.2);
     } else if (toContact < 0.65 && toContact > -0.05) {
       // Reading the ball: drop into a staggered stance and bring the platform to it.
@@ -188,7 +189,7 @@
       elbowDir = v(-0.5, -1, -0.2);
     } else if (speed > 0.6) {
       var phs = p.phase, sn = Math.sin(phs), cs = Math.cos(phs);
-      var stride = Math.min(0.44, 0.085 * speed), run = clamp((speed - 0.6) / 3, 0, 1);
+      var stride = SR.strideFor(speed), run = clamp((speed - 0.6) / 3, 0, 1);
       // Legs swing along the running direction, expressed in the local frame.
       var mf = (p.vx * cy + p.vy * sy) / speed, ms = (-p.vx * sy + p.vy * cy) / speed;
       // Lifted foot swings through high with the heel tucked; planted foot pushes back.
@@ -211,7 +212,7 @@
       // Side shuffles stay low with arms ready instead of a full sprint.
       if (Math.abs(ms) > 0.7) {
         hipZ = 0.8 - Math.abs(sn) * 0.02; handL = v(0.32, 0.22, 0.98); handR = v(0.32, -0.22, 0.98); lean = 0.1; twist = 0;
-        footL = v(0.04, 0.24 + ms * 0.12 * sn, Math.max(0, cs) * 0.06); footR = v(-0.02, -0.24 + ms * 0.12 * sn, Math.max(0, -cs) * 0.06);
+        footL = v(0.04, 0.24 + ms * stride * 0.5 * sn, Math.max(0, cs) * 0.06); footR = v(-0.02, -0.24 + ms * stride * 0.5 * sn, Math.max(0, -cs) * 0.06);
       }
     } else {
       // Ready stance, lower and wider when the ball is coming our way.
@@ -240,6 +241,9 @@
     var hTw = hipTw === null ? twist * 0.5 : hipTw, hc = Math.cos(hTw), hs = Math.sin(hTw);
     j.hipL = v(-side * hs, side * hc, hipZ); j.hipR = v(side * hs, -side * hc, hipZ);
     j.shL = v(lean - 0.2 * st, 0.2 * ct, shZ - tilt * 0.2); j.shR = v(lean + 0.2 * st, -0.2 * ct, shZ + tilt * 0.2);
+    // Shoulders lift when reaching overhead, adding a little reach.
+    if (handL.z > shZ + 0.35) j.shL.z += 0.06;
+    if (handR.z > shZ + 0.35) j.shR.z += 0.06;
     // Forearm platform: both arms straight, hands together, pointing at the ball.
     if (plat && platK > 0) {
       var mc = v(lean, 0, shZ - tilt * 0.05), df = plat.f - mc.f, ds = plat.s - mc.s, dz = plat.z - mc.z, dl = Math.sqrt(df * df + ds * ds + dz * dz) || 1;
@@ -255,7 +259,7 @@
     var eL = ik(j.shL, handL, UPPER, FORE, elbowDir), eR = ik(j.shR, handR, UPPER, FORE, v(elbowDir.f, -elbowDir.s, elbowDir.z));
     j.elbowL = eL.joint; j.handL = eL.end; j.elbowR = eR.joint; j.handR = eR.end;
     j._w = (act && (act.type === 'pass' || act.type === 'dive' || act.type === 'set')) || toContact < 0.65 ? 28 : sinceHit < 0.42 ? 30
-      : inAir ? 34 : speed > 0.6 ? 42 : 14;
+      : inAir ? 60 : speed > 0.6 ? 42 : 14;
     return j;
   }
 

@@ -60,6 +60,10 @@ SR.formatOf = function (id) {
     label: (sets === 1 ? '1 set to ' + points : 'Best of ' + sets + ', sets to ' + points) };
 };
 
+// Running stride: half the distance a foot travels per step at a given speed
+// (m/s). The gait's phase advances so a planted foot never slides.
+SR.strideFor = function (speed) { return Math.max(0.12, Math.min(0.42, 0.1 + 0.055 * speed)); };
+
 // Added to every CPU rating.
 SR.DIFFICULTY = {
   easy:   { label: 'Easy',   boost: -14 },

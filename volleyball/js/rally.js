@@ -137,17 +137,18 @@
     this.all().forEach(function (p) { p.contactAt = 0; });
   };
 
-  var TOSS_T = 0.8, TOSS_VZ = 6.05;
+  var TOSS_T = 0.8, TOSS_VZ = 5.8;
 
   // Start the serve: the server tosses the ball, steps in and jumps; the ball
   // is struck at the top of the jump (see update), then strike() sends it.
   R.serve = function (aim, power) {
     if (this.state !== 'serve' || this.toss) return;
     var s = this.m.server, p = this.server, dir = s === 0 ? 1 : -1;
-    this.toss = { t0: this.t, aim: { x: aim.x, y: aim.y }, power: power, x0: p.x + dir * 0.35, y0: p.y };
+    this.toss = { t0: this.t, aim: { x: aim.x, y: aim.y }, power: power, x0: p.x + dir * 0.35, y0: p.y - dir * 0.16 };
     this.uis[s].prompt = null;
     p.jumpAt = this.t + TOSS_T - 0.2;
     p.jumpKind = 'serve';
+    p.jumpH = 0.85;
     p.lock = true; p.tx = p.x + dir * 0.75; p.ty = p.y;
     SR.audio.play('set');
   };
@@ -246,6 +247,9 @@
     this.players[team].forEach(function (p) {
       if (p === self.server && self.state === 'serve') return;
       var arr = REACT + Math.max(0, dist(p, pc) - REACH) / p.speed;
+      // A player still in the air (blocking) can only play it after landing.
+      var down = p.jumpAt + 0.75 + 0.12 - self.t;
+      if (down > 0) arr = Math.max(arr, down + Math.max(0, dist(p, pc) - REACH) / p.speed);
       if (arr < bestArr) { bestArr = arr; best = p; }
     });
     if (!best) return;
@@ -253,6 +257,7 @@
     if (bestArr > tc + 0.02) {
       // Try a dive just before the ball hits the floor.
       var t2 = f.landT - 0.03, p2 = P.at(f.p0, f.v, t2), arr2 = REACT + Math.max(0, dist(best, p2) - REACH - 0.6) / best.speed;
+      arr2 += Math.max(0, best.jumpAt + 0.87 - this.t);
       if (arr2 > t2 + 0.15) return; // nobody gets there
       tc = t2; pc = p2; stretch = true;
     }
@@ -301,7 +306,7 @@
 
     var e = 1 - q;
     var lx = clamp(SET_SPOT[0] + gauss() * e * 1.6, 3.5, 8.6), ly = clamp(SET_SPOT[1] + gauss() * e * 2.0, 0.5, 8.5);
-    var tw = world(team, lx, ly), tgt = { x: tw.x, y: tw.y, z: 2.5 };
+    var tw = world(team, lx, ly), tgt = { x: tw.x, y: tw.y, z: 2.15 };
     var T = clamp(0.9 + dist(cp, tgt) * 0.06, 1.0, 1.6);
     this.launch(cp, tgt, T);
 
@@ -315,7 +320,8 @@
         if (d < bestD) { bestD = d; s = c; }
       });
     }
-    s.lock = true; s.tx = tgt.x; s.ty = tgt.y;
+    // The setter stands just behind the ball so it drops onto the hands above the forehead.
+    s.lock = true; s.tx = tgt.x - (team === 0 ? 0.15 : -0.15); s.ty = tgt.y;
     this.setter = s;
     this.passQ = q;
     this.formation(team, 'attack');
@@ -392,7 +398,7 @@
     var rt = this.m.ratings[team];
     var qs = clamp(0.35 + rt.pass / 100 * 0.4 + this.passQ * 0.25 + rnd(-0.15, 0.15), 0, 1);
     var e = 1 - qs, hx = clamp(HIT[pick.slot][0] + gauss() * e * 0.7, 6.5, 8.7), hy = clamp(HIT[pick.slot][1] + gauss() * e * 0.7, 0.3, 8.7);
-    var hw = world(team, hx, hy), tgt = { x: hw.x, y: hw.y, z: 2.9 + rt.attack / 100 * 0.45 };
+    var hw = world(team, hx, hy), tgt = { x: hw.x, y: hw.y, z: 2.8 + rt.attack / 100 * 0.3 };
     var T = pick.slot === 'middle' ? 0.62 : 1.05;
     if (this.passQ < 0.45) T += 0.25;
     var cp = { x: this.ball.x, y: this.ball.y, z: this.ball.z };
@@ -401,7 +407,10 @@
     this.fx('set', { pos: cp });
 
     var h = pick.p;
-    h.lock = true; h.tx = tgt.x; h.ty = tgt.y; h.jumpAt = this.t + T - 0.42; h.jumpKind = 'spike';
+    // Line the hitting shoulder up under the ball and jump so the hand meets it.
+    var hfd = team === 0 ? 1 : -1;
+    h.lock = true; h.tx = tgt.x - hfd * 0.1; h.ty = tgt.y + hfd * 0.16; h.jumpAt = this.t + T - 0.42; h.jumpKind = 'spike';
+    h.jumpH = clamp(tgt.z - 2.12, 0.7, 1.05);
     this.hitter = h;
     this.setQ = qs;
 
@@ -426,6 +435,7 @@
         by = clamp(by, 0.4, 8.6);
         b.jumpAt = this.t + T - 0.2;
         b.jumpKind = 'block';
+        b.jumpH = 0.8;
       } else { by = local(def, b.x, b.y).y; b.jumpKind = null; }
       var bw = world(def, 8.55, by);
       b.tx = bw.x; b.ty = bw.y;
@@ -779,12 +789,19 @@
       // Smoothed velocity drives the running animation.
       p.vx += ((p.x - ox) / dt - p.vx) * Math.min(1, dt * 12);
       p.vy += ((p.y - oy) / dt - p.vy) * Math.min(1, dt * 12);
-      p.phase += Math.sqrt((p.x - ox) * (p.x - ox) + (p.y - oy) * (p.y - oy)) * 5.2;
+      p.phase += Math.sqrt((p.x - ox) * (p.x - ox) + (p.y - oy) * (p.y - oy)) * Math.PI / (2 * SR.strideFor(Math.sqrt(p.vx * p.vx + p.vy * p.vy)));
       // Turn to track the ball (within 70 degrees of facing the net).
       var base = p.team === 0 ? 0 : Math.PI;
       want = base;
-      var bdx = ball.x - p.x, bdy = ball.y - p.y;
-      if (bdx * bdx + bdy * bdy > 0.4) {
+      var bdx = ball.x - p.x, bdy = ball.y - p.y, spd = Math.sqrt(p.vx * p.vx + p.vy * p.vy), cp = p.contactPt;
+      var cdx = cp ? cp.x - p.x : 0, cdy = cp ? cp.y - p.y : 0;
+      if (p.lock && cp && p.contactAt > t - 0.1 && p.contactKind === 'dive' && cdx * cdx + cdy * cdy > 0.09) {
+        // Diving: square up to where the ball will be.
+        want = Math.atan2(cdy, cdx);
+      } else if (spd > 2.2 && d > 1.2 && !(p.lock && p.contactAt && p.contactAt - t < 0.5)) {
+        // A long run faces the way the player is going.
+        want = Math.atan2(p.vy, p.vx);
+      } else if (bdx * bdx + bdy * bdy > 0.4) {
         var off = Math.atan2(bdy, bdx) - base;
         off = Math.atan2(Math.sin(off), Math.cos(off));
         want = base + clamp(off, -1.2, 1.2);
@@ -792,7 +809,7 @@
       var dy2 = Math.atan2(Math.sin(want - p.yaw), Math.cos(want - p.yaw));
       p.yaw += dy2 * Math.min(1, dt * 7);
       var jt = (t - p.jumpAt) / 0.75;
-      p.z = (jt >= 0 && jt <= 1) ? 4 * 0.85 * jt * (1 - jt) : 0;
+      p.z = (jt >= 0 && jt <= 1) ? 4 * (p.jumpH || 0.85) * jt * (1 - jt) : 0;
       if (p.dive > 0) p.dive = Math.max(0, p.dive - dt * 1.2);
     });
   };
