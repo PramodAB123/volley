@@ -2,11 +2,12 @@
 // with it. PeerJS introduces the two browsers, then they talk directly over
 // WebRTC. The host's browser runs the match (team 0 = host, team 1 = friend);
 // the friend sends their calls and receives the game state ~30 times a second,
-// drawn from their own end of the court.
+// drawn from their own end of the court. If a direct link can't be made, the
+// same messages go through a public relay server instead (see relay.js).
 (function () {
   var PREFIX = 'spikerally-v1-';
   var ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  var SNAP_MS = 33, FAST_ID = 7, PING_MS = 1000, LOST_MS = 6000, REJOIN_MS = 30000, JOIN_TIMEOUT_MS = 15000;
+  var SNAP_MS = 33, FAST_ID = 7, PING_MS = 1000, LOST_MS = 6000, REJOIN_MS = 30000, JOIN_TIMEOUT_MS = 20000, P2P_WAIT_MS = 6000, ROOM_CHECK_MS = 3500;
   var C = SR.COURT;
   var $ = function (id) { return document.getElementById(id); };
 
@@ -51,7 +52,12 @@
     events: [],
     timers: {},
     lostAt: 0,
-    idTries: 0
+    idTries: 0,
+    hub: null,       // relay connections (backup path)
+    links: {},       // host: relay links by guest id
+    relayRoom: null, // guest: does the relay say the room exists? (null = not known yet)
+    p2pDown: false,  // guest: the direct path has failed
+    via: null        // 'p2p' | 'relay' once connected
   };
   SR.net = N;
 
@@ -89,6 +95,124 @@
     return id ? new window.Peer(id, opts) : new window.Peer(opts);
   }
 
+  // ---- relay (backup path) --------------------------------------------------
+
+  function topic(rest) { return 'spikerally/v1/' + N.code + '/' + rest; }
+  function relayUrls() {
+    var c = SR.NET_CONFIG || {};
+    return c.relays || ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081/mqtt'];
+  }
+  function closeHub() {
+    var h = N.hub;
+    N.hub = null;
+    if (!h) return;
+    try { h.close(h.roomTopic || null); } catch (e) { /* ignore */ }
+  }
+  function relayLive() { return !!(N.hub && N.hub.live().length); }
+
+  function startRelayHost() {
+    closeHub();
+    if (!SR.relay || !relayUrls().length) return;
+    var h = N.hub = new SR.relay.Hub(relayUrls(), { topic: topic('room'), payload: '', retain: true });
+    var code = N.code;
+    h.roomTopic = topic('room');
+    h.subscribe(topic('h'));
+    h.publishAll(topic('room'), '1', true);
+    h.onopen = function () { if (N.hub === h) roomReady(); };
+    h.onclose = function () {
+      if (N.hub !== h || !h.dead()) return;
+      if (N.phase === 'waiting' && (!N.peer || !N.peer.open)) abort('Could not reach the online servers. Check your internet connection and try again.');
+    };
+    h.onmessage = function (t, text, client) {
+      if (N.hub !== h || N.code !== code || t !== topic('h')) return;
+      var w;
+      try { w = JSON.parse(text); } catch (e) { return; }
+      if (!w || typeof w.f !== 'string' || !w.m || typeof w.m !== 'object') return;
+      var gid = w.f, m = w.m, cur = N.conn;
+      if (m.t === 'hello') {
+        // The same hello can arrive through several brokers: keep the first.
+        if (cur && cur.relay && cur.gid === gid && cur.open) return;
+        var link = new SR.relay.Link(client, topic('g/' + gid), 'h', { token: m.token || null });
+        link.gid = gid;
+        N.links[gid] = link;
+        onHostConnection(link);
+        link.start();
+        return;
+      }
+      var l = N.links[gid];
+      if (l && N.conn === l) l.deliver(m);
+    };
+  }
+
+  function startRelayGuest() {
+    closeHub();
+    N.relayRoom = null;
+    if (!SR.relay || !relayUrls().length) return;
+    var h = N.hub = new SR.relay.Hub(relayUrls(), null), code = N.code, first = true;
+    var inbox = 'g/' + h.id;
+    h.subscribe(topic(inbox));
+    h.subscribe(topic('room'));
+    h.onopen = function () {
+      if (N.hub !== h || !first) return;
+      first = false;
+      // A retained message says whether the host's room is open.
+      N.timers.roomcheck = setTimeout(function () {
+        if (N.hub !== h || N.relayRoom !== null) return;
+        N.relayRoom = false;
+        guestDecide();
+      }, ROOM_CHECK_MS);
+    };
+    h.onclose = function () { if (N.hub === h && h.dead()) guestDecide(); };
+    h.onmessage = function (t, text, client) {
+      if (N.hub !== h || N.code !== code) return;
+      if (t === topic('room')) { N.relayRoom = text === '1'; guestDecide(); return; }
+      if (t !== topic(inbox)) return;
+      var w;
+      try { w = JSON.parse(text); } catch (e) { return; }
+      var l = N.conn;
+      if (!w || w.f !== 'h' || !w.m || !l || !l.relay) return;
+      if (!l.open) { l.client = client; l.start(); }
+      if (l.client === client) l.deliver(w.m);
+    };
+  }
+
+  // Guest: send a hello through every broker; the host answers on one of them.
+  function relayHello() {
+    var h = N.hub;
+    if (!h || !h.live().length) return false;
+    if (!(N.conn && N.conn.relay && !N.conn.open)) {
+      // Going through the relay: stop the direct attempt so the host never sees two of us.
+      if (N.peer) { try { N.peer.destroy(); } catch (e) { /* ignore */ } N.peer = null; }
+      dropConn();
+      attach(new SR.relay.Link(null, topic('h'), h.id, {}));
+    }
+    var msg = JSON.stringify({ f: h.id, m: { t: 'hello', token: N.token } });
+    h.live().forEach(function (c) { c.publish(topic('h'), msg); });
+    return true;
+  }
+
+  // Guest: pick the path once we know enough. Called whenever something changes.
+  function guestDecide() {
+    if (N.role !== 'guest' || N.phase !== 'waiting') return;
+    if (N.conn && N.conn.open) return;
+    var relayOk = relayLive();
+    if (N.relayRoom === true && (N.p2pDown || N.joinT && now() - N.joinT > P2P_WAIT_MS)) {
+      if (!(N.conn && N.conn.relay)) { status('Connecting to room ' + N.code + ' through the backup server…'); relayHello(); }
+      return;
+    }
+    if (N.p2pDown === 'notfound' && (N.relayRoom === false || !relayOk && (!N.hub || N.hub.dead()))) {
+      abort('Room ' + N.code + ' was not found. Check the code, or ask your friend to create a new room.');
+      return;
+    }
+    if (N.p2pDown && N.relayRoom === false) {
+      abort('Room ' + N.code + ' was not found. Check the code, or ask your friend to create a new room.');
+      return;
+    }
+    if (N.p2pDown && (!N.hub || N.hub.dead())) {
+      abort('Could not reach the online servers. Check your internet connection and try again.');
+    }
+  }
+
   function send(msg) {
     var c = N.conn;
     if (!c || !c.open) return false;
@@ -109,6 +233,9 @@
     dropConn();
     if (N.peer) { try { N.peer.destroy(); } catch (e) { /* ignore */ } }
     N.peer = null;
+    closeHub();
+    N.links = {};
+    N.via = null;
     N.role = null;
     N.phase = 'idle';
     N.events = [];
@@ -147,7 +274,8 @@
     c.on('open', function () {
       if (N.conn !== c) return;
       N.lastRecv = now();
-      openFast(c);
+      N.via = c.relay ? 'relay' : 'p2p';
+      if (!c.relay) openFast(c);
       onOpen(c);
     });
     c.on('data', function (msg) {
@@ -188,13 +316,17 @@
     }
     if (type === 'peer-unavailable') {
       if (N.phase === 'rejoining') return; // keep trying until the window closes
+      if (N.role === 'guest') { N.p2pDown = 'notfound'; guestDecide(); return; }
       abort('Room ' + N.code + ' was not found. Check the code, or ask your friend to create a new room.');
       return;
     }
     if (type === 'browser-incompatible') { abort('This browser cannot play online. Try the latest Chrome, Safari, Edge or Firefox.'); return; }
     if (type === 'network' || type === 'server-error' || type === 'socket-error' || type === 'socket-closed' || type === 'disconnected') {
       if (N.phase === 'playing' || N.phase === 'rejoining') return; // the heartbeat reconnects
-      abort('Could not reach the online server. Check your internet connection and try again.');
+      // The PeerJS server is unreachable: carry on over the relay if it works.
+      if (N.role === 'guest') { N.p2pDown = N.p2pDown || 'down'; guestDecide(); return; }
+      if (N.role === 'host' && (relayLive() || (N.hub && !N.hub.dead()))) return;
+      abort('Could not reach the online servers. Check your internet connection and try again.');
       return;
     }
     if (N.phase === 'playing' || N.phase === 'rejoining') return;
@@ -228,12 +360,20 @@
       tryRejoin();
       return;
     }
+    if (N.phase === 'waiting') { N.p2pDown = N.p2pDown || 'blocked'; guestDecide(); return; }
     if (N.phase !== 'rejoining') abort('Lost the connection to the room. Please try joining again.');
   }
 
   function tryRejoin() {
     clearTimer('rejoin');
     if (N.phase !== 'rejoining') return;
+    // Came in through the relay, or the direct path isn't coming back: use the relay.
+    if (N.via === 'relay' || now() - N.lostAt > P2P_WAIT_MS) {
+      if (!N.hub || N.hub.dead()) startRelayGuest();
+      relayHello();
+      N.timers.rejoin = setTimeout(tryRejoin, 3000);
+      return;
+    }
     try {
       if (!N.peer || N.peer.destroyed) {
         N.peer = makePeer();
@@ -268,13 +408,18 @@
     if (N.peer) { try { N.peer.destroy(); } catch (e) { /* ignore */ } }
     N.code = makeCode();
     N.phase = 'waiting';
-    try { N.peer = makePeer(PREFIX + N.code); } catch (e) { abort('Online play could not load. Check your connection and reload the page.'); return; }
-    N.peer.on('open', function () {
-      $('on-code-big').textContent = N.code;
-      status('Waiting for your friend to join. Send them the code or the invite link.');
-    });
+    try { N.peer = makePeer(PREFIX + N.code); } catch (e) { N.peer = null; }
+    if (!N.peer) { startRelayHost(); if (!N.hub) abort('Online play could not load. Check your connection and reload the page.'); return; }
+    N.peer.on('open', roomReady);
     N.peer.on('connection', onHostConnection);
     N.peer.on('error', onPeerError);
+    startRelayHost();
+  }
+
+  function roomReady() {
+    if (N.role !== 'host' || N.phase !== 'waiting' || $('on-code-big').textContent === N.code) return;
+    $('on-code-big').textContent = N.code;
+    status('Waiting for your friend to join. Send them the code or the invite link.');
   }
 
   function onHostConnection(c) {
@@ -399,10 +544,17 @@
     N.code = code;
     N.phase = 'waiting';
     N.token = null;
+    N.p2pDown = false;
+    N.joinT = now();
     status('Connecting to room ' + code + '…');
-    try { N.peer = makePeer(); } catch (e) { abort('Online play could not load. Check your connection and reload the page.'); return; }
-    N.peer.on('open', function () { connectToHost(false); });
-    N.peer.on('error', onPeerError);
+    startRelayGuest();
+    try { N.peer = makePeer(); } catch (e) { N.peer = null; N.p2pDown = 'down'; }
+    if (N.peer) {
+      N.peer.on('open', function () { connectToHost(false); });
+      N.peer.on('error', onPeerError);
+    }
+    // If the direct link isn't up after a few seconds, try the relay.
+    N.timers.p2pwait = setTimeout(guestDecide, P2P_WAIT_MS + 50);
     N.timers.join = setTimeout(function () {
       if (N.role === 'guest' && N.phase === 'waiting') abort('Could not connect to room ' + code + '. Make sure your friend\'s room is still open, then try again.');
     }, JOIN_TIMEOUT_MS);
@@ -702,7 +854,7 @@
     var g = SR.game;
     if (!g || g.cfg.online !== 'host' || !N.conn || !N.conn.open) return;
     if (N.events.length) { send({ t: 'ev', e: N.events }); N.events = []; }
-    if (now() - N.lastSnap < SNAP_MS) return;
+    if (now() - N.lastSnap < (N.conn.relay ? SNAP_MS * 2 : SNAP_MS)) return;
     N.lastSnap = now();
     var f = N.fast, msg = snapshot(g);
     if (f && f.readyState === 'open') {
