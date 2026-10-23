@@ -729,12 +729,15 @@
     // hiccups never build up into a growing delay.
     // Over the relay, updates come less often and less evenly: keep a bigger cushion.
     var relay = N.via === 'relay';
-    var delay = Math.max(relay ? 0.09 : 0.05, Math.min(relay ? 0.3 : 0.2, (relay ? 0.06 : 0.035) + this.jit * 2.5)) * ts;
+    var delay = Math.max(relay ? 0.09 : 0.05, Math.min(relay ? 0.45 : 0.25, (relay ? 0.06 : 0.035) + this.jit * 2.5)) * ts;
     var since = Math.min(0.25, (now() - this.lastArr) / 1000) * ts;
     var target = newest.T + since - delay;
     var err = target - this.ph;
-    if (Math.abs(err) > 0.35) this.ph = target;
-    else this.ph += dt * this.timeScale * (1 + Math.max(-0.3, Math.min(0.3, err * 3)));
+    // Only a long stall jumps straight to the right moment; smaller gaps are
+    // closed by playing up to twice as fast (or half speed when ahead), so
+    // players glide back into place instead of teleporting.
+    if (Math.abs(err) > 1) this.ph = target;
+    else this.ph += dt * this.timeScale * (1 + Math.max(-0.5, Math.min(1, err * 3)));
     // Never run too far past the newest data.
     var ahead = (relay ? 0.2 : 0.12) * ts;
     if (this.ph > newest.T + ahead) this.ph = newest.T + ahead;
@@ -768,10 +771,14 @@
     this.state = s0.st;
     this.stateT = lerp(s0.sT, s1.sT, s0.st === s1.st ? k : 0);
     this.timeScale = s0.ts || 1;
-    var F = s0.f, F1 = s1.f;
-    if (F && (s1 === s0 || F1 && Math.abs((s1.T - F1[6]) - (s0.T - F[6])) < 0.01)) {
-      // Same flight in both snapshots: follow its exact arc.
-      var e = Math.min(F[7], Math.max(0, F[6] + this.t - s0.T)), at = SR.phys.at({ x: F[0], y: F[1], z: F[2] }, { x: F[3], y: F[4], z: F[5] }, e);
+    var F = s0.f, F1 = s1.f, arc = null;
+    // Follow the real flight arc. If the ball was hit between two snapshots,
+    // switch to the new arc at the moment of the hit instead of cutting the corner.
+    // (f[6] is the host time the flight started.)
+    if (F1 && s1 !== s0 && this.t >= F1[6]) arc = { F: F1, e: this.t - F1[6] };
+    else if (F) arc = { F: F, e: this.t - F[6] };
+    if (arc) {
+      var A = arc.F, e = Math.min(A[7], Math.max(0, arc.e)), at = SR.phys.at({ x: A[0], y: A[1], z: A[2] }, { x: A[3], y: A[4], z: A[5] }, e);
       this.ball = { x: mx(at.x), y: my(at.y), z: Math.max(0.11, at.z) };
     } else {
       var kb = Math.min(1, k);
