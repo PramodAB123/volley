@@ -1,6 +1,12 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "/volleyball/index.html" },
-    { "source": "/:path((?!volleyball/).*)", "destination": "/volleyball/:path" }
+    {
+      "source": "/",
+      "destination": "/volleyball/Volleyball V1/index.html"
+    },
+    {
+      "source": "/:path((?!volleyball/Volleyball V1/).*)",
+      "destination": "/volleyball/Volleyball V1/:path"
+    }
   ]
 }
