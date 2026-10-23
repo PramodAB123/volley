@@ -262,7 +262,7 @@
   function abort(msg) {
     var wasPlaying = SR.game && SR.game.cfg.online;
     cleanup();
-    if (wasPlaying) SR.ui.startDemo();
+    if (wasPlaying) SR.ui.stopMatch();
     openLobby();
     status(msg, 'error');
   }
@@ -877,7 +877,7 @@
       if (conn) { try { conn.close(); } catch (e) { /* ignore */ } }
       if (peer) { try { peer.destroy(); } catch (e) { /* ignore */ } }
     }, 300);
-    if (wasPlaying) SR.ui.startDemo();
+    if (wasPlaying) SR.ui.stopMatch();
     SR.ui.show('scr-menu');
   }
 

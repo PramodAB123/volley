@@ -225,3 +225,25 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
   #result-title { font-size: 28px; }
   .help li { margin-bottom: 6px; }
 }
+
+/* Menus: the cover art instead of a match behind the panels. */
+#app.menu-bg { background: linear-gradient(rgba(11, 18, 32, 0.15), rgba(11, 18, 32, 0.55)), url(../img/menu-bg.jpg) center top / cover no-repeat, #0b1220; }
+#app.menu-bg #game { visibility: hidden; }
+#app.menu-bg .screen { background: none; }
+/* Panel low, so the logo at the top of the art stays visible. */
+#app.menu-bg .screen { align-items: flex-end; }
+/* Square-ish screens: the whole poster, full height, centred, edges faded. */
+@media (min-aspect-ratio: 1/1) {
+  #app.menu-bg {
+    background: linear-gradient(90deg, #0b1220 calc(50% - 33.3vh), rgba(11, 18, 32, 0) calc(50% - 33.3vh + 90px), rgba(11, 18, 32, 0) calc(50% + 33.3vh - 90px), #0b1220 calc(50% + 33.3vh)),
+      url(../img/menu-bg.jpg) center top / auto 100% no-repeat, #0b1220;
+  }
+}
+/* Wide screens: the art stands on the left, the panel beside it. */
+@media (min-aspect-ratio: 8/5) {
+  #app.menu-bg {
+    background: linear-gradient(90deg, rgba(11, 18, 32, 0) calc(66.7vh - 140px), #0b1220 66.7vh),
+      url(../img/menu-bg.jpg) left center / auto 100% no-repeat, #0b1220;
+  }
+  #app.menu-bg .screen { padding-left: calc(66.7vh - 24px); align-items: center; }
+}
