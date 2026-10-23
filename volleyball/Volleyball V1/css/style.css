@@ -175,6 +175,12 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
   padding: 12px 18px; border-radius: 14px; background: rgba(6, 10, 18, 0.88); color: #fff; font-weight: 700; text-align: center;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
+.net-link {
+  position: absolute; left: 10px; bottom: 10px; z-index: 3; padding: 4px 9px; border-radius: 10px; pointer-events: none;
+  background: rgba(6, 10, 18, 0.7); color: #7ee0a0; font: 700 12px system-ui, sans-serif; font-variant-numeric: tabular-nums;
+}
+.net-link.meh { color: #ffd23f; }
+.net-link.bad { color: #ff7a59; }
 .help li { margin-bottom: 10px; line-height: 1.45; }
 
 #result-title { font-size: 34px; }

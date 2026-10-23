@@ -47,6 +47,7 @@
     format: 'standard',
     lastRecv: 0,
     lastSnap: 0,
+    rtt: 0,
     lastAim: 0,
     fast: null,      // unreliable, unordered channel for snapshots
     events: [],
@@ -75,6 +76,19 @@
     if (!el) return;
     el.textContent = text || '';
     el.classList.toggle('hidden', !text);
+  }
+
+  // Small corner badge during an online match: ping, and whether the game is
+  // going direct or through the slower backup server.
+  function showLink() {
+    var el = $('net-link');
+    if (!el) return;
+    var on = N.phase === 'playing' && N.conn && N.conn.open;
+    el.classList.toggle('hidden', !on);
+    if (!on) return;
+    var ms = Math.round(N.rtt || 0), bad = N.via === 'relay' || ms > 180;
+    el.textContent = (ms ? ms + ' ms' : '…') + (N.via === 'relay' ? ' · backup server' : '');
+    el.className = 'net-link' + (bad ? ' bad' : ms > 90 ? ' meh' : '');
   }
 
   function view(which) {
@@ -236,10 +250,12 @@
     closeHub();
     N.links = {};
     N.via = null;
+    N.rtt = 0;
     N.role = null;
     N.phase = 'idle';
     N.events = [];
     banner('');
+    showLink();
   }
 
   // Back to the online screen with a message, ending any online match.
@@ -290,7 +306,8 @@
   function heartbeat() {
     clearTimer('beat');
     N.timers.beat = setInterval(function () {
-      if (N.conn && N.conn.open) send({ t: 'ping' });
+      if (N.conn && N.conn.open) send({ t: 'ping', s: now() });
+      showLink();
       if (N.conn && N.conn.open && (N.phase === 'lobby' || N.phase === 'playing') && now() - N.lastRecv > LOST_MS) lost();
       if (N.phase === 'rejoining') {
         var left = Math.max(0, Math.ceil((REJOIN_MS - (now() - N.lostAt)) / 1000));
@@ -570,7 +587,11 @@
   }
 
   function onData(msg) {
-    if (msg.t === 'ping') return;
+    if (msg.t === 'ping') { if (num(msg.s)) send({ t: 'pong', s: msg.s }); return; }
+    if (msg.t === 'pong') {
+      if (num(msg.s)) { var rt = now() - msg.s; if (rt >= 0 && rt < 10000) N.rtt = N.rtt ? N.rtt + (rt - N.rtt) * 0.3 : rt; }
+      return;
+    }
     if (msg.t === 'bye') {
       if (N.phase === 'over') return;
       if (N.role === 'host' && N.phase !== 'playing' && N.phase !== 'rejoining') { lost(); return; }
@@ -721,7 +742,7 @@
     while (i < b.length - 2 && b[i + 1].T <= this.ph) i++;
     var s0 = b[i], s1 = b[Math.min(i + 1, b.length - 1)];
     // Past the newest snapshot we keep moving along the last known motion.
-    var k = s1.T > s0.T ? Math.max(0, Math.min(1.6, (this.ph - s0.T) / (s1.T - s0.T))) : 1;
+    var k = s1.T > s0.T ? Math.max(0, Math.min(1.25, (this.ph - s0.T) / (s1.T - s0.T))) : 1;
     this.apply(s0, s1, k);
     // Fire effects whose time has come.
     var ph = this.ph, keep = [];
@@ -747,8 +768,15 @@
     this.state = s0.st;
     this.stateT = lerp(s0.sT, s1.sT, s0.st === s1.st ? k : 0);
     this.timeScale = s0.ts || 1;
-    this.ball = { x: mx(lerp(s0.b[0], s1.b[0], k)), y: my(lerp(s0.b[1], s1.b[1], k)), z: Math.max(0.11, lerp(s0.b[2], s1.b[2], k)) };
-    var F = s0.f;
+    var F = s0.f, F1 = s1.f;
+    if (F && (s1 === s0 || F1 && Math.abs((s1.T - F1[6]) - (s0.T - F[6])) < 0.01)) {
+      // Same flight in both snapshots: follow its exact arc.
+      var e = Math.min(F[7], Math.max(0, F[6] + this.t - s0.T)), at = SR.phys.at({ x: F[0], y: F[1], z: F[2] }, { x: F[3], y: F[4], z: F[5] }, e);
+      this.ball = { x: mx(at.x), y: my(at.y), z: Math.max(0.11, at.z) };
+    } else {
+      var kb = Math.min(1, k);
+      this.ball = { x: mx(lerp(s0.b[0], s1.b[0], kb)), y: my(lerp(s0.b[1], s1.b[1], kb)), z: Math.max(0.11, lerp(s0.b[2], s1.b[2], kb)) };
+    }
     this.flight = F ? { p0: { x: mx(F[0]), y: my(F[1]), z: F[2] }, v: { x: -F[3], y: -F[4], z: F[5] }, t: Math.max(0, this.t - F[6]), landT: F[7] } : null;
     this.server = this.byHost(s0.sv);
     this.setter = this.byHost(s0.se);
@@ -857,8 +885,9 @@
     var g = SR.game;
     if (!g || g.cfg.online !== 'host' || !N.conn || !N.conn.open) return;
     if (N.events.length) { send({ t: 'ev', e: N.events }); N.events = []; }
-    if (now() - N.lastSnap < (N.conn.relay ? 50 : SNAP_MS)) return;
-    N.lastSnap = now();
+    var gap = N.conn.relay ? 50 : SNAP_MS, t = now();
+    if (t - N.lastSnap < gap - 4) return;
+    N.lastSnap = t - N.lastSnap < gap * 2 ? N.lastSnap + gap : t;
     var f = N.fast, msg = snapshot(g);
     if (f && f.readyState === 'open') {
       // Skip a beat rather than queue snapshots behind a slow network.

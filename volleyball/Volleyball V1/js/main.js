@@ -46,13 +46,58 @@
     }
   };
 
-  var canvas, ctx, last = 0, acc = 0;
+  var canvas, ctx, last = 0, acc = 0, lowRes = false;
+
+  // The match steps at a fixed 120 Hz but screens refresh at 60, 90, 144 Hz
+  // and slow motion runs fewer steps per frame. Drawing the raw step leaves
+  // motion uneven (judder), so each frame is drawn between the last two
+  // steps: positions are saved before a step and blended at draw time.
+  var prev = { rally: null, t: 0, ball: null, ps: [] };
+
+  function saveStep(r) {
+    var ps = r.all();
+    prev.rally = r; prev.t = r.t;
+    prev.ball = { x: r.ball.x, y: r.ball.y, z: r.ball.z };
+    for (var i = 0; i < ps.length; i++) {
+      var p = ps[i], o = prev.ps[i] || (prev.ps[i] = {});
+      o.x = p.x; o.y = p.y; o.z = p.z; o.yaw = p.yaw;
+    }
+  }
+
+  function mix(a, b, k) { return a + (b - a) * k; }
+
+  // Blend the drawn state toward the previous step; returns an undo function.
+  function blend(r, k) {
+    if (prev.rally !== r || k >= 1 || !prev.ball) return null;
+    var ps = r.all(), keep = [], ball = r.ball, t = r.t, pb = prev.ball;
+    for (var i = 0; i < ps.length; i++) {
+      var p = ps[i], o = prev.ps[i];
+      keep.push(p.x, p.y, p.z, p.yaw);
+      if (!o || Math.abs(p.x - o.x) + Math.abs(p.y - o.y) > 1) continue; // snapped into place: don't smear
+      var dy = Math.atan2(Math.sin(p.yaw - o.yaw), Math.cos(p.yaw - o.yaw));
+      p.x = mix(o.x, p.x, k); p.y = mix(o.y, p.y, k); p.z = mix(o.z, p.z, k); p.yaw = o.yaw + dy * k;
+    }
+    if (Math.abs(ball.x - pb.x) + Math.abs(ball.y - pb.y) + Math.abs(ball.z - pb.z) < 2) {
+      r.ball = { x: mix(pb.x, ball.x, k), y: mix(pb.y, ball.y, k), z: mix(pb.z, ball.z, k) };
+    }
+    if (t > prev.t) r.t = mix(prev.t, t, k);
+    return function () {
+      for (var j = 0; j < ps.length; j++) {
+        var q = ps[j];
+        q.x = keep[j * 4]; q.y = keep[j * 4 + 1]; q.z = keep[j * 4 + 2]; q.yaw = keep[j * 4 + 3];
+      }
+      r.ball = ball; r.t = t;
+    };
+  }
 
   function resize() {
     var vw = window.innerWidth, vh = window.innerHeight;
     SR.render.setView(vw, vh);
     var s = Math.min(vw / SR.render.W, vh / SR.render.H);
-    var dpr = window.devicePixelRatio || 1;
+    // Very sharp phone screens cost a lot of pixels for little gain: cap the
+    // backing resolution, and lower it further if the device is struggling.
+    var dpr = Math.min(window.devicePixelRatio || 1, SR.lowFx ? 1.25 : 2);
+    lowRes = !!SR.lowFx;
     canvas.style.width = Math.floor(SR.render.W * s) + 'px';
     canvas.style.height = Math.floor(SR.render.H * s) + 'px';
     canvas.width = Math.floor(SR.render.W * s * dpr);
@@ -76,10 +121,13 @@
     if (g && !g.paused) {
       acc += dt * (g.rally.loopScale || g.rally.timeScale) * (SR.speed || 1);
       var n = 0;
-      while (acc >= STEP && n < 4000) { g.rally.update(STEP); acc -= STEP; n++; }
+      while (acc >= STEP && n < 4000) { saveStep(g.rally); g.rally.update(STEP); acc -= STEP; n++; }
     }
     if (SR.net) SR.net.tick();
-    if (!document.hidden) SR.render.draw(ctx, g);
+    if (SR.lowFx && !lowRes) resize();
+    if (document.hidden) return;
+    var undo = g && !g.paused ? blend(g.rally, acc / STEP) : null;
+    try { SR.render.draw(ctx, g); } finally { if (undo) undo(); }
   }
 
   function frame(ts) {
@@ -88,12 +136,18 @@
   }
 
   // A hidden tab stops animation frames. When hosting online, keep the match
-  // running on a timer so the friend's game doesn't freeze.
-  setInterval(function () {
+  // running on a timer so the friend's game doesn't freeze. Browsers slow page
+  // timers in hidden tabs to once a second, so the beat comes from a worker,
+  // whose timers keep running; a plain timer is the fallback.
+  function hiddenTick() {
     var g = SR.game;
     if (!document.hidden || !g || g.cfg.online !== 'host') return;
     step(performance.now());
-  }, 50);
+  }
+  try {
+    var beat = new Worker(URL.createObjectURL(new Blob(['setInterval(function(){postMessage(0)},33)'], { type: 'text/javascript' })));
+    beat.onmessage = hiddenTick;
+  } catch (e) { setInterval(hiddenTick, 50); }
 
   window.addEventListener('load', function () {
     SR.save.load();
