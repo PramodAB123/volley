@@ -45,7 +45,7 @@
   function renderTeams() {
     var title = mode === 'quick' ? (pickStep === 0 ? 'Choose your team' : 'Choose your opponent') :
       (mode === 'league' ? 'League: choose your team' : 'Tournament: choose your team');
-    $('teams-title').textContent = title;
+    $('teams-title').textContent = SR.t(title);
     teamCards($('team-grid'), pickStep === 1 && pickedHome ? pickedHome.id : null, pickTeam);
     rulesPicker($('team-rules'));
   }
@@ -54,12 +54,13 @@
   function rulesPicker(box) {
     var s = data().settings, f0 = SR.formatOf(s.format), f = SR.formatOf(SR.formatId(f0.points, f0.sets));
     function group(name, opts, cur, fmt) {
+      name = SR.t(name);
       return '<div class="rule"><span class="rule-name">' + name + '</span><div class="seg" role="radiogroup" aria-label="' + name + '">' +
         opts.map(function (o) { return '<button type="button" role="radio" aria-checked="' + (o === cur) + '" class="' + (o === cur ? 'on' : '') + '" data-v="' + o + '">' + fmt(o) + '</button>'; }).join('') + '</div></div>';
     }
     box.innerHTML = group('Points per set', SR.POINT_OPTIONS, f.points, String) +
-      group('Sets', SR.SET_OPTIONS, f.sets, function (n) { return n === 1 ? '1' : 'Best of ' + n; }) +
-      '<p class="rule-sum muted small">' + f.label + '</p>';
+      group('Sets', SR.SET_OPTIONS, f.sets, function (n) { return n === 1 ? '1' : SR.t('Best of {n}', { n: n }); }) +
+      '<p class="rule-sum muted small">' + SR.formatLabel(f) + '</p>';
     box.querySelectorAll('.rule').forEach(function (r, gi) {
       r.querySelectorAll('button').forEach(function (b) {
         b.addEventListener('click', function () {
@@ -83,7 +84,7 @@
       var pw = SR.teamPower(t);
       b.innerHTML = '<span class="jersey" style="background:' + t.color + ';color:' + t.trim + '">' + t.short + '</span>' +
         '<span class="tname">' + t.name + '</span>' +
-        '<span class="tstats">ATK ' + t.r.attack + ' · BLK ' + t.r.block + ' · PASS ' + t.r.pass + ' · SRV ' + t.r.serve + '</span>' +
+        '<span class="tstats">' + SR.t('ATK') + ' ' + t.r.attack + ' · ' + SR.t('BLK') + ' ' + t.r.block + ' · ' + SR.t('PASS') + ' ' + t.r.pass + ' · ' + SR.t('SRV') + ' ' + t.r.serve + '</span>' +
         '<span class="meter"><span style="width:' + Math.round((pw - 60) / 30 * 100) + '%"></span></span>';
       b.addEventListener('click', function () { onPick(t); });
       grid.appendChild(b);
@@ -125,12 +126,12 @@
     data().stars += stars;
     save();
 
-    $('result-title').textContent = won ? 'Victory!' : 'Defeat';
+    $('result-title').textContent = SR.t(won ? 'Victory!' : 'Defeat');
     $('result-title').className = won ? 'win' : 'loss';
     $('result-sub').textContent = m.teams[0].name + ' ' + m.sets[0] + ' - ' + m.sets[1] + ' ' + m.teams[1].name;
     $('result-sets').textContent = m.history.map(function (s) { return s[0] + '-' + s[1]; }).join('   ');
-    $('result-stats').textContent = 'Aces ' + m.stats[0].aces + ' · Kills ' + m.stats[0].kills + ' · Blocks ' + m.stats[0].blocks + ' · Errors ' + m.stats[0].errors;
-    $('result-stars').textContent = stars ? '+' + stars + ' star' + (stars > 1 ? 's' : '') : 'No stars this time';
+    $('result-stats').textContent = SR.t('Aces {a} · Kills {k} · Blocks {b} · Errors {e}', { a: m.stats[0].aces, k: m.stats[0].kills, b: m.stats[0].blocks, e: m.stats[0].errors });
+    $('result-stars').textContent = stars ? SR.t(stars > 1 ? '+{n} stars' : '+{n} star', { n: stars }) : SR.t('No stars this time');
     $('result-notes').textContent = notes.join(' ');
     // End of a match is a natural break for a midgame ad (CrazyGames spaces
     // them out; if none plays, the result shows straight away).
@@ -204,8 +205,8 @@
     if (L.round >= L.rounds.length) {
       L.done = true;
       var top = standings(L)[0];
-      if (top === L.me) { SR.cg.happytime(); out.stars += SR.STARS.leagueTitle; out.notes.push('League champions! +' + SR.STARS.leagueTitle + ' bonus stars.'); }
-      else out.notes.push('League finished. ' + team(top).name + ' took the title.');
+      if (top === L.me) { SR.cg.happytime(); out.stars += SR.STARS.leagueTitle; out.notes.push(SR.t('League champions! +{n} bonus stars.', { n: SR.STARS.leagueTitle })); }
+      else out.notes.push(SR.t('League finished. {team} took the title.', { team: team(top).name }));
     }
     return out;
   }
@@ -218,9 +219,9 @@
       var t = L.table[id], tm = team(id);
       return '<tr class="' + (id === L.me ? 'me' : '') + '"><td>' + (i + 1) + '</td><td>' + chip(tm) + tm.name + '</td><td>' + t.p + '</td><td>' + t.w + '</td><td>' + t.l + '</td><td>' + t.sw + ':' + t.sl + '</td><td><b>' + t.pts + '</b></td></tr>';
     }).join('');
-    $('league-table').innerHTML = '<thead><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>L</th><th>Sets</th><th>Pts</th></tr></thead><tbody>' + rows + '</tbody>';
+    $('league-table').innerHTML = '<thead><tr><th>#</th>' + ['Team', 'P', 'W', 'L', 'Sets', 'Pts'].map(function (h) { return '<th>' + SR.t(h) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows + '</tbody>';
     var opp = myFixture(L);
-    $('league-next').textContent = L.done ? 'Season complete.' : 'Round ' + (L.round + 1) + ' of 5: ' + team(L.me).name + ' vs ' + team(opp).name;
+    $('league-next').textContent = L.done ? SR.t('Season complete.') : SR.t('Round {r} of 5: {a} vs {b}', { r: L.round + 1, a: team(L.me).name, b: team(opp).name });
     $('league-log').textContent = L.log.slice(0, 6).join('  ·  ');
     $('btn-league-play').classList.toggle('hidden', L.done);
     $('btn-league-new').classList.toggle('hidden', !L.done);
@@ -269,8 +270,8 @@
     else T.out = true;
     advanceCup(T);
     while (T.out && !T.champion) advanceCup(T);
-    if (T.champion === T.me) { SR.cg.happytime(); out.stars += SR.STARS.cupTitle; out.notes.push('Cup winners! +' + SR.STARS.cupTitle + ' bonus stars.'); }
-    else if (T.out) out.notes.push((T.rounds.length === 3 && T.rounds[2][0].w && (T.rounds[2][0].a === T.me || T.rounds[2][0].b === T.me) ? 'Runners-up. ' : 'Knocked out. ') + team(T.champion).name + ' won the cup.');
+    if (T.champion === T.me) { SR.cg.happytime(); out.stars += SR.STARS.cupTitle; out.notes.push(SR.t('Cup winners! +{n} bonus stars.', { n: SR.STARS.cupTitle })); }
+    else if (T.out) out.notes.push(SR.t(T.rounds.length === 3 && T.rounds[2][0].w && (T.rounds[2][0].a === T.me || T.rounds[2][0].b === T.me) ? 'Runners-up. {team} won the cup.' : 'Knocked out. {team} won the cup.', { team: team(T.champion).name }));
     return out;
   }
 
@@ -278,12 +279,12 @@
     var T = data().tournament;
     if (!T) { openTeams('cup'); return; }
     mode = 'cup';
-    var names = ['Quarter-finals', 'Semi-finals', 'Final'];
+    var names = ['Quarter-finals', 'Semi-finals', 'Final'].map(function (n) { return SR.t(n); });
     var html = '';
     for (var r = 0; r < 3; r++) {
       html += '<div class="round"><h3>' + names[r] + '</h3>';
       var ms = T.rounds[r];
-      if (!ms) { html += '<div class="match tbd">To be decided</div>'; }
+      if (!ms) { html += '<div class="match tbd">' + SR.t('To be decided') + '</div>'; }
       else ms.forEach(function (m) {
         var line = function (id) {
           var t = team(id);
@@ -297,8 +298,8 @@
     $('cup-bracket').innerHTML = html;
     var mine = cupMyMatch(T);
     var msg;
-    if (T.champion) msg = T.champion === T.me ? 'You won the cup!' : team(T.champion).name + ' won the cup.';
-    else msg = names[T.round] + ': ' + team(mine.a).name + ' vs ' + team(mine.b).name;
+    if (T.champion) msg = T.champion === T.me ? SR.t('You won the cup!') : SR.t('{team} won the cup.', { team: team(T.champion).name });
+    else msg = SR.t('{round}: {a} vs {b}', { round: names[T.round], a: team(mine.a).name, b: team(mine.b).name });
     $('cup-next').textContent = msg;
     $('btn-cup-play').classList.toggle('hidden', !!T.champion);
     $('btn-cup-new').classList.toggle('hidden', !T.champion);
@@ -315,14 +316,14 @@
     var box = $('shop-ad'), btn = $('btn-ad-stars'), note = $('shop-ad-note');
     if (!SR.cg.ready || SR.cg.adsOff) { box.classList.add('hidden'); return; }
     box.classList.remove('hidden');
-    $('ad-stars-n').textContent = SR.STARS.adReward;
+    btn.innerHTML = '<span class="ad-icon" aria-hidden="true">▶</span> ' + SR.t('Watch a video: +{n} ★', { n: SR.STARS.adReward });
     var wait = Math.ceil((adReadyAt - Date.now()) / 60000);
     if (SR.cg.adblock) {
       btn.classList.add('hidden');
-      note.textContent = 'Free-star videos are unavailable while an ad blocker is on. You can still earn stars by winning matches.';
+      note.textContent = SR.t('Free-star videos are unavailable while an ad blocker is on. You can still earn stars by winning matches.');
     } else if (wait > 0) {
       btn.classList.add('hidden');
-      note.textContent = adNote || ('More free stars in ' + wait + ' min.');
+      note.textContent = adNote || SR.t('More free stars in {n} min.', { n: wait });
     } else {
       btn.classList.remove('hidden');
       note.textContent = adNote;
@@ -336,14 +337,14 @@
       data().stars += SR.STARS.adReward;
       save();
       adReadyAt = Date.now() + SR.AD_REWARD_COOLDOWN_MS;
-      adNote = 'Thanks for watching! +' + SR.STARS.adReward + ' stars added.';
+      adNote = SR.t('Thanks for watching! +{n} stars added.', { n: SR.STARS.adReward });
       SR.audio.play('cheer');
       renderShop();
       var badge = document.querySelector('#scr-shop .stars-badge');
       if (badge) { badge.classList.remove('pop'); void badge.offsetWidth; badge.classList.add('pop'); }
       setTimeout(function () { adNote = ''; if (current === 'scr-shop') renderShopAd(); }, 4000);
     }, function (err) {
-      adNote = err && err.code === 'adblock' ? '' : 'No video available right now. Please try again later.';
+      adNote = err && err.code === 'adblock' ? '' : SR.t('No video available right now. Please try again later.');
       renderShop();
     });
   }
@@ -360,8 +361,8 @@
         var sw = kind === 'balls'
           ? '<span class="swatch ball" style="background:radial-gradient(circle at 35% 35%,' + it.main + ' 55%,' + it.stripe + ' 56%)"></span>'
           : '<span class="swatch" style="background:linear-gradient(135deg,' + it.court + ' 50%,' + it.floor + ' 50%);border-color:' + it.line + '"></span>';
-        b.innerHTML = sw + '<span class="iname">' + it.name + '</span><span class="iprice">' +
-          (eq ? 'Equipped' : owned ? 'Equip' : '★ ' + it.price) + '</span>';
+        b.innerHTML = sw + '<span class="iname">' + SR.t(it.name) + '</span><span class="iprice">' +
+          (eq ? SR.t('Equipped') : owned ? SR.t('Equip') : '★ ' + it.price) + '</span>';
         b.addEventListener('click', function () {
           if (!owned) {
             if (data().stars < it.price) { b.classList.add('shake'); setTimeout(function () { b.classList.remove('shake'); }, 400); return; }
@@ -381,7 +382,7 @@
   function renderStats() {
     var s = data().stats, pct = s.matches ? Math.round(s.wins / s.matches * 100) : 0;
     var rows = [['Matches', s.matches], ['Wins', s.wins + ' (' + pct + '%)'], ['Points won', s.points], ['Aces', s.aces], ['Kills', s.kills], ['Blocks', s.blocks], ['Stars', data().stars]];
-    $('stats-list').innerHTML = rows.map(function (r) { return '<div class="stat"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('');
+    $('stats-list').innerHTML = rows.map(function (r) { return '<div class="stat"><span>' + SR.t(r[0]) + '</span><b>' + r[1] + '</b></div>'; }).join('');
   }
 
   function fillSettings() {
@@ -391,10 +392,13 @@
     // Older saves used named formats; map them onto the same choices.
     var cf = SR.formatOf(s.format);
     s.format = SR.formatId(cf.points, cf.sets);
-    $('set-format').innerHTML = ids.map(function (k) { return '<option value="' + k + '">' + SR.formatOf(k).label + '</option>'; }).join('');
-    $('set-diff').innerHTML = Object.keys(SR.DIFFICULTY).map(function (k) { return '<option value="' + k + '">' + SR.DIFFICULTY[k].label + '</option>'; }).join('');
+    $('set-format').innerHTML = ids.map(function (k) { return '<option value="' + k + '">' + SR.formatLabel(SR.formatOf(k)) + '</option>'; }).join('');
+    $('set-diff').innerHTML = Object.keys(SR.DIFFICULTY).map(function (k) { return '<option value="' + k + '">' + SR.t(SR.DIFFICULTY[k].label) + '</option>'; }).join('');
     $('set-format').value = s.format;
     $('set-diff').value = s.difficulty;
+    $('set-lang').innerHTML = '<option value="auto">' + SR.t('Automatic') + '</option>' +
+      Object.keys(SR.LANGS).map(function (k) { return '<option value="' + k + '">' + SR.LANGS[k] + '</option>'; }).join('');
+    $('set-lang').value = SR.LANGS[s.lang] ? s.lang : 'auto';
     $('set-sound').checked = !!s.sound && !SR.cg.settings.muteAudio;
     // CrazyGames' mute setting overrides the in-game sound toggle.
     $('set-sound').disabled = !!SR.cg.settings.muteAudio;
@@ -428,12 +432,12 @@
     st.aces += r.stats.aces; st.kills += r.stats.kills; st.blocks += r.stats.blocks;
     data().stars += stars;
     save();
-    $('result-title').textContent = won ? 'Victory!' : 'Defeat';
+    $('result-title').textContent = SR.t(won ? 'Victory!' : 'Defeat');
     $('result-title').className = won ? 'win' : 'loss';
-    $('result-sub').textContent = r.me.name + ' ' + r.mySets + ' - ' + r.oppSets + ' ' + r.opp.name + (r.oppName ? ' (vs ' + r.oppName + ')' : ' (online)');
+    $('result-sub').textContent = r.me.name + ' ' + r.mySets + ' - ' + r.oppSets + ' ' + r.opp.name + ' ' + (r.oppName ? SR.t('(vs {name})', { name: r.oppName }) : SR.t('(online)'));
     $('result-sets').textContent = r.history.map(function (x) { return x[0] + '-' + x[1]; }).join('   ');
-    $('result-stats').textContent = 'Aces ' + r.stats.aces + ' · Kills ' + r.stats.kills + ' · Blocks ' + r.stats.blocks + ' · Errors ' + r.stats.errors;
-    $('result-stars').textContent = stars ? '+' + stars + ' star' : 'No stars this time';
+    $('result-stats').textContent = SR.t('Aces {a} · Kills {k} · Blocks {b} · Errors {e}', { a: r.stats.aces, k: r.stats.kills, b: r.stats.blocks, e: r.stats.errors });
+    $('result-stars').textContent = stars ? SR.t('+{n} star', { n: stars }) : SR.t('No stars this time');
     $('result-notes').textContent = '';
     SR.cg.midgame(function () {
       startDemo();
@@ -460,6 +464,8 @@
       if (current === 'scr-settings') fillSettings();
       if (current === 'scr-shop') renderShop();
       if (current === 'scr-stats') renderStats();
+      if (current === 'scr-league') openLeague();
+      if (current === 'scr-cup') openCup();
     },
     init: function () {
       refreshStars();
@@ -491,12 +497,13 @@
       var armed = false;
       on('btn-reset', function () {
         var b = $('btn-reset');
-        if (!armed) { armed = true; b.textContent = 'Click again to erase everything'; setTimeout(function () { armed = false; b.textContent = 'Reset progress'; }, 3000); return; }
-        armed = false; b.textContent = 'Reset progress';
+        if (!armed) { armed = true; b.textContent = SR.t('Click again to erase everything'); setTimeout(function () { armed = false; b.textContent = SR.t('Reset progress'); }, 3000); return; }
+        armed = false; b.textContent = SR.t('Reset progress');
         SR.save.reset(); renderStats(); refreshStars();
       });
       $('set-format').addEventListener('change', function (e) { data().settings.format = e.target.value; save(); });
       $('set-diff').addEventListener('change', function (e) { data().settings.difficulty = e.target.value; save(); });
+      $('set-lang').addEventListener('change', function (e) { SR.i18n.set(e.target.value); SR.ui.refresh(); fillSettings(); });
       $('set-sound').addEventListener('change', function (e) { data().settings.sound = e.target.checked; save(); });
       startDemo();
       show('scr-menu');

@@ -31,15 +31,27 @@ analytics, no SEO tags, sitemap, robots.txt or web manifest.
   buttons work, a join-room listener, and Instant Multiplayer opens a room
   straight away. CrazyGames usernames are shown to the other player.
 - First-time players land straight in a quick match.
+- Languages: English, Spanish, Portuguese, French, German, Turkish (js/i18n.js).
+  Picked from Settings > Language, else the CrazyGames locale, else the
+  browser language, else English. Test with `?lang=de` etc. The online lobby
+  screens are still English only (online is switched off for launch).
 
 Outside CrazyGames (other domains) the SDK reports `disabled` and every call is
 skipped, so the game still runs normally.
 
+## Release status
+
+Single-player first: `online: false` in js/net-config.js, so "Play online" is
+hidden and invites are ignored. Submit as a single-player game (no lobby
+size). Flip it to `true` in a later update once a reliable relay is in place.
+
 ## On submission
 
 - Tick the **Data module** option, or cloud saves are disabled.
-- Online play uses PeerJS (0.peerjs.com), Google/Cloudflare STUN and public
-  MQTT relays; declare it as multiplayer and give the lobby size (2).
+- Online play uses PeerJS (0.peerjs.com), Cloudflare STUN (Google STUN removed)
+  and free public MQTT test brokers as a backup relay; declare it as
+  multiplayer and give the lobby size (2). To ship single-player first, set
+  `online: false` in js/net-config.js (hides Play online, ignores invites).
 - Test in the CrazyGames Preview tool, or on localhost (the SDK shows fake ads
   there; add `?useLocalSdk=true` on other hosts).
 

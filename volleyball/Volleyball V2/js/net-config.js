@@ -9,14 +9,15 @@
 //   { urls: 'turn:YOUR-HOST:443', username: 'USER', credential: 'PASS' }
 window.SR = window.SR || {};
 SR.NET_CONFIG = {
+  // false hides "Play online" and ignores invites (a single-player release).
+  online: true,
   // Leave host empty to use the public PeerJS server (0.peerjs.com).
   host: '',
   port: 443,
   path: '/',
   secure: true,
+  // No Google servers: some game portals (Poki) block them.
   iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' }
   ],
   // Backup relay servers (free public MQTT brokers over secure WebSockets).

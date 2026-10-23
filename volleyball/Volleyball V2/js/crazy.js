@@ -13,6 +13,7 @@
     adsOff: false,         // ads unavailable this session (Basic Launch)
     adblock: false,
     username: null,
+    locale: null,
     settings: { muteAudio: false, disableChat: false },
     instantMultiplayer: false
   };
@@ -59,6 +60,8 @@
       });
     } catch (e) { /* settings unavailable */ }
     try { cg.instantMultiplayer = !!s.game.isInstantMultiplayer; } catch (e) { /* ignore */ }
+    // Player's language on CrazyGames, e.g. "es-ES" (used by i18n.js).
+    try { cg.locale = (s.user && s.user.systemInfo && s.user.systemInfo.locale) || null; } catch (e) { /* ignore */ }
     try {
       s.ad.hasAdblock().then(function (b) { cg.adblock = !!b; }, function () { /* unknown */ });
     } catch (e) { /* ignore */ }

@@ -443,7 +443,7 @@
     }
     if (this.isHuman(def)) this.uis[def].prompt = null;
     // Online both players see banners, so name the team that made the call.
-    if (this.isHuman(def) && commit !== 'read') this.say(commit === pick.slot ? 'READ IT!' : 'WRONG GUESS', this.human === 'both' ? this.m.teams[def].name : '', commit === pick.slot ? '#ffd23f' : '#ff9e9e', 0.9);
+    if (this.isHuman(def) && commit !== 'read') this.say(SR.t(commit === pick.slot ? 'READ IT!' : 'WRONG GUESS'), this.human === 'both' ? this.m.teams[def].name : '', commit === pick.slot ? '#ffd23f' : '#ff9e9e', 0.9);
 
     this.hitSlot = pick.slot;
     this.timeScale = 1;
@@ -634,7 +634,7 @@
 
     var name = this.m.teams[winner].name, color = this.m.teams[winner].color;
     var label = { ace: 'ACE!', kill: 'KILL!', block: 'BLOCK!', point: 'POINT' }[kind] || (reason === 'net' ? 'NET' : 'OUT');
-    this.say(label, name, color, 1.5);
+    this.say(SR.t(label), name, color, 1.5);
     SR.audio.play('bounce');
     SR.audio.play('whistle');
     this.fx('land', { pos: { x: b.x, y: b.y }, kind: kind, reason: reason });

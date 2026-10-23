@@ -278,8 +278,8 @@
           ctx.globalAlpha = a;
           ctx.font = '900 ' + Math.round(Math.max(11, 0.5 * q.s) * (0.6 + 0.4 * pop)) + 'px system-ui, sans-serif';
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.strokeText(mk.call, q.x, q.y - 0.6 * q.s);
-          ctx.fillStyle = out ? '#ff5a4d' : '#5dff9b'; ctx.fillText(mk.call, q.x, q.y - 0.6 * q.s);
+          ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.strokeText(SR.t(mk.call), q.x, q.y - 0.6 * q.s);
+          ctx.fillStyle = out ? '#ff5a4d' : '#5dff9b'; ctx.fillText(SR.t(mk.call), q.x, q.y - 0.6 * q.s);
           ctx.globalAlpha = 1;
         }
       });
@@ -363,7 +363,7 @@
       ctx.textAlign = t === 0 ? 'left' : 'right';
       ctx.fillText(team.short, cx + sign * (w / 2 - 26), y0 + 21);
       ctx.font = '600 12px system-ui, sans-serif'; ctx.fillStyle = '#9fb0c8';
-      ctx.fillText('rot ' + (m.rot[t] + 1), cx + sign * (w / 2 - 26), y0 + 39);
+      ctx.fillText(SR.t('rot {n}', { n: m.rot[t] + 1 }), cx + sign * (w / 2 - 26), y0 + 39);
       // Sets box (gold) and points box (white)
       var sx = cx + sign * 118, px = cx + sign * 62;
       roundRect(ctx, sx - 15, y0 + 9, 30, h - 18, 6); ctx.fillStyle = '#f2c230'; ctx.fill();
@@ -387,9 +387,9 @@
       }
     }
     ctx.font = '700 11px system-ui, sans-serif'; ctx.fillStyle = '#9fb0c8'; ctx.textAlign = 'center';
-    ctx.fillText('SET ' + m.setNo, cx, y0 + 19);
+    ctx.fillText(SR.t('SET {n}', { n: m.setNo }), cx, y0 + 19);
     ctx.font = '600 10px system-ui, sans-serif';
-    ctx.fillText('TO ' + m.target(), cx, y0 + 35);
+    ctx.fillText(SR.t('TO {n}', { n: m.target() }), cx, y0 + 35);
   }
 
   // Instruction pill under the scoreboard; wraps onto extra lines on narrow screens.
@@ -452,7 +452,7 @@
       ctx.fill(); ctx.shadowBlur = 0;
     }
     ctx.fillStyle = '#fff'; ctx.font = '800 11px system-ui, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('POWER', x + w / 2, y0 - 12);
+    ctx.fillText(SR.t('POWER'), x + w / 2, y0 - 12);
   }
 
   function drawBanner(ctx, b) {
@@ -568,8 +568,8 @@
       // Ground markers under everything else
       drawFx(ctx, 'ground');
       if (ui.prompt === 'block') drawBlockZones(ctx, ui.blockCall === 'read' ? null : ui.blockCall, now);
-      if (ui.prompt === 'serve') reticle(ctx, ui.aim.x, ui.aim.y, '#ff4d3d', 'SERVE', now);
-      var shotName = SR.SHOTS[ui.tip ? 'tip' : ui.shot].label.toUpperCase();
+      if (ui.prompt === 'serve') reticle(ctx, ui.aim.x, ui.aim.y, '#ff4d3d', SR.t('SERVE'), now);
+      var shotName = SR.upper(SR.t(SR.SHOTS[ui.tip ? 'tip' : ui.shot].label));
       if (ui.attackTarget && rally.state === 'rally') reticle(ctx, ui.attackTarget.x, ui.attackTarget.y, ui.tip || ui.shot === 'tip' ? '#36c5ff' : '#ff4d3d', shotName, now);
       if (ui.prompt === 'target' && game.hover && !ui.attackTarget && !SR.SHOTS[ui.shot].auto) reticle(ctx, game.hover.x, game.hover.y, game.shift ? '#36c5ff' : '#ff4d3d', null, now);
 
@@ -610,14 +610,14 @@
       ctx.setTransform(SR.render.scale, 0, 0, SR.render.scale, 0, 0);
       drawOverlay(ctx, rally);
       drawScoreboard(ctx, game);
-      if (ui.prompt === 'serve') { drawPower(ctx, ui.power); hint(ctx, SR.touch ? 'Tap their court to aim and serve' : 'Aim on their court, click or tap to serve (Space)'); }
-      else if (ui.prompt === 'hitter') hint(ctx, ui.hitterChoice ? 'Hitter chosen' : SR.touch ? 'Tap a numbered player to set them' : 'Pick your hitter: click a player or press 1-' + ui.hitters.length);
+      if (ui.prompt === 'serve') { drawPower(ctx, ui.power); hint(ctx, SR.t(SR.touch ? 'Tap their court to aim and serve' : 'Aim on their court, click or tap to serve (Space)')); }
+      else if (ui.prompt === 'hitter') hint(ctx, ui.hitterChoice ? SR.t('Hitter chosen') : SR.touch ? SR.t('Tap a numbered player to set them') : SR.t('Pick your hitter: click a player or press 1-{n}', { n: ui.hitters.length }));
       else if (ui.prompt === 'target') {
-        hint(ctx, ui.attackTarget ? shotName + ' locked in' : SR.touch ? 'Pick a shot, then tap where it goes. Line, Cross and Tool aim themselves' : 'Pick a shot (1-6), then click where it goes. Line, Cross and Tool aim themselves');
-        this.buttons = buttonRow(ctx, SR.SHOT_ORDER.map(function (id) { return { id: id, label: SR.SHOTS[id].label }; }), ui.tip ? 'tip' : ui.shot, 'shot');
+        hint(ctx, ui.attackTarget ? SR.t('{shot} locked in', { shot: shotName }) : SR.t(SR.touch ? 'Pick a shot, then tap where it goes. Line, Cross and Tool aim themselves' : 'Pick a shot (1-6), then click where it goes. Line, Cross and Tool aim themselves'));
+        this.buttons = buttonRow(ctx, SR.SHOT_ORDER.map(function (id) { return { id: id, label: SR.t(SR.SHOTS[id].label) }; }), ui.tip ? 'tip' : ui.shot, 'shot');
       } else if (ui.prompt === 'block') {
-        hint(ctx, SR.touch ? 'Call the block: commit to a side, or Read the set' : 'Call the block (1-4 or tap a B zone): commit to a side, or Read the set');
-        this.buttons = buttonRow(ctx, [{ id: 'left', label: 'Left' }, { id: 'middle', label: 'Middle' }, { id: 'right', label: 'Right' }, { id: 'read', label: 'Read' }], ui.blockCall, 'block');
+        hint(ctx, SR.t(SR.touch ? 'Call the block: commit to a side, or Read the set' : 'Call the block (1-4 or tap a B zone): commit to a side, or Read the set'));
+        this.buttons = buttonRow(ctx, [{ id: 'left', label: SR.t('Left') }, { id: 'middle', label: SR.t('Middle') }, { id: 'right', label: SR.t('Right') }, { id: 'read', label: SR.t('Read') }], ui.blockCall, 'block');
       }
       if (rally.banner) drawBanner(ctx, rally.banner);
     },

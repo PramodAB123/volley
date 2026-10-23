@@ -14,7 +14,7 @@
     rally.formation(0, 'base');
     rally.formation(1, 'base');
     rally.snap();
-    if (cfg.human !== -1) rally.say('SET 1', cfg.home.name + ' vs ' + cfg.away.name, '#ffffff', 2);
+    if (cfg.human !== -1) rally.say(SR.t('SET {n}', { n: 1 }), SR.t('{a} vs {b}', { a: cfg.home.name, b: cfg.away.name }), '#ffffff', 2);
     rally.wait(cfg.human !== -1 ? 1.4 : 0.4, function () { rally.startServe({ snap: true }); });
   };
 
@@ -28,18 +28,18 @@
     var res = m.point(winner);
     if (res.matchOver) {
       var t = m.teams[winner];
-      rally.say(t.short + ' WIN', m.history.map(function (s) { return s[0] + '-' + s[1]; }).join('  '), t.color, 3);
+      rally.say(SR.t('{team} WIN', { team: t.short }), m.history.map(function (s) { return s[0] + '-' + s[1]; }).join('  '), t.color, 3);
       SR.audio.play('cheer');
       SR.fx.emit('confetti', { color: t.color });
       rally.wait(2.6, function () { if (self.cfg.onEnd) self.cfg.onEnd(self); });
     } else if (res.setOver) {
       var w = m.teams[res.setWinner], last = m.history[m.history.length - 1];
-      rally.say('SET ' + w.short, last[0] + ' - ' + last[1], w.color, 2.2);
+      rally.say(SR.t('SET {team}', { team: w.short }), last[0] + ' - ' + last[1], w.color, 2.2);
       SR.audio.play('cheer');
       SR.fx.emit('confetti', { color: w.color });
       rally.wait(2.0, function () {
         var next = function () {
-          rally.say('SET ' + m.setNo, 'to ' + m.target(), '#ffffff', 1.6);
+          rally.say(SR.t('SET {n}', { n: m.setNo }), SR.t('to {n}', { n: m.target() }), '#ffffff', 1.6);
           rally.startServe();
         };
         // The break between sets is a natural point for a CrazyGames midgame
@@ -105,6 +105,7 @@
   function boot() {
     SR.cg.loadingStart();
     SR.save.load();
+    SR.i18n.init();
     canvas = document.getElementById('game');
     ctx = canvas.getContext('2d');
     resize();
@@ -120,7 +121,7 @@
     if (SR.ui.current() === 'scr-menu' && !SR.save.data.stats.matches) SR.ui.quickStart();
     SR.cg.onSettingsChange(function () { SR.audio.setMuted(SR.cg.muted()); SR.ui.refresh(); });
     // Signing in to CrazyGames swaps in that account's saved progress.
-    SR.cg.onAuthChange(function () { setTimeout(function () { SR.save.load(); SR.ui.refresh(); }, 300); });
+    SR.cg.onAuthChange(function () { setTimeout(function () { SR.save.load(); SR.i18n.init(); SR.ui.refresh(); }, 300); });
     window.requestAnimationFrame(frame);
     SR.cg.loadingStop();
   }
