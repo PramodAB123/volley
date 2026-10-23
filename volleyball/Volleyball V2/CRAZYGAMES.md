@@ -30,7 +30,8 @@ analytics, no SEO tags, sitemap, robots.txt or web manifest.
   `getInviteParam`, `updateRoom` / `leftRoom` so CrazyGames' Join and Invite
   buttons work, a join-room listener, and Instant Multiplayer opens a room
   straight away. CrazyGames usernames are shown to the other player.
-- First-time players land straight in a quick match.
+- The game opens on the main menu (no auto-start); players pick teams and match length themselves.
+- Menus show the CrazyGames portrait cover (img/menu-bg.jpg, 75 KB) instead of a match running behind them.
 - Languages: English, Spanish, Portuguese, French, German, Turkish (js/i18n.js).
   Picked from Settings > Language, else the CrazyGames locale, else the
   browser language, else English. Test with `?lang=de` etc. The online lobby

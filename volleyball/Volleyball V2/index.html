@@ -21,6 +21,8 @@
 
     <div id="ad-block" class="ad-block hidden" aria-hidden="true"></div>
 
+    <div id="net-link" class="net-link hidden" aria-hidden="true"></div>
+
     <div id="net-banner" class="net-banner hidden" role="status" aria-live="polite"></div>
 
     <div id="hud" class="hidden">
@@ -34,7 +36,7 @@
         <div class="stars-badge">★ <span data-stars>0</span></div>
         <div class="menu-grid">
           <button id="btn-quick" class="btn primary">Quick match</button>
-          <button id="btn-online" class="btn primary">Play online</button>
+          <button id="btn-online" class="btn primary hidden">Play online</button>
           <button id="btn-league" class="btn">League</button>
           <button id="btn-cup" class="btn">Tournament</button>
           <button id="btn-shop" class="btn">Shop</button>
@@ -163,7 +165,7 @@
           <li data-i18n="help.set"><b>Set.</b> When your team passes, numbers appear over your front-row hitters. Click one, or press 1 to 3, to choose who gets the ball. If you don't, the setter decides.</li>
           <li data-i18n="help.attack"><b>Attack.</b> While the set is in the air, quickly pick a shot with the buttons or keys 1 to 6, then click where it should land:
             <b>Power</b> is fastest; <b>Line</b> and <b>Cross</b> aim themselves down the sideline or across court; <b>Roll</b> is a slow, high shot over the block into open space; <b>Tip</b> drops it just over the net; <b>Tool</b> hits off the blockers' hands to send the ball out. Aiming right on the lines is risky.</li>
-          <li id="help-online" data-i18n="help.online"><b>Online.</b> Choose Play online, create a room and send the code or invite link to a friend. Each of you makes the calls for your own team, and you both see the court from your own end. If the connection drops, the game waits up to 30 seconds for it to come back.</li>
+          <li id="help-online" class="hidden" data-i18n="help.online"><b>Online.</b> Choose Play online, create a room and send the code or invite link to a friend. Each of you makes the calls for your own team, and you both see the court from your own end. If the connection drops, the game waits up to 30 seconds for it to come back.</li>
           <li data-i18n="help.block"><b>Block.</b> When the other team passes, call your block with the buttons or keys 1 to 4. Commit Left, Middle or Right to stack all three blockers there before the set (a great block if you guess right, an open net if you don't), or choose Read to react with two blockers.</li>
         </ol>
         <p data-i18n="help.rules">Rally scoring, win each set by two. Before a match, choose the points per set (5, 11 or 15) and how many sets to play (1, best of 3 or best of 5). Winning the rally on the other team's serve wins you the serve and rotates your team. Press P or Esc to pause.</p>

@@ -153,7 +153,7 @@
     });
   }
 
-  function drawArena(ctx, style, t, cheer) {
+  function drawBackdrop(ctx, style) {
     var g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, style.wall); g.addColorStop(0.45, style.wall); g.addColorStop(1, '#000');
     ctx.fillStyle = g; ctx.fillRect(-80, 0, W + 160, H);
@@ -163,6 +163,12 @@
       lg.addColorStop(0, 'rgba(255,255,235,0.35)'); lg.addColorStop(1, 'rgba(255,255,235,0)');
       ctx.fillStyle = lg; ctx.fillRect(lx - 70, 0, 140, 80);
     }
+  }
+
+  // bg: the wall and lights already drawn (a big gradient fill is slow to redo).
+  function drawArena(ctx, style, t, cheer, bg) {
+    if (bg) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(bg, 0, 0); ctx.restore(); }
+    else drawBackdrop(ctx, style);
     drawStands(ctx, style, t, cheer);
     poly(ctx, [[-12, -3.5], [21.6, -3.5], [21.6, 12.6], [-12, 12.6]], style.floor);
     poly(ctx, [[0, 0], [18, 0], [18, 9], [0, 9]], style.court);
@@ -182,21 +188,39 @@
     poly(ctx, [[9.15, -0.5], [9.55, -0.5], [9.55, 9.5], [9.15, 9.5]], 'rgba(0,0,0,0.12)');
   }
 
-  // The arena is static while the crowd is calm, so it is drawn once into an
-  // offscreen canvas and copied each frame; cheering crowds are drawn live.
-  var cache = { cv: null, key: '' };
-  function arenaLayer(ctx, style, t, cheer) {
-    if (cheer > 0 || typeof document === 'undefined') { drawArena(ctx, style, t, cheer); return; }
+  // The arena is drawn into an offscreen canvas and copied each frame. A
+  // cheering crowd refreshes that copy about 20 times a second instead of the
+  // whole arena being redrawn every frame (the old cause of lag after points).
+  var cache = { cv: null, bg: null, key: '', at: 0, calm: true };
+  function arenaLayer(ctx, style, t, cheer, zoomed) {
+    if (typeof document === 'undefined') { drawArena(ctx, style, t, cheer); return; }
+    if (SR.lowFx) cheer = 0;
     var sc = SR.render.scale, key = style.id + '|' + sc + '|' + W + 'x' + H, PAD = 70;
-    if (cache.key !== key) {
-      cache.cv = cache.cv || document.createElement('canvas');
-      cache.cv.width = Math.ceil((W + PAD * 2) * sc); cache.cv.height = Math.ceil(H * sc);
+    var redraw = cache.key !== key || (cheer > 0 ? t - cache.at > 0.05 : !cache.calm);
+    if (redraw) {
+      if (cache.key !== key) {
+        cache.cv = cache.cv || document.createElement('canvas');
+        cache.cv.width = Math.ceil((W + PAD * 2) * sc); cache.cv.height = Math.ceil(H * sc);
+        cache.bg = cache.bg || document.createElement('canvas');
+        cache.bg.width = cache.cv.width; cache.bg.height = cache.cv.height;
+        var cb = cache.bg.getContext('2d');
+        cb.setTransform(sc, 0, 0, sc, PAD * sc, 0);
+        drawBackdrop(cb, style);
+      }
       var c2 = cache.cv.getContext('2d');
       c2.setTransform(sc, 0, 0, sc, PAD * sc, 0);
-      drawArena(c2, style, t, 0);
-      cache.key = key;
+      drawArena(c2, style, t, cheer, cache.bg);
+      cache.key = key; cache.at = t; cache.calm = !(cheer > 0);
     }
-    ctx.drawImage(cache.cv, -PAD, 0, W + PAD * 2, H);
+    if (zoomed) { ctx.drawImage(cache.cv, -PAD, 0, W + PAD * 2, H); return; }
+    // Copy on whole device pixels with no scaling: a straight, cheap blit
+    // instead of a filtered resample of the biggest image on screen.
+    var m = ctx.getTransform();
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(cache.cv, Math.round(m.e - PAD * sc), Math.round(m.f));
+    ctx.restore();
   }
 
   function drawNet(ctx) {
@@ -207,8 +231,10 @@
     poly(ctx, [[9, 9.5, 0], [9, 9.5, 0.9], [9, 9.7, 0.9], [9, 9.7, 0]], '#e5484d');
     poly(ctx, [[9, -0.5, bot], [9, 9.5, bot], [9, 9.5, top], [9, -0.5, top]], 'rgba(15,15,20,0.32)');
     ctx.globalAlpha = 0.5;
-    for (var y = -0.5; y <= 9.5; y += 0.2) line(ctx, [9, y, bot], [9, y, top], '#0b0b0b', 1);
-    for (var z = bot; z <= top; z += 0.15) line(ctx, [9, -0.5, z], [9, 9.5, z], '#0b0b0b', 1);
+    ctx.beginPath();
+    for (var y = -0.5; y <= 9.5; y += 0.2) { var a0 = proj(9, y, bot), a1 = proj(9, y, top); ctx.moveTo(a0.x, a0.y); ctx.lineTo(a1.x, a1.y); }
+    for (var z = bot; z <= top; z += 0.15) { var b0 = proj(9, -0.5, z), b1 = proj(9, 9.5, z); ctx.moveTo(b0.x, b0.y); ctx.lineTo(b1.x, b1.y); }
+    ctx.strokeStyle = '#0b0b0b'; ctx.lineWidth = 1; ctx.stroke();
     ctx.globalAlpha = 1;
     line(ctx, [9, -0.5, top], [9, 9.5, top], '#ffffff', 5);
     line(ctx, [9, -0.5, bot], [9, 9.5, bot], '#f4f4f4', 2);
@@ -230,7 +256,7 @@
       ctx.globalAlpha = k * (fast ? 0.7 : 0.4) * sp;
       ctx.strokeStyle = fast ? (k > 0.7 ? '#fff1b8' : '#ff9a3c') : style.main;
       ctx.lineWidth = Math.max(1.5, 0.21 * q1.s * 2) * (0.15 + k * 0.85) * (fast ? 1 : 0.7);
-      if (fast && k > 0.5) { ctx.shadowColor = '#ff8a2b'; ctx.shadowBlur = 12; }
+      if (fast && k > 0.5 && !SR.lowFx) { ctx.shadowColor = '#ff8a2b'; ctx.shadowBlur = 12; }
       ctx.beginPath(); ctx.moveTo(q0.x, q0.y); ctx.lineTo(q1.x, q1.y); ctx.stroke();
       ctx.shadowBlur = 0;
     }
@@ -539,9 +565,10 @@
       ctx.translate(panX + (sh > 0 ? (Math.random() - 0.5) * sh : 0), sh > 0 ? (Math.random() - 0.5) * sh : 0);
       // Camera push-in on big hits, eased out.
       var pk = SR.fx.punch, zm = 1 + 0.045 * pk * pk * (3 - 2 * pk);
-      if (zm > 1.0005) { var zc = proj(9, 4.5, 1); ctx.translate(zc.x, zc.y); ctx.scale(zm, zm); ctx.translate(-zc.x, -zc.y); }
+      var zoomed = zm > 1.0005;
+      if (zoomed) { var zc = proj(9, 4.5, 1); ctx.translate(zc.x, zc.y); ctx.scale(zm, zm); ctx.translate(-zc.x, -zc.y); }
       var style = this.courtStyle();
-      arenaLayer(ctx, style, now, SR.fx.cheer);
+      arenaLayer(ctx, style, now, SR.fx.cheer, zoomed);
       drawBoards(ctx, now);
       this.heads = [];
       this.buttons = [];

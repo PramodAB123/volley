@@ -27,11 +27,11 @@
     return a;
   }
 
-  // ---- demo match behind the menus -------------------------------------
+  // ---- no match behind the menus ------------------------------------------
 
-  function startDemo() {
-    var ids = shuffle(SR.TEAMS.map(function (t) { return t.id; }));
-    SR.game = new SR.Game({ home: team(ids[0]), away: team(ids[1]), format: 'short', difficulty: 'normal', human: -1, onEnd: startDemo });
+  // Menus sit on the cover art (see #app.menu-bg in style.css), not a match.
+  function stopMatch() {
+    SR.game = null;
   }
 
   // ---- team select --------------------------------------------------------
@@ -136,17 +136,9 @@
     // End of a match is a natural break for a midgame ad (CrazyGames spaces
     // them out; if none plays, the result shows straight away).
     SR.cg.midgame(function () {
-      startDemo();
+      stopMatch();
       show('scr-result');
     });
-  }
-
-  // First visit: straight into a quick match with the saved team.
-  function quickStart() {
-    var home = team(data().settings.team) || SR.TEAMS[0];
-    var others = SR.TEAMS.filter(function (t) { return t.id !== home.id; });
-    mode = 'quick';
-    startMatch(home, others[Math.floor(Math.random() * others.length)]);
   }
 
   // ---- league -------------------------------------------------------------
@@ -418,7 +410,7 @@
 
   function quitMatch() {
     if (SR.game && SR.game.cfg.online && SR.net) { SR.net.leave(); return; }
-    startDemo();
+    stopMatch();
     show('scr-menu');
   }
 
@@ -440,7 +432,7 @@
     $('result-stars').textContent = stars ? SR.t('+{n} star', { n: stars }) : SR.t('No stars this time');
     $('result-notes').textContent = '';
     SR.cg.midgame(function () {
-      startDemo();
+      stopMatch();
       show('scr-result');
     });
   }
@@ -453,11 +445,10 @@
     togglePause: togglePause,
     show: show,
     current: function () { return current; },
-    startDemo: startDemo,
+    stopMatch: stopMatch,
     teamCards: teamCards,
     rulesPicker: rulesPicker,
     onlineResult: onlineResult,
-    quickStart: quickStart,
     // Redraw anything that shows saved data or SDK settings.
     refresh: function () {
       refreshStars();
@@ -505,7 +496,7 @@
       $('set-diff').addEventListener('change', function (e) { data().settings.difficulty = e.target.value; save(); });
       $('set-lang').addEventListener('change', function (e) { SR.i18n.set(e.target.value); SR.ui.refresh(); fillSettings(); });
       $('set-sound').addEventListener('change', function (e) { data().settings.sound = e.target.checked; save(); });
-      startDemo();
+      stopMatch();
       show('scr-menu');
     }
   };

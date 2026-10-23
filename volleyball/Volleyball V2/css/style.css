@@ -175,6 +175,12 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
   padding: 12px 18px; border-radius: 14px; background: rgba(6, 10, 18, 0.88); color: #fff; font-weight: 700; text-align: center;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
+.net-link {
+  position: absolute; left: 10px; bottom: 10px; z-index: 3; padding: 4px 9px; border-radius: 10px; pointer-events: none;
+  background: rgba(6, 10, 18, 0.7); color: #7ee0a0; font: 700 12px system-ui, sans-serif; font-variant-numeric: tabular-nums;
+}
+.net-link.meh { color: #ffd23f; }
+.net-link.bad { color: #ff7a59; }
 .help li { margin-bottom: 10px; line-height: 1.45; }
 
 #result-title { font-size: 34px; }
@@ -227,3 +233,25 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 .ad-icon { display: inline-block; width: 1.5em; height: 1.5em; line-height: 1.5em; margin-right: 4px; border-radius: 50%; background: #fff; color: var(--bg); font-size: 0.75em; text-align: center; vertical-align: middle; }
 .stars-badge.pop { animation: star-pop 0.6s ease; }
 @keyframes star-pop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+
+/* Menus: the CrazyGames cover art instead of a match behind the panels. */
+#app.menu-bg { background: linear-gradient(rgba(11, 18, 32, 0.15), rgba(11, 18, 32, 0.55)), url(../img/menu-bg.jpg) center top / cover no-repeat, #0b1220; }
+#app.menu-bg #game { visibility: hidden; }
+#app.menu-bg .screen { background: none; }
+/* Panel low, so the logo at the top of the art stays visible. */
+#app.menu-bg .screen { align-items: flex-end; }
+/* Square-ish screens: the whole poster, full height, centred, edges faded. */
+@media (min-aspect-ratio: 1/1) {
+  #app.menu-bg {
+    background: linear-gradient(90deg, #0b1220 calc(50% - 33.3vh), rgba(11, 18, 32, 0) calc(50% - 33.3vh + 90px), rgba(11, 18, 32, 0) calc(50% + 33.3vh - 90px), #0b1220 calc(50% + 33.3vh)),
+      url(../img/menu-bg.jpg) center top / auto 100% no-repeat, #0b1220;
+  }
+}
+/* Wide screens: the art stands on the left, the panel beside it. */
+@media (min-aspect-ratio: 8/5) {
+  #app.menu-bg {
+    background: linear-gradient(90deg, rgba(11, 18, 32, 0) calc(66.7vh - 140px), #0b1220 66.7vh),
+      url(../img/menu-bg.jpg) left center / auto 100% no-repeat, #0b1220;
+  }
+  #app.menu-bg .screen { padding-left: calc(66.7vh - 24px); align-items: center; }
+}

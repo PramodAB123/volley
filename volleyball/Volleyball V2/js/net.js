@@ -57,6 +57,7 @@
     format: 'standard',
     lastRecv: 0,
     lastSnap: 0,
+    rtt: 0,
     lastAim: 0,
     fast: null,      // unreliable, unordered channel for snapshots
     events: [],
@@ -87,6 +88,19 @@
     el.classList.toggle('hidden', !text);
   }
 
+  // Small corner badge during an online match: ping, and whether the game is
+  // going direct or through the slower backup server.
+  function showLink() {
+    var el = $('net-link');
+    if (!el) return;
+    var on = N.phase === 'playing' && N.conn && N.conn.open;
+    el.classList.toggle('hidden', !on);
+    if (!on) return;
+    var ms = Math.round(N.rtt || 0), bad = N.via === 'relay' || ms > 180;
+    el.textContent = (ms ? ms + ' ms' : '…') + (N.via === 'relay' ? ' · backup server' : '');
+    el.className = 'net-link' + (bad ? ' bad' : ms > 90 ? ' meh' : '');
+  }
+
   function view(which) {
     ['on-home', 'on-teams', 'on-room'].forEach(function (id) { $(id).classList.toggle('hidden', id !== which); });
   }
@@ -100,7 +114,7 @@
   function makePeer(id) {
     if (typeof window.Peer === 'undefined') throw new Error('nopeer');
     var c = SR.NET_CONFIG || {};
-    var opts = { debug: 0, config: { iceServers: c.iceServers || [{ urls: 'stun:stun.l.google.com:19302' }] } };
+    var opts = { debug: 0, config: { iceServers: c.iceServers || [{ urls: 'stun:stun.cloudflare.com:3478' }] } };
     if (c.host) { opts.host = c.host; opts.port = c.port; opts.path = c.path || '/'; opts.secure = c.secure !== false; }
     return id ? new window.Peer(id, opts) : new window.Peer(opts);
   }
@@ -246,19 +260,21 @@
     closeHub();
     N.links = {};
     N.via = null;
+    N.rtt = 0;
     N.role = null;
     N.phase = 'idle';
     N.events = [];
     N.oppName = null;
     SR.cg.leftRoom();
     banner('');
+    showLink();
   }
 
   // Back to the online screen with a message, ending any online match.
   function abort(msg) {
     var wasPlaying = SR.game && SR.game.cfg.online;
     cleanup();
-    if (wasPlaying) SR.ui.startDemo();
+    if (wasPlaying) SR.ui.stopMatch();
     openLobby();
     status(msg, 'error');
   }
@@ -302,7 +318,8 @@
   function heartbeat() {
     clearTimer('beat');
     N.timers.beat = setInterval(function () {
-      if (N.conn && N.conn.open) send({ t: 'ping' });
+      if (N.conn && N.conn.open) send({ t: 'ping', s: now() });
+      showLink();
       if (N.conn && N.conn.open && (N.phase === 'lobby' || N.phase === 'playing') && now() - N.lastRecv > LOST_MS) lost();
       if (N.phase === 'rejoining') {
         var left = Math.max(0, Math.ceil((REJOIN_MS - (now() - N.lostAt)) / 1000));
@@ -588,7 +605,11 @@
   }
 
   function onData(msg) {
-    if (msg.t === 'ping') return;
+    if (msg.t === 'ping') { if (num(msg.s)) send({ t: 'pong', s: msg.s }); return; }
+    if (msg.t === 'pong') {
+      if (num(msg.s)) { var rt = now() - msg.s; if (rt >= 0 && rt < 10000) N.rtt = N.rtt ? N.rtt + (rt - N.rtt) * 0.3 : rt; }
+      return;
+    }
     if (msg.t === 'bye') {
       if (N.phase === 'over') return;
       if (N.role === 'host' && N.phase !== 'playing' && N.phase !== 'rejoining') { lost(); return; }
@@ -729,12 +750,15 @@
     // hiccups never build up into a growing delay.
     // Over the relay, updates come less often and less evenly: keep a bigger cushion.
     var relay = N.via === 'relay';
-    var delay = Math.max(relay ? 0.09 : 0.05, Math.min(relay ? 0.3 : 0.2, (relay ? 0.06 : 0.035) + this.jit * 2.5)) * ts;
+    var delay = Math.max(relay ? 0.09 : 0.05, Math.min(relay ? 0.45 : 0.25, (relay ? 0.06 : 0.035) + this.jit * 2.5)) * ts;
     var since = Math.min(0.25, (now() - this.lastArr) / 1000) * ts;
     var target = newest.T + since - delay;
     var err = target - this.ph;
-    if (Math.abs(err) > 0.35) this.ph = target;
-    else this.ph += dt * this.timeScale * (1 + Math.max(-0.3, Math.min(0.3, err * 3)));
+    // Only a long stall jumps straight to the right moment; smaller gaps are
+    // closed by playing up to twice as fast (or half speed when ahead), so
+    // players glide back into place instead of teleporting.
+    if (Math.abs(err) > 1) this.ph = target;
+    else this.ph += dt * this.timeScale * (1 + Math.max(-0.5, Math.min(1, err * 3)));
     // Never run too far past the newest data.
     var ahead = (relay ? 0.2 : 0.12) * ts;
     if (this.ph > newest.T + ahead) this.ph = newest.T + ahead;
@@ -742,7 +766,7 @@
     while (i < b.length - 2 && b[i + 1].T <= this.ph) i++;
     var s0 = b[i], s1 = b[Math.min(i + 1, b.length - 1)];
     // Past the newest snapshot we keep moving along the last known motion.
-    var k = s1.T > s0.T ? Math.max(0, Math.min(1.6, (this.ph - s0.T) / (s1.T - s0.T))) : 1;
+    var k = s1.T > s0.T ? Math.max(0, Math.min(1.25, (this.ph - s0.T) / (s1.T - s0.T))) : 1;
     this.apply(s0, s1, k);
     // Fire effects whose time has come.
     var ph = this.ph, keep = [];
@@ -768,8 +792,19 @@
     this.state = s0.st;
     this.stateT = lerp(s0.sT, s1.sT, s0.st === s1.st ? k : 0);
     this.timeScale = s0.ts || 1;
-    this.ball = { x: mx(lerp(s0.b[0], s1.b[0], k)), y: my(lerp(s0.b[1], s1.b[1], k)), z: Math.max(0.11, lerp(s0.b[2], s1.b[2], k)) };
-    var F = s0.f;
+    var F = s0.f, F1 = s1.f, arc = null;
+    // Follow the real flight arc. If the ball was hit between two snapshots,
+    // switch to the new arc at the moment of the hit instead of cutting the corner.
+    // (f[6] is the host time the flight started.)
+    if (F1 && s1 !== s0 && this.t >= F1[6]) arc = { F: F1, e: this.t - F1[6] };
+    else if (F) arc = { F: F, e: this.t - F[6] };
+    if (arc) {
+      var A = arc.F, e = Math.min(A[7], Math.max(0, arc.e)), at = SR.phys.at({ x: A[0], y: A[1], z: A[2] }, { x: A[3], y: A[4], z: A[5] }, e);
+      this.ball = { x: mx(at.x), y: my(at.y), z: Math.max(0.11, at.z) };
+    } else {
+      var kb = Math.min(1, k);
+      this.ball = { x: mx(lerp(s0.b[0], s1.b[0], kb)), y: my(lerp(s0.b[1], s1.b[1], kb)), z: Math.max(0.11, lerp(s0.b[2], s1.b[2], kb)) };
+    }
     this.flight = F ? { p0: { x: mx(F[0]), y: my(F[1]), z: F[2] }, v: { x: -F[3], y: -F[4], z: F[5] }, t: Math.max(0, this.t - F[6]), landT: F[7] } : null;
     this.server = this.byHost(s0.sv);
     this.setter = this.byHost(s0.se);
@@ -863,7 +898,7 @@
       if (conn) { try { conn.close(); } catch (e) { /* ignore */ } }
       if (peer) { try { peer.destroy(); } catch (e) { /* ignore */ } }
     }, 300);
-    if (wasPlaying) SR.ui.startDemo();
+    if (wasPlaying) SR.ui.stopMatch();
     SR.ui.show('scr-menu');
   }
 
@@ -878,8 +913,9 @@
     var g = SR.game;
     if (!g || g.cfg.online !== 'host' || !N.conn || !N.conn.open) return;
     if (N.events.length) { send({ t: 'ev', e: N.events }); N.events = []; }
-    if (now() - N.lastSnap < (N.conn.relay ? 50 : SNAP_MS)) return;
-    N.lastSnap = now();
+    var gap = N.conn.relay ? 50 : SNAP_MS, t = now();
+    if (t - N.lastSnap < gap - 4) return;
+    N.lastSnap = t - N.lastSnap < gap * 2 ? N.lastSnap + gap : t;
     var f = N.fast, msg = snapshot(g);
     if (f && f.readyState === 'open') {
       // Skip a beat rather than queue snapshots behind a slow network.
@@ -891,6 +927,11 @@
   };
 
   N.init = function (query) {
+    // "Play online" and its help line start hidden in the page, and only
+    // appear when online play is switched on in net-config.js.
+    if (SR.NET_CONFIG && SR.NET_CONFIG.online === false) return;
+    $('btn-online').classList.remove('hidden');
+    $('help-online').classList.remove('hidden');
     hookEffects();
     $('btn-on-create').addEventListener('click', function () {
       SR.audio.play('click');
@@ -924,7 +965,7 @@
     SR.cg.onJoinRoom(function (params) {
       var code = cleanCode(params && params.room);
       if (code.length !== 6) return;
-      if (SR.game && SR.game.cfg.human !== -1 && !SR.game.cfg.online) SR.ui.startDemo();
+      if (SR.game && SR.game.cfg.human !== -1 && !SR.game.cfg.online) SR.ui.stopMatch();
       $('on-code').value = code;
       openLobby();
       join(code);

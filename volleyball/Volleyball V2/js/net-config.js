@@ -10,7 +10,7 @@
 window.SR = window.SR || {};
 SR.NET_CONFIG = {
   // false hides "Play online" and ignores invites (a single-player release).
-  online: true,
+  online: false,
   // Leave host empty to use the public PeerJS server (0.peerjs.com).
   host: '',
   port: 443,
