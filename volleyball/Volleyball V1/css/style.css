@@ -172,6 +172,12 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 .join-row input::placeholder { letter-spacing: 0.08em; font-size: 15px; font-weight: 600; color: var(--muted); }
 .center { text-align: center; }
 .room-code { font-size: 44px; font-weight: 900; letter-spacing: 0.18em; margin: 4px 0 8px; font-variant-numeric: tabular-nums; color: var(--accent); }
+.btn:disabled { opacity: 0.45; cursor: default; filter: none; }
+.invite-link {
+  display: block; width: 100%; max-width: 360px; margin: 12px auto 0; padding: 8px 10px; box-sizing: border-box;
+  border-radius: 10px; border: 1px solid var(--panel-border); background: transparent; color: var(--muted);
+  font-family: inherit; font-size: 13px; font-weight: 600; line-height: 1.3; text-align: center; text-overflow: ellipsis; user-select: all; -webkit-user-select: all;
+}
 .status { min-height: 1.4em; margin: 14px 0 0; font-weight: 600; color: var(--muted); }
 .status.error { color: var(--loss); }
 .net-banner {

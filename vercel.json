@@ -32,7 +32,7 @@
       "destination": "/volleyball/Volleyball V1/:page.html"
     },
     {
-      "source": "/:path((?!volleyball/Volleyball V1/).*)",
+      "source": "/:path((?!volleyball/Volleyball V1/|api/).*)",
       "destination": "/volleyball/Volleyball V1/:path"
     }
   ],
