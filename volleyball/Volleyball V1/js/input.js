@@ -9,7 +9,7 @@
 
   function active() {
     var g = SR.game;
-    return g && !g.paused && g.cfg.human !== -1 ? g : null;
+    return g && !g.paused && g.cfg.human !== -1 && !g.cfg.demo ? g : null;
   }
 
   function onMove(e) {
@@ -66,7 +66,7 @@
     var g = SR.game;
     if (!g) return;
     if (e.key === 'Shift') g.shift = down;
-    if (!down || g.cfg.human === -1) return;
+    if (!down || g.cfg.human === -1 || g.cfg.demo) return; // demo.js has its own keys
     if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') { SR.ui.togglePause(); e.preventDefault(); return; }
     if (g.paused) return;
     var rally = g.rally;

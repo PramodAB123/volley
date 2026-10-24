@@ -47,6 +47,9 @@
     this.touches = [0, 0];
     this.lastTouch = 0;
     this.lastOffense = null;
+    // The How to play demo sets a script that fixes the dice for its scenes
+    // (see demo.js); normal matches leave it null.
+    this.script = null;
     // One set of prompts per team; `ui` is the local player's (team 0).
     this.uis = [0, 1].map(function (t) {
       return { prompt: null, aim: { x: t === 0 ? 13.5 : 4.5, y: 4.5 }, power: 0, hitters: [], hitterChoice: null, attackTarget: null, tip: false, shot: 'power', blockThreats: [], blockCall: 'read' };
@@ -163,6 +166,7 @@
     var tgt = { x: aim.x + gauss() * scatter, y: aim.y + gauss() * scatter, z: 0 };
     var T = 1.6 - 0.65 * power;
     var errChance = 0.03 + power * 0.1 * (1.3 - rt.serve / 100);
+    if (this.script) { tgt = { x: aim.x + gauss() * scatter * 0.2, y: aim.y + gauss() * scatter * 0.2, z: 0 }; errChance = 0; }
     if (Math.random() < errChance) {
       if (Math.random() < 0.5) { tgt = { x: C.NET_X + dir * 0.6, y: clamp(tgt.y, 0.5, 8.5), z: 1.0 }; }
       else tgt = this.pushOut(1 - s, tgt);
@@ -183,7 +187,8 @@
 
   R.cpuServe = function () {
     var s = this.m.server, rt = this.m.ratings[s];
-    var aim = world(1 - s, rnd(1.0, 7.0), rnd(0.8, 8.2));
+    var aim = world(1 - s, rnd(1.0, 7.0), rnd(0.8, 8.2)), sc = this.script && this.script.cpuServe;
+    if (sc) { this.serve(world(1 - s, sc[0], sc[1]), sc[2]); return; }
     this.serve(aim, clamp(rnd(0.3, 0.85) * rt.serve / 80, 0.2, 1));
   };
 
@@ -237,6 +242,7 @@
     var L = P.at(f.p0, f.v, f.landT);
     var onSide = team === 0 ? L.x < C.NET_X : L.x > C.NET_X;
     if (!onSide) return;
+    if (this.script && this.script.noDig === team) return;
     var out = L.x < -0.25 || L.x > C.L + 0.25 || L.y < -0.25 || L.y > C.W + 0.25;
     if (out && Math.random() > 0.06) return; // let it go
     var tc = P.timeAtHeight(f.p0, f.v, 1.0);
@@ -283,6 +289,7 @@
     var rating = this.m.ratings[team].pass;
     var serveHeat = (this.lastOffense && this.lastOffense.type === 'serve') ? this.servePower * 0.22 : 0;
     var q = clamp(0.28 + rating / 100 * 0.62 + rnd(-0.22, 0.22) - Math.max(0, spd - 11) * 0.022 - (o.stretch ? 0.2 : 0) + (o.bonus || 0) - serveHeat, 0, 1);
+    if (this.script) q = 0.85;
     p.lock = false;
     p.contactAt = 0;
     p.contactPt = { x: this.ball.x, y: this.ball.y, z: Math.max(0.3, this.ball.z) };
@@ -337,7 +344,7 @@
       ud.prompt = 'block';
       ud.blockCall = 'read';
       ud.blockThreats = hitters.map(function (h) { return h.p; });
-    } else if (Math.random() < 0.22 && hitters.length) {
+    } else if (!this.script && Math.random() < 0.22 && hitters.length) {
       this.commitBlock(def, hitters[Math.floor(Math.random() * hitters.length)].slot);
     }
     var self = this;
@@ -385,6 +392,9 @@
     if (this.isHuman(team) && ua.hitterChoice) {
       pick = opts.find(function (h) { return h.p === ua.hitterChoice; }) || null;
     }
+    if (!pick && this.script && this.script.cpuHitter) {
+      pick = opts.find(function (h) { return h.slot === self.script.cpuHitter; }) || null;
+    }
     if (!pick) {
       var bestScore = -1e9, q = this.passQ;
       opts.forEach(function (h) {
@@ -397,6 +407,7 @@
     ua.prompt = null;
     var rt = this.m.ratings[team];
     var qs = clamp(0.35 + rt.pass / 100 * 0.4 + this.passQ * 0.25 + rnd(-0.15, 0.15), 0, 1);
+    if (this.script) qs = 0.92;
     var e = 1 - qs, hx = clamp(HIT[pick.slot][0] + gauss() * e * 0.7, 6.5, 8.7), hy = clamp(HIT[pick.slot][1] + gauss() * e * 0.7, 0.3, 8.7);
     var hw = world(team, hx, hy), tgt = { x: hw.x, y: hw.y, z: 2.8 + rt.attack / 100 * 0.3 };
     var T = pick.slot === 'middle' ? 0.62 : 1.05;
@@ -508,8 +519,9 @@
       shot = ua.tip ? 'tip' : (ua.shot || 'power');
       aim = ua.attackTarget || this.shotTarget(team, shot, cp);
     } else {
-      shot = this.aiShot();
-      aim = this.shotTarget(team, shot, cp);
+      var sca = this.script;
+      shot = sca && sca.cpuShot ? sca.cpuShot : this.aiShot();
+      aim = sca && sca.cpuAim ? world(def, sca.cpuAim[0], sca.cpuAim[1]) : this.shotTarget(team, shot, cp);
     }
     var S = SR.SHOTS[shot], tip = shot === 'tip', qs = this.setQ;
     this.lastShot = shot;
@@ -520,7 +532,8 @@
     var errChance = 0.04 + S.err + (1 - qs) * 0.1 - (rt.attack - 75) * 0.002 + (edge < 0.5 ? (0.5 - edge) * 0.3 : 0);
     var scatter = (0.2 + (1 - qs) * 0.8 + (1 - rt.attack / 100) * 0.6) * S.scatter;
     tgt.x += gauss() * scatter; tgt.y += gauss() * scatter;
-    var netErr = false;
+    var netErr = false, sc = this.script;
+    if (sc) { tgt = { x: aim.x + (tgt.x - aim.x) * 0.25, y: aim.y + (tgt.y - aim.y) * 0.25, z: 0 }; errChance = 0; }
     if (Math.random() < errChance) {
       if (Math.random() < 0.5) { netErr = true; tgt = { x: C.NET_X + (def === 1 ? 0.6 : -0.6), y: clamp(cp.y + rnd(-1, 1), 0.3, 8.7), z: 0.9 }; }
       else tgt = this.pushOut(def, tgt);
@@ -547,10 +560,12 @@
         });
         var rd = this.m.ratings[def];
         var pTouch = cross.z < 3.45 ? Math.min(0.85, nb * 0.22 * (rd.block / 75) * (1.15 - rt.attack / 200) * S.block * (this.blockBonus || 1)) : 0;
+        if (sc) pTouch = sc.block ? 1 : 0;
         if (Math.random() < pTouch) {
           var r = Math.random(), outcome;
           if (shot === 'tool') outcome = r < 0.75 ? 'out' : r < 0.88 ? 'soft' : 'stuff';
           else outcome = r < 0.28 ? 'stuff' : r < 0.78 ? 'soft' : 'out';
+          if (sc) outcome = sc.block;
           this.at(tn, function () { self.blockResult(outcome, def, cross); });
           return;
         }
@@ -573,7 +588,7 @@
       this.launch(from, { x: tw.x, y: tw.y, z: 0 }, 0.42);
       this.lastOffense = { team: def, type: 'block' };
       this.touches[att] = 0;
-      if (Math.random() < 0.35) this.planReception(att, -0.15); // block cover is rarely there in time
+      if (!this.script && Math.random() < 0.35) this.planReception(att, -0.15); // block cover is rarely there in time
     } else if (outcome === 'soft') {
       tw = world(def, rnd(3, 6.5), rnd(1.5, 7.5));
       from = { x: C.NET_X + side * 0.15, y: cross.y, z: cross.z + 0.2 };

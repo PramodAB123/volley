@@ -14,6 +14,7 @@
     rally.formation(0, 'base');
     rally.formation(1, 'base');
     rally.snap();
+    if (cfg.demo) return; // the How to play demo stages its own rallies (demo.js)
     if (cfg.human !== -1) rally.say('SET 1', cfg.home.name + ' vs ' + cfg.away.name, '#ffffff', 2);
     rally.wait(cfg.human !== -1 ? 1.4 : 0.4, function () { rally.startServe({ snap: true }); });
   };
@@ -25,6 +26,7 @@
     else if (info.kind === 'kill') st.kills++;
     else if (info.kind === 'block') st.blocks++;
     else if (info.kind === 'error') m.stats[1 - winner].errors++;
+    if (this.cfg.demo) { m.point(winner); return; }
     var res = m.point(winner);
     if (res.matchOver) {
       var t = m.teams[winner];
@@ -92,8 +94,11 @@
 
   function resize() {
     var vw = window.innerWidth, vh = window.innerHeight;
-    SR.render.setView(vw, vh);
-    var s = Math.min(vw / SR.render.W, vh / SR.render.H);
+    // The How to play demo keeps a strip (right or bottom) for its captions;
+    // the court fits in what is left.
+    var dm = SR.demo && SR.demo.active ? SR.demo.layout(vw, vh) : null, bw = dm ? dm.w : vw, bh = dm ? dm.h : vh;
+    SR.render.setView(bw, bh);
+    var s = Math.min(bw / SR.render.W, bh / SR.render.H);
     // Very sharp phone screens cost a lot of pixels for little gain: cap the
     // backing resolution, and lower it further if the device is struggling.
     var dpr = Math.min(window.devicePixelRatio || 1, SR.lowFx ? 1.25 : 2);
@@ -105,7 +110,8 @@
     SR.render.scale = s * dpr;
     // Pause button sits on the canvas corner: top right in landscape,
     // bottom right in portrait where the scoreboard fills the top.
-    var cw = SR.render.W * s, ch = SR.render.H * s, left = (vw - cw) / 2, top = (vh - ch) / 2;
+    var cw = SR.render.W * s, ch = SR.render.H * s, left = (bw - cw) / 2, top = (bh - ch) / 2;
+    canvas.style.margin = dm ? '0 ' + (vw - bw) + 'px ' + (vh - bh) + 'px 0' : '';
     var hud = document.getElementById('hud');
     hud.style.left = (left + cw - 56) + 'px';
     hud.style.top = (SR.render.portrait ? top + ch - 56 : top + 12) + 'px';
@@ -121,6 +127,7 @@
     var dt = last ? Math.min(document.hidden ? 0.25 : 0.05, (ts - last) / 1000) : 0;
     last = ts;
     var g = SR.game;
+    if (SR.demo && SR.demo.active) SR.demo.tick(dt);
     // Hit-stop on big hits: a brief slow-motion beat rather than a dead
     // freeze, so motion never visibly stops. Skipped online so the match never stalls.
     if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; if (!(g && g.cfg.online)) dt *= 0.2; }
@@ -157,6 +164,8 @@
     beat.onmessage = hiddenTick;
   } catch (e) { setInterval(hiddenTick, 50); }
 
+  SR.resize = function () { if (canvas) resize(); };
+
   window.addEventListener('load', function () {
     SR.save.load();
     canvas = document.getElementById('game');
@@ -169,6 +178,7 @@
     var q = new URLSearchParams(window.location.search);
     if (q.get('speed')) SR.speed = Number(q.get('speed')) || 1;
     if (SR.net) SR.net.init(q);
+    if (q.get('demo') !== null && SR.demo && !q.get('room')) SR.demo.start('menu');
     window.requestAnimationFrame(frame);
   });
 })();

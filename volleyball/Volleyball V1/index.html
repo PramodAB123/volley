@@ -88,6 +88,33 @@
       <button class="emote" data-emo="idle" title="Idle" aria-label="Idle">😐</button>
     </div>
 
+    <aside id="demo" class="demo hidden" aria-label="How to play demo">
+      <div class="demo-head">
+        <span class="demo-tag">Demo</span>
+        <span id="demo-count" class="demo-count">1 / 11</span>
+        <button id="demo-exit" class="demo-x" type="button" aria-label="Close demo">✕</button>
+      </div>
+      <div class="demo-progress" aria-hidden="true"><span id="demo-bar"></span></div>
+      <ol id="demo-chapters" class="demo-chapters" aria-label="Skills"></ol>
+      <div id="demo-scroll" class="demo-scroll">
+        <h2 id="demo-title"></h2>
+        <p id="demo-now" class="demo-now" role="status" aria-live="polite"></p>
+        <div id="demo-body" class="demo-body"></div>
+        <p id="demo-keys" class="demo-keys"></p>
+      </div>
+      <div id="demo-end" class="demo-end hidden">
+        <button id="demo-quick" class="btn primary" type="button">Play a quick match</button>
+        <button id="demo-again" class="btn" type="button">Watch again</button>
+        <button id="demo-help" class="btn ghost" type="button">How to play</button>
+      </div>
+      <div class="demo-ctrl">
+        <button id="demo-prev" class="btn" type="button" aria-label="Previous skill">◀<span class="lbl"> Back</span></button>
+        <button id="demo-play" class="btn" type="button">❚❚<span class="lbl"> Pause</span></button>
+        <button id="demo-replay" class="btn icon" type="button" aria-label="Replay this skill" title="Replay">↻</button>
+        <button id="demo-next" class="btn primary" type="button" aria-label="Next skill"><span class="lbl">Next </span>▶</button>
+      </div>
+    </aside>
+
     <section id="scr-menu" class="screen">
       <div class="panel menu">
         <h1>Spike <span>Rally</span></h1>
@@ -219,18 +246,69 @@
     <section id="scr-help" class="screen hidden">
       <div class="panel help">
         <h2>How to play</h2>
-        <p>You coach the team in the near half. Your players move on their own; you make the three calls that decide each rally.</p>
-        <ol>
-          <li><b>Serve.</b> Move the pointer over the far court to aim, then click or tap (or press Space). The power bar swings up and down: a harder serve is tougher to pass but less accurate.</li>
-          <li><b>Set.</b> When your team passes, numbers appear over your front-row hitters. Click one, or press 1 to 3, to choose who gets the ball. If you don't, the setter decides.</li>
-          <li><b>Attack.</b> While the set is in the air, quickly pick a shot with the buttons or keys 1 to 6, then click where it should land:
-            <b>Power</b> is fastest; <b>Line</b> and <b>Cross</b> aim themselves down the sideline or across court; <b>Roll</b> is a slow, high shot over the block into open space; <b>Tip</b> drops it just over the net; <b>Tool</b> hits off the blockers' hands to send the ball out. Aiming right on the lines is risky.</li>
-          <li><b>Online.</b> Choose Play online, create a room and send the code or invite link to a friend. Each of you makes the calls for your own team, and you both see the court from your own end. If the connection drops, the game waits up to 30 seconds for it to come back.</li>
-          <li><b>Block.</b> When the other team passes, call your block with the buttons or keys 1 to 4. Commit Left, Middle or Right to stack all three blockers there before the set (a great block if you guess right, an open net if you don't), or choose Read to react with two blockers.</li>
+        <p class="help-lead">You coach the team in the near half. Your players move on their own; you make the four calls that decide each rally.</p>
+        <button id="btn-demo" class="demo-cta" type="button">
+          <span class="demo-cta-icon" aria-hidden="true">▶</span>
+          <span class="demo-cta-text"><b>Watch the demo</b><small>A guided rally that shows every skill, step by step</small></span>
+        </button>
+
+        <ol class="help-steps">
+          <li>
+            <span class="hnum" aria-hidden="true">1</span>
+            <div>
+              <h3>Serve</h3>
+              <p>Aim on their court, then serve while the power bar swings. A harder serve is tougher to pass but less accurate.</p>
+              <p class="hkeys"><span><b>PC</b>Mouse to aim, click or <kbd>Space</kbd></span><span><b>Phone</b>Tap a spot on their court</span></p>
+            </div>
+          </li>
+          <li>
+            <span class="hnum" aria-hidden="true">2</span>
+            <div>
+              <h3>Set</h3>
+              <p>When your team passes, numbers appear over your front-row hitters. Pick who gets the ball, or the setter decides.</p>
+              <p class="hkeys"><span><b>PC</b>Click a player or <kbd>1</kbd>–<kbd>3</kbd></span><span><b>Phone</b>Tap a numbered player</span></p>
+            </div>
+          </li>
+          <li>
+            <span class="hnum" aria-hidden="true">3</span>
+            <div>
+              <h3>Attack</h3>
+              <p>While the set is in the air, pick one of six shots, then pick where it lands. Aiming right on the lines is risky.</p>
+              <p class="hkeys"><span><b>PC</b><kbd>1</kbd>–<kbd>6</kbd>, then click a spot</span><span><b>Phone</b>Tap a shot, then a spot</span></p>
+            </div>
+          </li>
+          <li>
+            <span class="hnum" aria-hidden="true">4</span>
+            <div>
+              <h3>Block</h3>
+              <p>When they pass, commit Left, Middle or Right to stack all three blockers there, or choose Read to react with two.</p>
+              <p class="hkeys"><span><b>PC</b><kbd>1</kbd>–<kbd>4</kbd> or click a B zone</span><span><b>Phone</b>Tap a block button</span></p>
+            </div>
+          </li>
         </ol>
-        <p>Rally scoring, win each set by two. Before a match, choose the points per set (5, 11 or 15) and how many sets to play (1, best of 3 or best of 5). Winning the rally on the other team's serve wins you the serve and rotates your team. Press P or Esc to pause.</p>
-        <p class="muted small">Stars: 1 per win. League title +3, tournament cup +5. Spend them in the Shop.</p>
-        <button class="btn ghost" data-back>Back</button>
+
+        <h3 class="help-sub">The six shots</h3>
+        <div class="shot-grid">
+          <div class="shot"><kbd>1</kbd><b>Power</b><span>Fastest, hardest spike. You pick the spot.</span></div>
+          <div class="shot"><kbd>2</kbd><b>Line</b><span>Aims itself straight down the sideline.</span></div>
+          <div class="shot"><kbd>3</kbd><b>Cross</b><span>Aims itself on a diagonal across court.</span></div>
+          <div class="shot"><kbd>4</kbd><b>Roll</b><span>Slow and high over the block into space.</span></div>
+          <div class="shot"><kbd>5</kbd><b>Tip</b><span>Drops just over the net. Shift + click or long-press tips anywhere.</span></div>
+          <div class="shot"><kbd>6</kbd><b>Tool</b><span>Off the blockers' hands and out.</span></div>
+        </div>
+
+        <h3 class="help-sub">Rules and more</h3>
+        <ul class="help-rules">
+          <li>Rally scoring: every rally wins a point. Win each set by two.</li>
+          <li>Choose 5, 11 or 15 points per set and 1, 3 or 5 sets before a match.</li>
+          <li>Win a rally on their serve to take the serve; your team rotates.</li>
+          <li><b>Online:</b> create a room and send the code or invite link. If the connection drops, the game waits up to 30 seconds.</li>
+          <li>Press <kbd>P</kbd> or <kbd>Esc</kbd> to pause. Stars: 1 per win, +3 for a league title, +5 for a cup. Spend them in the Shop.</li>
+        </ul>
+        <div class="row">
+          <button id="btn-demo-2" class="btn primary" type="button">Watch the demo</button>
+          <button class="btn ghost" data-back>Back</button>
+        </div>
       </div>
     </section>
 
@@ -274,6 +352,7 @@
   <script src="js/net-config.js"></script>
   <script src="js/relay.js"></script>
   <script src="js/net.js"></script>
+  <script src="js/demo.js"></script>
   <script src="js/main.js"></script>
   
   <!-- Vercel Web Analytics -->

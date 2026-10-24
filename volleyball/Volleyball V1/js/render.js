@@ -678,6 +678,8 @@
       }
       drawReacts(ctx, game);
       if (rally.banner) drawBanner(ctx, rally.banner);
+      // The How to play demo's pointer, drawn over everything.
+      if (game.cfg.demo && SR.demo) SR.demo.draw(ctx, { proj: proj, panX: panX, W: W, H: H, buttons: this.buttons, heads: this.heads, portrait: portrait });
     },
     scale: 1
   };
