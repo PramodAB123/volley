@@ -175,7 +175,8 @@
     h.onopen = function () { if (N.hub === h) roomReady(); };
     h.onclose = function () {
       if (N.hub !== h || !h.dead()) return;
-      if (N.phase === 'waiting' && (!N.peer || !N.peer.open)) abort('Could not reach the online servers. Check your internet connection and try again.');
+      // Only give up when PeerJS has failed too; it may still be connecting.
+      if (N.phase === 'waiting' && (!N.peer || N.peer.destroyed || N.peer.disconnected)) abort('Could not reach the online servers. Check your internet connection and try again.');
     };
     h.onmessage = function (t, text, client) {
       if (N.hub !== h || N.code !== code || t !== topic('h')) return;
