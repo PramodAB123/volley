@@ -3,8 +3,39 @@
   <url>
     <loc>https://spikerally.buzz/</loc>
     <lastmod>2026-10-24</lastmod>
+    <priority>1.0</priority>
     <image:image><image:loc>https://spikerally.buzz/icons/social-preview.png</image:loc></image:image>
     <image:image><image:loc>https://spikerally.buzz/screenshots/wide-1.jpg</image:loc></image:image>
     <image:image><image:loc>https://spikerally.buzz/screenshots/wide-2.jpg</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://spikerally.buzz/how-to-play</loc>
+    <lastmod>2026-10-24</lastmod>
+    <priority>0.8</priority>
+    <image:image><image:loc>https://spikerally.buzz/img/pages/call-the-shot.webp</image:loc></image:image>
+    <image:image><image:loc>https://spikerally.buzz/img/pages/kill.webp</image:loc></image:image>
+    <image:image><image:loc>https://spikerally.buzz/img/pages/block.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://spikerally.buzz/about</loc>
+    <lastmod>2026-10-24</lastmod>
+    <priority>0.7</priority>
+    <image:image><image:loc>https://spikerally.buzz/img/pages/rally.webp</image:loc></image:image>
+    <image:image><image:loc>https://spikerally.buzz/img/pages/kill.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://spikerally.buzz/contact</loc>
+    <lastmod>2026-10-24</lastmod>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://spikerally.buzz/privacy</loc>
+    <lastmod>2026-10-24</lastmod>
+    <priority>0.2</priority>
+  </url>
+  <url>
+    <loc>https://spikerally.buzz/terms</loc>
+    <lastmod>2026-10-24</lastmod>
+    <priority>0.2</priority>
   </url>
 </urlset>

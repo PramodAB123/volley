@@ -2,8 +2,23 @@
   "redirects": [
     {
       "source": "/:path*",
-      "has": [{ "type": "host", "value": "volley-kappa.vercel.app" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "volley-kappa.vercel.app"
+        }
+      ],
       "destination": "https://spikerally.buzz/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:page(about|how-to-play|privacy|terms|contact).html",
+      "destination": "/:page",
+      "permanent": true
+    },
+    {
+      "source": "/index.html",
+      "destination": "/",
       "permanent": true
     }
   ],
@@ -11,6 +26,10 @@
     {
       "source": "/",
       "destination": "/volleyball/Volleyball V1/index.html"
+    },
+    {
+      "source": "/:page(about|how-to-play|privacy|terms|contact)",
+      "destination": "/volleyball/Volleyball V1/:page.html"
     },
     {
       "source": "/:path((?!volleyball/Volleyball V1/).*)",
@@ -21,25 +40,51 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
       ]
     },
     {
       "source": "/(icons|img|screenshots)/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=86400" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, stale-while-revalidate=86400"
+        }
+      ]
     },
     {
       "source": "/favicon.ico",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
     },
     {
       "source": "/js/vendor/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=2592000"
+        }
+      ]
     },
     {
       "source": "/site.webmanifest",
-      "headers": [{ "key": "Content-Type", "value": "application/manifest+json" }]
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
+        }
+      ]
     }
   ]
 }

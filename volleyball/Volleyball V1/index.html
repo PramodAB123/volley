@@ -63,15 +63,6 @@
         "inLanguage": "en", "isAccessibleForFree": true,
         "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD", "availability": "https://schema.org/InStock"},
         "isPartOf": {"@id": "https://spikerally.buzz/#website"}
-      },
-      {
-        "@type": "FAQPage", "@id": "https://spikerally.buzz/#faq",
-        "mainEntity": [
-          {"@type": "Question", "name": "Is Spike Rally free?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Spike Rally is free to play in any modern web browser, with no download or sign-up."}},
-          {"@type": "Question", "name": "Can I play volleyball online with a friend?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Choose Play online, create a room and send the six-letter code or invite link to a friend. Each of you coaches your own team."}},
-          {"@type": "Question", "name": "Does it work on phones?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Spike Rally works on phones, tablets and computers, in portrait or landscape, with touch, mouse or keyboard."}},
-          {"@type": "Question", "name": "How do I play?", "acceptedAnswer": {"@type": "Answer", "text": "You coach a six-player team. Aim and time the serve, pick which hitter gets the set, choose the attack (power, line, cross, roll, tip or tool) and call the block. Rally scoring, win each set by two."}}
-        ]
       }
     ]
   }
@@ -104,7 +95,13 @@
           <button id="btn-settings" class="btn">Settings</button>
           <button id="btn-help" class="btn wide">How to play</button>
         </div>
-        <button id="btn-about" class="link-btn">About this volleyball game</button>
+        <nav class="menu-links" aria-label="Site">
+          <a href="/about">About</a>
+          <a href="/how-to-play">How to play</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+          <a href="/contact">Contact</a>
+        </nav>
       </div>
     </section>
 
@@ -227,35 +224,6 @@
         <p class="muted small">Stars: 1 per win. League title +3, tournament cup +5. Spend them in the Shop.</p>
         <button class="btn ghost" data-back>Back</button>
       </div>
-    </section>
-
-    <section id="scr-about" class="screen hidden">
-      <article class="panel help about">
-        <h2>Spike Rally: free online volleyball game</h2>
-        <p>Spike Rally is a free 6v6 volleyball game you play right in your browser, on a phone, tablet or computer. There is nothing to download and no account to make. You are the coach: your six players move on their own, and you make the calls that win or lose each rally.</p>
-        <h3>How a rally works</h3>
-        <p>Aim and time your serve with the power bar. When your team passes, choose which front-row hitter gets the set. Then call the attack: a hard power spike, a shot down the line or across court, a soft roll shot over the block, a tip just over the net, or a tool shot off the blockers' hands. On defence, read the other team's set and commit your block left, middle or right.</p>
-        <h3>Game modes</h3>
-        <ul>
-          <li><b>Quick match</b> against the computer, at easy, normal or hard difficulty.</li>
-          <li><b>League</b>: play a full season against every team and top the table.</li>
-          <li><b>Tournament</b>: win three knockout matches to lift the cup.</li>
-          <li><b>Play online</b> with a friend: create a room, share the code or invite link, and each of you coaches your own side.</li>
-        </ul>
-        <p>Win matches to earn stars, then spend them in the shop on new balls and courts. Choose 5, 11 or 15 points per set and play one set, best of three or best of five, with rally scoring and win-by-two.</p>
-        <h3>Questions</h3>
-        <dl class="faq">
-          <dt>Is Spike Rally free?</dt>
-          <dd>Yes. It is free to play in any modern browser, with no download or sign-up.</dd>
-          <dt>Can I play volleyball online with a friend?</dt>
-          <dd>Yes. Choose Play online, create a room and send the six-letter code or invite link. If the connection drops, the game waits up to 30 seconds for it to come back.</dd>
-          <dt>Does it work on phones?</dt>
-          <dd>Yes. It works in portrait or landscape, with touch, mouse or keyboard.</dd>
-          <dt>Is my progress saved?</dt>
-          <dd>Your stars, stats, league and tournament are saved in your browser on this device.</dd>
-        </dl>
-        <button class="btn ghost" data-back>Back</button>
-      </article>
     </section>
 
     <section id="scr-result" class="screen hidden">

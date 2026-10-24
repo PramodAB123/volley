@@ -402,7 +402,6 @@
       on('btn-stats', function () { renderStats(); show('scr-stats'); });
       on('btn-settings', function () { fillSettings(); show('scr-settings'); });
       on('btn-help', function () { show('scr-help'); });
-      on('btn-about', function () { show('scr-about'); });
       on('btn-online', function () { SR.net.openLobby(); });
       document.querySelectorAll('[data-back]').forEach(function (b) {
         b.addEventListener('click', function () { SR.audio.play('click'); show('scr-menu'); });
