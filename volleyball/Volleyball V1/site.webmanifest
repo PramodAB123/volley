@@ -1,23 +1,57 @@
 {
   "id": "/",
-  "name": "Spike Rally",
+  "name": "Spike Rally – Free Online Volleyball Game",
   "short_name": "Spike Rally",
-  "description": "Coach a six-player volleyball team: call the serve, the set and the spike.",
+  "description": "Free 6v6 volleyball game in your browser. Call the serve, set and spike, or play a friend online.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
   "orientation": "any",
   "background_color": "#0b1220",
   "theme_color": "#0b1220",
-  "categories": ["games", "sports"],
+  "categories": [
+    "games",
+    "sports"
+  ],
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "icons/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
   ],
   "screenshots": [
-    { "src": "screenshots/wide-1.jpg", "sizes": "1280x720", "type": "image/jpeg", "form_factor": "wide", "label": "Spike the ball past the block" },
-    { "src": "screenshots/wide-2.jpg", "sizes": "1280x720", "type": "image/jpeg", "form_factor": "wide", "label": "Call the block at the net" }
+    {
+      "src": "screenshots/wide-1.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Spike the ball past the block"
+    },
+    {
+      "src": "screenshots/wide-2.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Call the block at the net"
+    }
   ]
 }
