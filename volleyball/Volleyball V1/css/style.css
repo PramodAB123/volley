@@ -185,6 +185,29 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 }
 .net-link.meh { color: #ffd23f; }
 .net-link.bad { color: #ff7a59; }
+/* Online emoji reactions: a slim column on the canvas's right edge (a row
+   along the top in portrait). main.js sets the --cv-* canvas box. */
+.emotes {
+  position: absolute; z-index: 2; display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 14px;
+  left: calc(var(--cv-l, 0px) + var(--cv-w, 100vw) - 12px); top: calc(var(--cv-t, 0px) + var(--cv-h, 100vh) / 2);
+  transform: translate(-100%, -50%); background: rgba(6, 10, 18, 0.6); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.emote {
+  width: 40px; height: 40px; padding: 0; border: 0; border-radius: 10px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.08);
+  font: 24px/1 "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  transition: transform 0.1s, opacity 0.2s, background 0.15s; touch-action: manipulation; user-select: none;
+}
+.emote:hover { background: rgba(255, 255, 255, 0.2); }
+.emote:active { transform: scale(0.88); }
+.emotes.cooling .emote { opacity: 0.38; cursor: default; transform: none; background: rgba(255, 255, 255, 0.08); }
+/* Portrait: a row centred along the bottom, beside the pause button and below the shot buttons. */
+.emotes.flat {
+  flex-direction: row; gap: 6px; padding: 5px; border-radius: 12px;
+  left: calc(var(--cv-l, 0px) + var(--cv-w, 100vw) / 2); top: calc(var(--cv-t, 0px) + var(--cv-h, 100vh) - 8px);
+  transform: translate(-50%, -100%);
+}
+.emotes.flat .emote { width: 34px; height: 34px; border-radius: 9px; font-size: 21px; }
 .help li { margin-bottom: 10px; line-height: 1.45; }
 
 #result-title { font-size: 34px; }

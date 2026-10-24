@@ -110,6 +110,11 @@
     hud.style.left = (left + cw - 56) + 'px';
     hud.style.top = (SR.render.portrait ? top + ch - 56 : top + 12) + 'px';
     hud.style.right = 'auto';
+    // The canvas box, for overlays laid out in CSS (the emoji reactions bar).
+    var app = document.getElementById('app').style;
+    app.setProperty('--cv-l', left + 'px'); app.setProperty('--cv-t', top + 'px');
+    app.setProperty('--cv-w', cw + 'px'); app.setProperty('--cv-h', ch + 'px');
+    document.getElementById('emotes').classList.toggle('flat', SR.render.portrait);
   }
 
   function step(ts) {

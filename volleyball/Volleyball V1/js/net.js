@@ -99,6 +99,46 @@
     if (N.timers[name]) { clearTimeout(N.timers[name]); clearInterval(N.timers[name]); N.timers[name] = null; }
   }
 
+  // ---- emoji reactions -----------------------------------------------------
+  // Four quick reactions during a match. Each shows for a moment beside the
+  // sender's half of the scoreboard; a short cooldown on both ends stops spam.
+
+  var EMOTES = { laugh: '\ud83d\ude02', cry: '\ud83d\ude2d', angry: '\ud83d\ude21', idle: '\ud83d\ude10' };
+  var EMOTE_MS = 2000, EMOTE_IN_MS = 700;
+  var emoteOut = 0, emoteIn = 0, emoteBar = false;
+  N.reacts = [null, null]; // [mine, friend's]: { e: emoji, at: seconds }
+
+  function showReact(side, id) { N.reacts[side] = { e: EMOTES[id], at: performance.now() / 1000 }; }
+
+  function sendEmote(id) {
+    var t = now();
+    if (!EMOTES[id] || N.phase !== 'playing' || t - emoteOut < EMOTE_MS) return;
+    if (!send({ t: 'emo', e: id })) return;
+    emoteOut = t;
+    showReact(0, id);
+    SR.audio.play('emote');
+    var bar = $('emotes');
+    bar.classList.add('cooling');
+    clearTimer('emote');
+    N.timers.emote = setTimeout(function () { bar.classList.remove('cooling'); }, EMOTE_MS);
+  }
+
+  function gotEmote(id) {
+    var t = now();
+    if (!EMOTES.hasOwnProperty(id) || N.phase !== 'playing' || t - emoteIn < EMOTE_IN_MS) return;
+    emoteIn = t;
+    showReact(1, id);
+    SR.audio.play('emote');
+  }
+
+  // The bar shows only while an online match is on screen (not under a menu).
+  function syncEmoteBar() {
+    var on = !!(SR.game && SR.game.cfg.online && N.phase === 'playing' && !$('hud').classList.contains('hidden'));
+    if (on === emoteBar) return;
+    emoteBar = on;
+    $('emotes').classList.toggle('hidden', !on);
+  }
+
   // ---- connection plumbing -------------------------------------------------
 
   function makePeer(id) {
@@ -254,6 +294,8 @@
     N.role = null;
     N.phase = 'idle';
     N.events = [];
+    N.reacts = [null, null];
+    $('emotes').classList.remove('cooling');
     banner('');
     showLink();
   }
@@ -592,6 +634,7 @@
       if (num(msg.s)) { var rt = now() - msg.s; if (rt >= 0 && rt < 10000) N.rtt = N.rtt ? N.rtt + (rt - N.rtt) * 0.3 : rt; }
       return;
     }
+    if (msg.t === 'emo') { gotEmote(msg.e); return; }
     if (msg.t === 'bye') {
       if (N.phase === 'over') return;
       if (N.role === 'host' && N.phase !== 'playing' && N.phase !== 'rejoining') { lost(); return; }
@@ -888,6 +931,7 @@
 
   // Called every frame: the host streams snapshots.
   N.tick = function () {
+    syncEmoteBar();
     if (N.role !== 'host' || N.phase !== 'playing') return;
     var g = SR.game;
     if (!g || g.cfg.online !== 'host' || !N.conn || !N.conn.open) return;
@@ -935,6 +979,11 @@
       if (N.phase !== 'idle') leave(); else SR.ui.show('scr-menu');
     });
     window.addEventListener('beforeunload', function () { if (N.phase !== 'idle') send({ t: 'bye' }); });
+    document.querySelectorAll('#emotes [data-emo]').forEach(function (b) {
+      // Never take keyboard focus, so Space still serves after a reaction.
+      b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      b.addEventListener('click', function () { b.blur(); sendEmote(b.getAttribute('data-emo')); });
+    });
     var room = cleanCode(query && query.get('room'));
     if (room.length === 6) {
       $('on-code').value = room;
