@@ -390,3 +390,10 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 .demo.last #demo-play, .demo.last #demo-replay { display: none; }
 .demo.bottom #demo-help { display: none; }
 .demo.bottom .demo-end .btn { min-height: 40px; padding: 8px 10px; }
+.demo-alt { margin: 8px 0 0; font-size: 13.5px; color: var(--muted); text-align: center; }
+.link-btn { border: 0; padding: 4px 2px; background: none; font: inherit; font-weight: 700; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.demo-mode { margin-left: auto; display: inline-flex; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.18); }
+.demo-mode button { border: 0; padding: 6px 11px; background: transparent; color: var(--demo-muted); font: 800 12.5px system-ui, sans-serif; cursor: pointer; min-height: 32px; }
+.demo-mode button + button { border-left: 1px solid rgba(255, 255, 255, 0.18); }
+.demo-mode button.on { background: #ffd23f; color: #241a00; }
+.demo-mode + .demo-x { margin-left: 0; }

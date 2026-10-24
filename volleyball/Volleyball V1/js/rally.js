@@ -166,7 +166,7 @@
     var tgt = { x: aim.x + gauss() * scatter, y: aim.y + gauss() * scatter, z: 0 };
     var T = 1.6 - 0.65 * power;
     var errChance = 0.03 + power * 0.1 * (1.3 - rt.serve / 100);
-    if (this.script) { tgt = { x: aim.x + gauss() * scatter * 0.2, y: aim.y + gauss() * scatter * 0.2, z: 0 }; errChance = 0; }
+    if (this.script) { tgt = this.keepIn(1 - s, { x: aim.x + gauss() * scatter * 0.2, y: aim.y + gauss() * scatter * 0.2, z: 0 }); errChance = 0; }
     if (Math.random() < errChance) {
       if (Math.random() < 0.5) { tgt = { x: C.NET_X + dir * 0.6, y: clamp(tgt.y, 0.5, 8.5), z: 1.0 }; }
       else tgt = this.pushOut(1 - s, tgt);
@@ -190,6 +190,12 @@
     var aim = world(1 - s, rnd(1.0, 7.0), rnd(0.8, 8.2)), sc = this.script && this.script.cpuServe;
     if (sc) { this.serve(world(1 - s, sc[0], sc[1]), sc[2]); return; }
     this.serve(aim, clamp(rnd(0.3, 0.85) * rt.serve / 80, 0.2, 1));
+  };
+
+  // Pull a target point inside a team's half (the demo's scripted rallies).
+  R.keepIn = function (team, tgt) {
+    var l = local(team, tgt.x, tgt.y), w = world(team, clamp(l.x, 0.4, 8.2), clamp(l.y, 0.4, C.W - 0.4));
+    return { x: w.x, y: w.y, z: 0 };
   };
 
   // Move a target point beyond the nearest boundary of a team's half.
@@ -533,7 +539,7 @@
     var scatter = (0.2 + (1 - qs) * 0.8 + (1 - rt.attack / 100) * 0.6) * S.scatter;
     tgt.x += gauss() * scatter; tgt.y += gauss() * scatter;
     var netErr = false, sc = this.script;
-    if (sc) { tgt = { x: aim.x + (tgt.x - aim.x) * 0.25, y: aim.y + (tgt.y - aim.y) * 0.25, z: 0 }; errChance = 0; }
+    if (sc) { tgt = this.keepIn(def, { x: aim.x + (tgt.x - aim.x) * 0.25, y: aim.y + (tgt.y - aim.y) * 0.25, z: 0 }); errChance = 0; }
     if (Math.random() < errChance) {
       if (Math.random() < 0.5) { netErr = true; tgt = { x: C.NET_X + (def === 1 ? 0.6 : -0.6), y: clamp(cp.y + rnd(-1, 1), 0.3, 8.7), z: 0.9 }; }
       else tgt = this.pushOut(def, tgt);

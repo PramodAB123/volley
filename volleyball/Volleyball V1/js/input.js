@@ -9,7 +9,8 @@
 
   function active() {
     var g = SR.game;
-    return g && !g.paused && g.cfg.human !== -1 && !g.cfg.demo ? g : null;
+    // The How to play demo takes your calls only in its Try it mode.
+    return g && !g.paused && g.cfg.human !== -1 && (!g.cfg.demo || SR.demo.tryMode) ? g : null;
   }
 
   function onMove(e) {
@@ -66,7 +67,8 @@
     var g = SR.game;
     if (!g) return;
     if (e.key === 'Shift') g.shift = down;
-    if (!down || g.cfg.human === -1 || g.cfg.demo) return; // demo.js has its own keys
+    if (!down || g.cfg.human === -1) return;
+    if (g.cfg.demo && (!SR.demo.tryMode || e.key === 'p' || e.key === 'P' || e.key === 'Escape')) return; // demo.js has its own keys
     if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') { SR.ui.togglePause(); e.preventDefault(); return; }
     if (g.paused) return;
     var rally = g.rally;

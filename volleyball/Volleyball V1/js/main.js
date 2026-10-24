@@ -178,7 +178,7 @@
     var q = new URLSearchParams(window.location.search);
     if (q.get('speed')) SR.speed = Number(q.get('speed')) || 1;
     if (SR.net) SR.net.init(q);
-    if (q.get('demo') !== null && SR.demo && !q.get('room')) SR.demo.start('menu');
+    if (q.get('demo') !== null && SR.demo && !q.get('room')) SR.demo.start('menu', q.get('demo'));
     window.requestAnimationFrame(frame);
   });
 })();

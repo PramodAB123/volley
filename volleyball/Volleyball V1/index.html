@@ -92,6 +92,10 @@
       <div class="demo-head">
         <span class="demo-tag">Demo</span>
         <span id="demo-count" class="demo-count">1 / 11</span>
+        <div id="demo-mode" class="demo-mode" role="radiogroup" aria-label="Demo mode">
+          <button type="button" role="radio" data-mode="try" aria-checked="true" class="on">Try it</button>
+          <button type="button" role="radio" data-mode="watch" aria-checked="false">Watch</button>
+        </div>
         <button id="demo-exit" class="demo-x" type="button" aria-label="Close demo">✕</button>
       </div>
       <div class="demo-progress" aria-hidden="true"><span id="demo-bar"></span></div>
@@ -249,8 +253,9 @@
         <p class="help-lead">You coach the team in the near half. Your players move on their own; you make the four calls that decide each rally.</p>
         <button id="btn-demo" class="demo-cta" type="button">
           <span class="demo-cta-icon" aria-hidden="true">▶</span>
-          <span class="demo-cta-text"><b>Watch the demo</b><small>A guided rally that shows every skill, step by step</small></span>
+          <span class="demo-cta-text"><b>Try the guided demo</b><small>Play a real rally step by step: you make every call, the captions show you how</small></span>
         </button>
+        <p class="demo-alt">Rather just see it first? <button id="btn-demo-watch" class="link-btn" type="button">Watch the demo play itself</button></p>
 
         <ol class="help-steps">
           <li>
@@ -306,7 +311,7 @@
           <li>Press <kbd>P</kbd> or <kbd>Esc</kbd> to pause. Stars: 1 per win, +3 for a league title, +5 for a cup. Spend them in the Shop.</li>
         </ul>
         <div class="row">
-          <button id="btn-demo-2" class="btn primary" type="button">Watch the demo</button>
+          <button id="btn-demo-2" class="btn primary" type="button">Try the guided demo</button>
           <button class="btn ghost" data-back>Back</button>
         </div>
       </div>
