@@ -110,7 +110,7 @@
   };
 
   R.snap = function () {
-    this.all().forEach(function (p) { p.x = p.tx; p.y = p.ty; p.z = 0; p.dive = 0; p.mvx = 0; p.mvy = 0; });
+    this.all().forEach(function (p) { p.x = p.tx; p.y = p.ty; p.z = 0; p.dive = 0; p.mvx = 0; p.mvy = 0; p.yawV = 0; });
   };
 
   // ---- serve --------------------------------------------------------------
@@ -779,6 +779,9 @@
       var vmax = p.speed * (p.lock ? 1.7 : hurry), acc = p.lock ? 24 : 12, dec = p.lock ? 16 : 7;
       // A receiver hustles hard enough to be set before the ball arrives.
       if (p.lock && p.contactAt > t + 0.02) { vmax = Math.min(11, Math.max(vmax, d / (p.contactAt - t - 0.02) * 1.2)); acc = 40; dec = 30; }
+      // Airborne players can't push off the floor: they carry their run-up
+      // momentum through the jump and only drift a little toward the target.
+      if (p.z > 0.02) acc *= 0.2;
       var want = (t < p.delayUntil || d < 0.002) ? 0 : Math.min(vmax, Math.sqrt(2 * dec * d));
       var wx = d > 0.002 ? dx / d * want : 0, wy = d > 0.002 ? dy / d * want : 0;
       var mx = p.mvx || 0, my = p.mvy || 0, ex = wx - mx, ey = wy - my, el = Math.sqrt(ex * ex + ey * ey), dv = acc * dt;
@@ -806,8 +809,12 @@
         off = Math.atan2(Math.sin(off), Math.cos(off));
         want = base + clamp(off, -1.2, 1.2);
       }
-      var dy2 = Math.atan2(Math.sin(want - p.yaw), Math.cos(want - p.yaw));
-      p.yaw += dy2 * Math.min(1, dt * 7);
+      // Turn on a critically damped spring with a top turn rate, so the body
+      // winds into a turn and settles out of it instead of snapping round.
+      var dy2 = Math.atan2(Math.sin(want - p.yaw), Math.cos(want - p.yaw)), yw = p.lock ? 14 : 10;
+      p.yawV = (p.yawV || 0) + (yw * yw * dy2 - 2 * yw * (p.yawV || 0)) * dt;
+      p.yawV = clamp(p.yawV, -9, 9);
+      p.yaw += p.yawV * dt;
       var jt = (t - p.jumpAt) / 0.75;
       p.z = (jt >= 0 && jt <= 1) ? 4 * (p.jumpH || 0.85) * jt * (1 - jt) : 0;
       if (p.dive > 0) p.dive = Math.max(0, p.dive - dt * 1.2);

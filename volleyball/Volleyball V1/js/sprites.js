@@ -26,6 +26,17 @@
   function lv(a, b, k) { return v(lerp(a.f, b.f, k), lerp(a.s, b.s, k), lerp(a.z, b.z, k)); }
   function ease(k) { k = clamp(k, 0, 1); return k * k * (3 - 2 * k); }
 
+  // One foot's place in the running cycle at phase ph (same timing as
+  // sin/cos of ph): pos runs -1..1 along the stride, lift 0..1. The swing
+  // (cos ph > 0) eases forward through the air; the stance slides back
+  // linearly, which matches the body's ground speed so the foot doesn't skate.
+  function gait(ph) {
+    var q = (ph + Math.PI / 2) / (2 * Math.PI);
+    q -= Math.floor(q);
+    if (q < 0.5) { var u = q * 2; return { pos: -1 + 2 * ease(u), lift: Math.sin(Math.PI * u) }; }
+    return { pos: 3 - 4 * q, lift: 0 };
+  }
+
   // Interpolate a list of keyframes [{t, ...vectors/numbers}] at time x.
   function keys(list, x) {
     var i = 0;
@@ -57,6 +68,7 @@
     var footL = v(0.05, 0.24, 0), footR = v(-0.02, -0.24, 0);
     var handL = v(0.32, 0.2, 1.0), handR = v(0.32, -0.2, 1.0);
     var elbowDir = v(-0.2, 1, -1), kneeDir = v(1, 0, 0.1);
+    var plantFeet = false;
     var act = p.act && t >= p.act.t && t - p.act.t < p.act.dur ? p.act : null;
     var a = act ? (t - act.t) / act.dur : 0;
     var jt = clamp((t - p.jumpAt) / 0.75, 0, 1);
@@ -69,7 +81,18 @@
     var fl = rally.state === 'rally' ? rally.flight : null;
     var sinceHit = fl && ((fl.p0.x < SR.COURT.NET_X ? 0 : 1) !== p.team) ? fl.t : 99;
     var incoming = fl ? Math.sqrt(fl.v.x * fl.v.x + fl.v.y * fl.v.y) : 0;
-    var K;
+    var K, legsRun = false;
+    // Running legs: each foot spends half the cycle planted, sliding back under
+    // the body at exactly the running speed so it stays put on the floor, and
+    // half swinging forward through a high arc with the heel tucked.
+    function runFeet() {
+      var stride = SR.strideFor(speed), run = clamp((speed - 0.6) / 3, 0, 1), lh = 0.1 + 0.12 * run;
+      var mf = (p.vx * cy + p.vy * sy) / speed, ms = (-p.vx * sy + p.vy * cy) / speed;
+      var gL = gait(p.phase), gR = gait(p.phase + Math.PI);
+      footL = v(mf * stride * gL.pos - gL.lift * lh * 0.3 * mf, 0.12 + ms * stride * gL.pos, gL.lift * lh);
+      footR = v(mf * stride * gR.pos - gR.lift * lh * 0.3 * mf, -0.12 + ms * stride * gR.pos, gR.lift * lh);
+      plantFeet = true;
+    }
 
     if (act && act.type === 'dive') {
       // Lunge with arms out, slide on the floor, then push back up.
@@ -131,11 +154,13 @@
       // Up on the toes with the hands making a window right where the ball drops.
       hipZ = act ? 0.95 + push * 0.04 : 0.93; lean = -0.02;
       footL = v(0.1, 0.2, 0.04); footR = v(-0.08, -0.2, 0.04);
+      legsRun = !act;
       handL = v(0.15 + push * 0.04, 0.1, 2.05 + push * 0.08); handR = v(0.15 + push * 0.04, -0.1, 2.05 + push * 0.08);
       elbowDir = v(0.2, 1, -0.2);
     } else if (toContact < 0.65 && toContact > -0.05) {
       // Reading the ball: drop into a staggered stance and bring the platform to it.
       var kk = ease(1 - toContact / 0.65), dig = clamp((incoming - 9) / 8, 0, 1);
+      legsRun = toContact > 0.3;
       if (p.contactKind === 'dive') {
         var rd = platform(p, 0.3);
         hipZ = 0.8 - kk * 0.3; lean = 0.15 + kk * 0.33;
@@ -161,11 +186,13 @@
       handL = v(0.28, 0.32, 0.92 + lk * 0.12); handR = v(0.28, -0.32, 0.92 + lk * 0.12);
     } else if (act && act.type === 'sad') {
       var droop = ease(a / 0.3);
+      legsRun = true;
       hipZ = 0.9; lean = 0.03 + droop * 0.06; headF = droop * 0.05;
       handL = v(-0.02, 0.27, 0.98); handR = v(-0.02, -0.27, 0.98);
       elbowDir = v(-0.4, 1, 0.1);
     } else if (act && act.type === 'cheer') {
       var bob = Math.abs(Math.sin(a * Math.PI * 3));
+      legsRun = true;
       hipZ = 0.86 + bob * 0.1; lean = -0.03;
       handL = v(0.05 + bob * 0.05, 0.36, 2.0 + bob * 0.15); handR = v(0.05 + bob * 0.05, -0.36, 2.0 + bob * 0.15);
       elbowDir = v(0, 1, 0);
@@ -184,6 +211,7 @@
       }
     } else if (rally.state === 'serve' && rally.server === p) {
       var toss = Math.abs(Math.sin(rally.stateT * 4));
+      legsRun = true;
       hipZ = 0.9;
       handL = v(0.35, 0.05, 1.12 + toss * 0.25); handR = v(-0.12, -0.28, 1.45);
       elbowDir = v(-0.5, -1, -0.2);
@@ -192,10 +220,7 @@
       var stride = SR.strideFor(speed), run = clamp((speed - 0.6) / 3, 0, 1);
       // Legs swing along the running direction, expressed in the local frame.
       var mf = (p.vx * cy + p.vy * sy) / speed, ms = (-p.vx * sy + p.vy * cy) / speed;
-      // Lifted foot swings through high with the heel tucked; planted foot pushes back.
-      var liftL = Math.max(0, cs) * (0.1 + 0.12 * run), liftR = Math.max(0, -cs) * (0.1 + 0.12 * run);
-      footL = v(mf * stride * sn - liftL * 0.3 * mf, 0.12 + ms * stride * sn, liftL);
-      footR = v(-mf * stride * sn - liftR * 0.3 * mf, -0.12 - ms * stride * sn, liftR);
+      runFeet();
       hipZ = 0.92 - Math.abs(cs) * 0.035 * (0.5 + run); lean = 0.05 + mf * (0.06 + 0.08 * run);
       // Arms swing opposite to the legs with bent elbows; shoulders counter-rotate.
       var sw = 0.28 * sn * Math.max(0.3, Math.abs(mf));
@@ -212,7 +237,9 @@
       // Side shuffles stay low with arms ready instead of a full sprint.
       if (Math.abs(ms) > 0.7) {
         hipZ = 0.8 - Math.abs(sn) * 0.02; handL = v(0.32, 0.22, 0.98); handR = v(0.32, -0.22, 0.98); lean = 0.1; twist = 0;
-        footL = v(0.04, 0.24 + ms * stride * 0.5 * sn, Math.max(0, cs) * 0.06); footR = v(-0.02, -0.24 + ms * stride * 0.5 * sn, Math.max(0, -cs) * 0.06);
+        // Shuffle steps: feet stay planted while the body slides over them, then hop across low.
+        var sL = gait(phs), sR = gait(phs + Math.PI);
+        footL = v(0.04, 0.26 + ms * stride * 0.8 * sL.pos, sL.lift * 0.06); footR = v(-0.02, -0.26 + ms * stride * 0.8 * sR.pos, sR.lift * 0.06);
       }
     } else {
       // Ready stance, lower and wider when the ball is coming our way.
@@ -231,6 +258,10 @@
         lean = 0.14;
       }
     }
+
+    // Upper-body poses (setting, celebrating, reading the ball) still run on
+    // planted feet while the player is moving, instead of gliding in a stance.
+    if (legsRun && !inAir && speed > 1.2) { runFeet(); hipZ = Math.min(hipZ, 0.92); }
 
     // Keep the torso a fixed length however far the player leans.
     lean = clamp(lean, -0.3, 0.53);
@@ -260,6 +291,8 @@
     j.elbowL = eL.joint; j.handL = eL.end; j.elbowR = eR.joint; j.handR = eR.end;
     j._w = (act && (act.type === 'pass' || act.type === 'dive' || act.type === 'set')) || toContact < 0.65 ? 28 : sinceHit < 0.42 ? 30
       : inAir ? 60 : speed > 0.6 ? 42 : 14;
+    // Planted feet follow tightly; a loose spring would let them skate.
+    j._wf = plantFeet ? 120 : j._w;
     return j;
   }
 
@@ -304,8 +337,8 @@
   // Pose, smoothing and world positions for one player, once per frame.
   function prepare(p, rally) {
     if (p._prepT === rally.t && p._W) return p._W;
-    var j = pose(p, rally), w = j._w;
-    delete j._w;
+    var j = pose(p, rally), w0 = j._w, wf = j._wf;
+    delete j._w; delete j._wf;
     // Each joint follows its target on a critically damped spring, so poses
     // flow into each other with natural ease-in and ease-out.
     var dtp = rally.t - (p._jt || 0);
@@ -315,7 +348,7 @@
     } else if (dtp > 0) {
       var n = Math.ceil(dtp / (1 / 240)), h = dtp / n;
       Object.keys(j).forEach(function (k) {
-        var x = p._j[k], vel = p._jv[k], g = j[k];
+        var x = p._j[k], vel = p._jv[k], g = j[k], w = k === 'footL' || k === 'footR' ? wf : w0;
         if (!x) { p._j[k] = v(g.f, g.s, g.z); p._jv[k] = v(0, 0, 0); return; }
         for (var i = 0; i < n; i++) {
           vel.f += (w * w * (g.f - x.f) - 2 * w * vel.f) * h; x.f += vel.f * h;

@@ -116,8 +116,9 @@
     var dt = last ? Math.min(document.hidden ? 0.25 : 0.05, (ts - last) / 1000) : 0;
     last = ts;
     var g = SR.game;
-    // Hit-stop freeze on big hits; skipped online so the match never stalls.
-    if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; if (!(g && g.cfg.online)) dt = 0; }
+    // Hit-stop on big hits: a brief slow-motion beat rather than a dead
+    // freeze, so motion never visibly stops. Skipped online so the match never stalls.
+    if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; if (!(g && g.cfg.online)) dt *= 0.2; }
     if (g && !g.paused) {
       acc += dt * (g.rally.loopScale || g.rally.timeScale) * (SR.speed || 1);
       var n = 0;
