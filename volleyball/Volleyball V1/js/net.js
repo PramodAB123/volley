@@ -73,7 +73,11 @@
     offSince: 0,     // host: when it last lost every server
     peerTry: 0,
     helloAt: 0,
-    retryAt: 0
+    retryAt: 0,
+    beats: 0,
+    path: null,     // 'direct' or 'Cloudflare' for a direct (WebRTC) link
+    netRtt: 0,
+    friendAway: false
   };
   SR.net = N;
 
@@ -102,9 +106,39 @@
     el.classList.toggle('hidden', !on);
     if (!on) return;
     var ms = Math.round(N.rtt || 0), bad = N.via === 'relay' || ms > 180;
-    el.textContent = (ms ? ms + ' ms' : '…') + (N.via === 'relay' ? ' · backup server' : '');
+    var how = N.via === 'relay' ? ' · backup server' : N.path ? ' · ' + N.path : '';
+    // A game in a background tab, a minimised window or a locked phone barely
+    // runs, which looks like a terrible connection. Say so instead.
+    if (N.friendAway) { el.textContent = 'Friend\'s game is in the background'; el.className = 'net-link bad'; return; }
+    // The browser's own measure of the network alone; when it's much lower than
+    // the game's ping, the delay is a busy device, not the connection.
+    var net = N.netRtt && ms > N.netRtt * 2 + 60 ? ' (network ' + Math.round(N.netRtt) + ')' : '';
+    el.textContent = (ms ? ms + ' ms' : '…') + net + how;
     el.className = 'net-link' + (bad ? ' bad' : ms > 90 ? ' meh' : '');
   }
+
+  // Which way the direct link goes (straight between the players, or through
+  // Cloudflare's TURN relay), from the browser's own connection stats.
+  function checkPath() {
+    var c = N.conn, pc = c && !c.relay && c.peerConnection;
+    if (!pc || !pc.getStats || N.pathBusy) return;
+    N.pathBusy = true;
+    pc.getStats().then(function (stats) {
+      N.pathBusy = false;
+      var pair = null, byId = {};
+      stats.forEach(function (r) { byId[r.id] = r; });
+      stats.forEach(function (r) { if (r.type === 'transport' && r.selectedCandidatePairId) pair = byId[r.selectedCandidatePairId]; });
+      if (!pair) stats.forEach(function (r) { if (r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded') pair = r; });
+      if (!pair) return;
+      var lc = byId[pair.localCandidateId] || {}, rc = byId[pair.remoteCandidateId] || {};
+      var relayed = lc.candidateType === 'relay' || rc.candidateType === 'relay';
+      N.path = relayed ? 'Cloudflare' + (lc.relayProtocol === 'tcp' || lc.relayProtocol === 'tls' ? ' TCP' : '') : 'direct';
+      N.netRtt = typeof pair.currentRoundTripTime === 'number' ? pair.currentRoundTripTime * 1000 : 0;
+    }).catch(function () { N.pathBusy = false; });
+  }
+
+  // Tell the other player when this game goes into the background or comes back.
+  function sendVis() { send({ t: 'vis', away: !!document.hidden }); }
 
   function view(which) {
     ['on-home', 'on-teams', 'on-room'].forEach(function (id) { $(id).classList.toggle('hidden', id !== which); });
@@ -409,6 +443,7 @@
       if (N.conn !== c) return;
       N.lastRecv = now();
       N.via = c.relay ? 'relay' : 'p2p';
+      N.path = null; N.netRtt = 0; N.friendAway = false;
       if (!c.relay) openFast(c);
       onOpen(c);
     });
@@ -425,6 +460,7 @@
     clearTimer('beat');
     N.timers.beat = setInterval(function () {
       if (N.conn && N.conn.open) send({ t: 'ping', s: now() });
+      if (N.phase === 'playing' && ++N.beats % 2 === 0) checkPath();
       showLink();
       if (N.conn && N.conn.open && (N.phase === 'lobby' || N.phase === 'playing') && now() - N.lastRecv > (N.via === 'relay' ? RELAY_LOST_MS : LOST_MS)) lost();
       if (N.phase === 'rejoining') {
@@ -858,6 +894,7 @@
       return;
     }
     if (msg.t === 'emo') { gotEmote(msg.e); return; }
+    if (msg.t === 'vis') { N.friendAway = !!msg.away; showLink(); return; }
     if (msg.t === 'bye') {
       if (N.phase === 'over') return;
       if (N.role === 'host' && N.phase !== 'playing' && N.phase !== 'rejoining') { lost(); return; }
@@ -1195,7 +1232,10 @@
     if (navigator.share) share.addEventListener('click', function () { if (N.shown) shareLink(); });
     else share.classList.add('hidden');
     $('on-link').addEventListener('focus', function (e) { e.target.select(); });
-    document.addEventListener('visibilitychange', function () { if (!document.hidden) revive(); });
+    document.addEventListener('visibilitychange', function () {
+      if (N.conn && N.conn.open) sendVis();
+      if (!document.hidden) revive();
+    });
     window.addEventListener('online', revive);
     window.addEventListener('pageshow', function (e) { if (e.persisted) revive(); });
     $('btn-on-back').addEventListener('click', function () {
