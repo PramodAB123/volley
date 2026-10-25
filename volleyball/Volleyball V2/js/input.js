@@ -85,7 +85,13 @@
       cv.addEventListener('pointerdown', onDown);
       cv.addEventListener('pointerup', onUp);
       cv.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-      window.addEventListener('keydown', function (e) { onKey(e, true); });
+      // Space, arrows and Page Up/Down must not scroll the page around the game
+      // (CrazyGames embeds it in an iframe). Form fields and buttons keep them.
+      window.addEventListener('keydown', function (e) {
+        var tag = e.target && e.target.tagName;
+        if (/^( |Arrow\w+|Page(Up|Down))$/.test(e.key) && !/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(tag)) e.preventDefault();
+        onKey(e, true);
+      });
       window.addEventListener('keyup', function (e) { onKey(e, false); });
     }
   };

@@ -11,8 +11,7 @@ analytics, no SEO tags, sitemap, robots.txt or web manifest.
   `SDK.init()` before the game boots (5 s timeout, so the game never hangs).
 - `loadingStart` / `loadingStop` around boot.
 - `gameplayStart` / `gameplayStop` whenever a real match is running or not
-  (menus, pause, result screen and ads stop it; the demo match behind the menu
-  does not count).
+  (menus, pause, result screen and ads stop it).
 - Midgame ads at natural breaks: between sets and at the end of a match, before
   the result screen. Not during play, not on menu buttons, never online between
   sets. The SDK spaces them (about 3 minutes) and the game just carries on when
@@ -46,15 +45,34 @@ Single-player first: `online: false` in js/net-config.js, so "Play online" is
 hidden and invites are ignored. Submit as a single-player game (no lobby
 size). Flip it to `true` in a later update once a reliable relay is in place.
 
-## On submission
+## On submission (single-player launch)
 
+- Upload: zip the contents of this folder (about 0.5 MB, index.html at the
+  top of the zip). Orientation: landscape (it also fits portrait phones).
 - Tick the **Data module** option, or cloud saves are disabled.
-- Online play uses PeerJS (0.peerjs.com), Cloudflare STUN (Google STUN removed)
-  and free public MQTT test brokers as a backup relay; declare it as
-  multiplayer and give the lobby size (2). To ship single-player first, set
-  `online: false` in js/net-config.js (hides Play online, ignores invites).
+- Do not declare it multiplayer while `online` is `false`; no lobby size.
+- Covers: `promo/crazygames/` (1920x1080, 800x1200, 800x800). The landscape
+  cover's tagline now reads "Volleyball · Serve, set and spike" (it used to
+  say "Play a friend online").
+- Tags: Sports, Volleyball, Strategy, Casual (leave out Multiplayer and
+  2 players until online is switched on).
+- Description: Spike Rally is a fast 6-vs-6 volleyball game you play in your
+  browser. You coach the team: aim the serve, choose who gets the set, pick the
+  shot (power, line, cross, roll, tip or tool) and click where it lands. On
+  defence you call the block. Play a quick match, a league or a tournament and
+  earn stars to unlock new balls and courts.
+- Controls: mouse or touch to aim and pick; keys 1 to 6 for the shot or block;
+  Space to serve; P or Esc to pause.
 - Test in the CrazyGames Preview tool, or on localhost (the SDK shows fake ads
   there; add `?useLocalSdk=true` on other hosts).
+- Space, arrow keys and Page Up/Down never scroll the CrazyGames page around
+  the game (js/input.js).
+
+## When online is switched on later
+
+Online play uses PeerJS (0.peerjs.com), Cloudflare STUN and free public MQTT
+test brokers as a backup relay. Before flipping `online: true`, move to a
+reliable relay, then declare the game as multiplayer with a lobby size of 2.
 
 ## Not done yet
 
