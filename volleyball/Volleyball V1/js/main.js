@@ -140,6 +140,7 @@
     if (SR.lowFx && !lowRes) resize();
     // No match (menus): show the cover art instead of the court.
     if (!g !== menuBg) { menuBg = !g; document.getElementById('app').classList.toggle('menu-bg', menuBg); }
+    if (SR.landing) SR.landing.sync();
     if (document.hidden || !g) return;
     var undo = g && !g.paused ? blend(g.rally, acc / STEP) : null;
     try { SR.render.draw(ctx, g); } finally { if (undo) undo(); }

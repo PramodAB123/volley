@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="page-home">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -139,6 +139,7 @@
           <button id="btn-settings" class="btn">Settings</button>
           <button id="btn-help" class="btn">How to play</button>
         </div>
+        <button id="btn-more" class="more-cue" type="button">Screenshots, game modes and FAQ <span aria-hidden="true">↓</span></button>
         <nav class="menu-links" aria-label="Site">
           <a href="/about">About</a>
           <a href="/how-to-play">How to play</a>
@@ -346,6 +347,195 @@
     </section>
   </div>
 
+  <!-- Home page below the game: shown only while the main menu is open (js/landing.js). -->
+  <main id="landing" class="landing" aria-labelledby="ld-title">
+    <section class="ld-intro">
+      <div class="ld-wrap ld-split">
+        <div>
+          <p class="ld-kicker">Free online volleyball game</p>
+          <h2 id="ld-title">Play 6v6 volleyball in your browser</h2>
+          <p class="ld-lead">Spike Rally is a free volleyball game for phone and PC. You coach a full six-player team: call the serve, choose the hitter, pick the spike and set the block. No download, no sign-up, and it loads in seconds.</p>
+          <ul class="ld-facts" aria-label="At a glance">
+            <li>100% free</li><li>No download</li><li>Phone, tablet and PC</li><li>1 or 2 players</li><li>Play a friend online</li>
+          </ul>
+          <div class="ld-actions">
+            <button class="btn primary" type="button" data-go="btn-quick">Play a quick match</button>
+            <button class="btn" type="button" data-go="btn-online">Play a friend online</button>
+          </div>
+        </div>
+        <figure class="ld-shot">
+          <img src="img/pages/kill.webp" alt="A kill in Spike Rally: the blue team spikes the ball past the red block for a point" width="1280" height="720" loading="lazy" decoding="async">
+        </figure>
+      </div>
+    </section>
+
+    <section class="ld-sec" aria-labelledby="ld-how">
+      <div class="ld-wrap">
+        <h2 id="ld-how">How a rally works</h2>
+        <p class="ld-sub">Your players move on their own. You make the four calls that win or lose each point.</p>
+        <div class="ld-rows">
+          <article class="ld-row">
+            <img src="img/pages/rally.webp" alt="Spike Rally court during a serve, with the blue team in the near half ready to receive" width="1280" height="720" loading="lazy" decoding="async">
+            <div>
+              <span class="ld-num">1</span>
+              <h3>Serve</h3>
+              <p>Aim anywhere on their court and serve while the power bar swings. A harder serve is tougher to pass but easier to miss, and the seams between two passers are the weak spots.</p>
+              <p class="ld-keys"><b>PC</b> mouse to aim, click or <kbd>Space</kbd> <b>Phone</b> tap a spot</p>
+            </div>
+          </article>
+          <article class="ld-row">
+            <img src="img/pages/call-the-shot.webp" alt="The six attack buttons Power, Line, Cross, Roll, Tip and Tool along the bottom of the court" width="1280" height="720" loading="lazy" decoding="async">
+            <div>
+              <span class="ld-num">2</span>
+              <h3>Set and attack</h3>
+              <p>When your team passes, pick which front-row hitter gets the set. While the ball is in the air, choose one of six shots and where it lands. Aim away from the block, but not too close to the lines.</p>
+              <p class="ld-keys"><b>PC</b> keys <kbd>1</kbd>–<kbd>6</kbd>, then click <b>Phone</b> tap a shot, then a spot</p>
+            </div>
+          </article>
+          <article class="ld-row">
+            <img src="img/pages/block.webp" alt="A stuff block in Spike Rally: three blockers stop the spike at the net" width="1280" height="720" loading="lazy" decoding="async">
+            <div>
+              <span class="ld-num">3</span>
+              <h3>Block and dig</h3>
+              <p>When the other team attacks, stack your three blockers left, middle or right, or choose Read and react with two. Guess right for a stuff block; guess wrong and your back row has to dig it.</p>
+              <p class="ld-keys"><b>PC</b> keys <kbd>1</kbd>–<kbd>4</kbd> <b>Phone</b> tap a block button</p>
+            </div>
+          </article>
+        </div>
+        <div class="ld-demo">
+          <div>
+            <b>New to volleyball?</b>
+            <span>The guided demo walks you through a real rally, one call at a time.</span>
+          </div>
+          <button class="btn primary" type="button" data-go="btn-demo">Try the guided demo</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="ld-sec ld-alt" aria-labelledby="ld-shots">
+      <div class="ld-wrap">
+        <h2 id="ld-shots">Six attack shots</h2>
+        <p class="ld-sub">Every spike is a choice. Read the block and the defence, then pick the shot that beats them.</p>
+        <div class="ld-shot-grid">
+          <div><b>Power</b><span>The fastest, hardest spike. Best when the block is late.</span></div>
+          <div><b>Line</b><span>Straight down the sideline when the block leaves it open.</span></div>
+          <div><b>Cross</b><span>A sharp diagonal when the block sits on the line.</span></div>
+          <div><b>Roll</b><span>Slow and high over the block into open space.</span></div>
+          <div><b>Tip</b><span>A soft drop just over the net while defenders are deep.</span></div>
+          <div><b>Tool</b><span>Off the blockers' hands and out when a big block is waiting.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ld-sec" aria-labelledby="ld-modes">
+      <div class="ld-wrap">
+        <h2 id="ld-modes">Game modes</h2>
+        <p class="ld-sub">Eight teams, each with its own attack, block, pass and serve ratings.</p>
+        <div class="ld-modes">
+          <article class="ld-mode">
+            <img src="img/home/quick-match.webp" alt="Team select screen with eight volleyball teams and match length options" width="800" height="500" loading="lazy" decoding="async">
+            <div>
+              <h3>Quick match</h3>
+              <p>Pick any two teams, choose 5, 11 or 15 points and 1, 3 or 5 sets, and play.</p>
+              <button class="btn" type="button" data-go="btn-quick">Play now</button>
+            </div>
+          </article>
+          <article class="ld-mode">
+            <img src="img/home/online.webp" alt="Play online screen: create a room or join a friend with a room code" width="800" height="500" loading="lazy" decoding="async">
+            <div>
+              <h3>Play online with a friend</h3>
+              <p>Create a room and send the code or invite link. Your friend joins from any phone or computer.</p>
+              <button class="btn" type="button" data-go="btn-online">Create a room</button>
+            </div>
+          </article>
+          <article class="ld-mode">
+            <img src="img/home/league.webp" alt="League table with six teams, played over five rounds" width="800" height="500" loading="lazy" decoding="async">
+            <div>
+              <h3>League</h3>
+              <p>A five-round season against the other teams. Finish top of the table to win the title.</p>
+              <button class="btn" type="button" data-go="btn-league">Start a league</button>
+            </div>
+          </article>
+          <article class="ld-mode">
+            <img src="img/home/tournament.webp" alt="Tournament bracket with quarter-finals, semi-finals and the final" width="800" height="500" loading="lazy" decoding="async">
+            <div>
+              <h3>Tournament</h3>
+              <p>Eight teams, knockout rounds. Win the quarter-final, the semi-final and the final to lift the cup.</p>
+              <button class="btn" type="button" data-go="btn-cup">Enter the cup</button>
+            </div>
+          </article>
+          <article class="ld-mode">
+            <img src="img/home/shop.webp" alt="Shop with ball and court styles you unlock with stars" width="800" height="500" loading="lazy" decoding="async">
+            <div>
+              <h3>Stars and the shop</h3>
+              <p>Earn a star for each win, three for a league title and five for a cup. Spend them on new balls and courts.</p>
+              <button class="btn" type="button" data-go="btn-shop">Open the shop</button>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="ld-sec ld-alt" aria-labelledby="ld-why">
+      <div class="ld-wrap">
+        <h2 id="ld-why">Why players like it</h2>
+        <ul class="ld-why">
+          <li><b>Real volleyball, quick to learn</b><span>Rally scoring, rotations, sets won by two. One click per call, so a match fits in a few minutes.</span></li>
+          <li><b>Made for phones too</b><span>Big tap targets and a layout that fits portrait and landscape screens.</span></li>
+          <li><b>Pick your challenge</b><span>Easy, Normal or Hard opponents, and matches from one quick set to best of five.</span></li>
+          <li><b>Your progress is saved</b><span>Stars, unlocks and career stats stay in your browser. No account needed.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="ld-sec" aria-labelledby="ld-faq">
+      <div class="ld-wrap ld-narrow">
+        <h2 id="ld-faq">Questions</h2>
+        <details>
+          <summary>Is Spike Rally free?</summary>
+          <p>Yes. The whole game is free to play in your browser, with nothing to download or buy.</p>
+        </details>
+        <details>
+          <summary>Can I play volleyball online with a friend?</summary>
+          <p>Yes. Choose Play online, create a room and send your friend the six-character code or the invite link. You each coach one team. If the connection drops, the game waits up to 30 seconds for you to come back.</p>
+        </details>
+        <details>
+          <summary>Does it work on my phone?</summary>
+          <p>Yes. Spike Rally runs in any modern browser on Android, iPhone, iPad, Windows, Mac and Chromebook. You can also add it to your home screen to open it like an app.</p>
+        </details>
+        <details>
+          <summary>What are the controls?</summary>
+          <p>On a computer use the mouse plus <kbd>Space</kbd> and the number keys. On a phone just tap. <kbd>P</kbd> or <kbd>Esc</kbd> pauses. The <a href="/how-to-play">how to play guide</a> has every control.</p>
+        </details>
+        <details>
+          <summary>How do I get better?</summary>
+          <p>Serve at the seams, set away from the block, and mix your shots so the other coach can't read you. Try the guided demo to practise each call.</p>
+        </details>
+        <p class="ld-more">More in <a href="/about">About Spike Rally</a> and the <a href="/how-to-play">full how to play guide</a>.</p>
+      </div>
+    </section>
+
+    <section class="ld-final">
+      <div class="ld-wrap">
+        <h2>Ready to serve?</h2>
+        <button class="btn primary" type="button" data-go="btn-quick">Play Spike Rally free</button>
+      </div>
+    </section>
+
+    <footer class="ld-foot">
+      <div class="ld-wrap">
+        <nav aria-label="Site">
+          <a href="/about">About</a>
+          <a href="/how-to-play">How to play</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+          <a href="/contact">Contact</a>
+        </nav>
+        <p>© 2026 Spike Rally · spikerally.buzz</p>
+      </div>
+    </footer>
+  </main>
+
   <noscript><p class="noscript">Spike Rally is a free 6v6 volleyball game that runs in your browser. Please turn on JavaScript to play.</p></noscript>
 
   <script src="js/data.js"></script>
@@ -364,6 +554,7 @@
   <script src="js/relay.js"></script>
   <script src="js/net.js"></script>
   <script src="js/demo.js"></script>
+  <script src="js/landing.js"></script>
   <script src="js/main.js"></script>
   
   <!-- Vercel Web Analytics -->
