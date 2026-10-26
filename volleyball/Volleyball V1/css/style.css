@@ -506,3 +506,44 @@ html:not(.page-home) .more-cue { display: none; }
   .ld-row:nth-child(even) img { order: 0; }
   .ld-actions .btn { flex: 1 1 auto; }
 }
+
+/* League and tournament: the arena for the next match. */
+.venue { display: flex; align-items: center; gap: 12px; margin: -2px 0 12px; padding: 10px 12px; border-radius: 14px; background: var(--btn); }
+.venue-swatch { position: relative; flex: none; width: 70px; height: 44px; border-radius: 10px; overflow: hidden; background: var(--vf); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2); }
+.venue-swatch i { position: absolute; inset: 0; opacity: 0.55; }
+.venue-swatch::before { content: ''; position: absolute; z-index: 1; inset: 8px 10px; background: var(--vc); border: 2px solid var(--vl); border-radius: 2px; }
+.venue-swatch::after { content: ''; position: absolute; z-index: 2; left: 50%; top: 6px; bottom: 6px; width: 2px; margin-left: -1px; background: var(--vl); }
+.v-waves i { background: repeating-linear-gradient(0deg, var(--va) 0 3px, transparent 3px 7px); }
+.v-sunburst i { background: repeating-conic-gradient(from 0deg at 50% 50%, var(--va) 0 12deg, transparent 12deg 24deg); }
+.v-frost i { background: linear-gradient(135deg, var(--va) 25%, transparent 25% 50%, var(--va) 50% 75%, transparent 75%) 0 0 / 12px 12px; }
+.v-sunset i { background: repeating-linear-gradient(60deg, #ff7a59 0 4px, #ffd56b 4px 8px, #ff5f7e 8px 12px); }
+.v-stars i { background: radial-gradient(var(--va) 1px, transparent 1.6px) 0 0 / 7px 7px; opacity: 0.9; }
+.v-reef i { background: radial-gradient(circle, transparent 2px, var(--va) 2.5px, transparent 3.5px) 0 0 / 10px 10px; }
+.v-storm i { background: repeating-linear-gradient(45deg, var(--va) 0 4px, transparent 4px 8px); }
+.v-stripes i { background: repeating-linear-gradient(100deg, #06140c 0 3px, transparent 3px 9px); opacity: 0.8; }
+.v-gold i { background: conic-gradient(var(--va) 25%, transparent 0 50%, var(--va) 0 75%, transparent 0) 0 0 / 10px 10px; opacity: 0.35; }
+.venue-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.venue-text small { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.venue-text b { font-size: 16px; }
+.venue-text span { font-size: 13px; color: var(--muted); }
+
+/* Quick match court picker */
+.courts { flex-wrap: wrap; align-items: center; margin: -4px 0 14px; }
+.court-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+.court-pick button {
+  display: flex; flex-direction: column; align-items: center; gap: 5px; width: 84px; padding: 6px 6px 7px; cursor: pointer;
+  font: inherit; font-size: 12px; font-weight: 700; line-height: 1.15; color: var(--text); text-align: center;
+  background: var(--btn); border: 2px solid transparent; border-radius: 12px;
+}
+.court-pick button:hover { background: var(--btn-hover); }
+.court-pick button.on { border-color: var(--accent); }
+.court-pick .venue-swatch { width: 68px; height: 40px; }
+.shop-item .venue-swatch { width: 56px; height: 44px; }
+.v-grid i { background: linear-gradient(var(--va) 1px, transparent 1px) 0 0 / 8px 8px, linear-gradient(90deg, var(--va) 1px, transparent 1px) 0 0 / 8px 8px; opacity: 0.8; }
+.v-petals i { background: radial-gradient(circle, var(--va) 2px, transparent 2.5px) 0 0 / 9px 9px, radial-gradient(circle, #fff 1.5px, transparent 2px) 4px 5px / 11px 11px; opacity: 0.9; }
+.v-dunes i { background: repeating-radial-gradient(ellipse at 50% 120%, var(--va) 0 2px, transparent 2px 7px); opacity: 0.6; }
+.v-street i { background: radial-gradient(circle at 20% 30%, #ff5a5f 4px, transparent 5px), radial-gradient(circle at 80% 70%, #ffd23f 4px, transparent 5px), radial-gradient(circle at 75% 20%, #3bf0a0 3px, transparent 4px), radial-gradient(circle at 25% 80%, #4d8bff 3px, transparent 4px); opacity: 0.9; }
+.v-galaxy i { background: radial-gradient(#fff 0.8px, transparent 1.2px) 0 0 / 6px 6px, radial-gradient(circle at 30% 40%, rgba(124, 92, 255, 0.8), transparent 60%), radial-gradient(circle at 75% 70%, rgba(255, 79, 216, 0.7), transparent 55%); opacity: 1; }
+.v-lava i { background: repeating-linear-gradient(70deg, transparent 0 6px, var(--va) 6px 7.5px, transparent 7.5px 13px), repeating-linear-gradient(-40deg, transparent 0 9px, var(--va) 9px 10px, transparent 10px 17px); opacity: 0.9; }
+.v-candy i { background: repeating-linear-gradient(-60deg, var(--va) 0 4px, #fff 4px 8px); opacity: 0.7; }
+.v-pixels i { background: conic-gradient(#ff4d6d 25%, #3bf0a0 0 50%, #4d8bff 0 75%, #ffd23f 0) 0 0 / 8px 8px; opacity: 0.55; }

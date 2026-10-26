@@ -39,6 +39,7 @@
     this.state = 'idle';
     this.stateT = 0;
     this.timeScale = 1;
+    this.slowTo = 1; // timeScale eases toward this (see update)
     this.flight = null;
     this.bounce = null;
     this.ball = { x: 4, y: 4.5, z: 1 };
@@ -47,6 +48,9 @@
     this.touches = [0, 0];
     this.lastTouch = 0;
     this.lastOffense = null;
+    // The How to play demo sets a script that fixes the dice for its scenes
+    // (see demo.js); normal matches leave it null.
+    this.script = null;
     // One set of prompts per team; `ui` is the local player's (team 0).
     this.uis = [0, 1].map(function (t) {
       return { prompt: null, aim: { x: t === 0 ? 13.5 : 4.5, y: 4.5 }, power: 0, hitters: [], hitterChoice: null, attackTarget: null, tip: false, shot: 'power', blockThreats: [], blockCall: 'read' };
@@ -86,6 +90,14 @@
 
   R.fx = function (name, data) { if (SR.fx) SR.fx.emit(name, data); };
 
+  // Time to make your calls: when you are attacking in single-player, your
+  // pass and set fly a little higher and slower. Only the ball's flight
+  // changes, so players keep moving at full speed (no slow motion). Not
+  // online (both sides share one clock) or in the demo (scripted timing).
+  R.moreTime = function (team) {
+    return this.human === 0 && team === 0 && !this.script && !(SR.demo && SR.demo.active);
+  };
+
   R.act = function (p, type, dur) { p.act = { type: type, t: this.t, dur: dur }; };
 
   // ---- formations -------------------------------------------------------
@@ -121,7 +133,7 @@
     this.bounce = null;
     this.touches = [0, 0];
     this.lastOffense = null;
-    this.timeScale = 1;
+    this.timeScale = this.slowTo = 1;
     this.all().forEach(function (p) { p.lock = false; p.jumpAt = -9; p.jumpKind = null; p.act = null; p.delayUntil = 0; });
     this.setter = null;
     this.commit = 'read';
@@ -163,6 +175,7 @@
     var tgt = { x: aim.x + gauss() * scatter, y: aim.y + gauss() * scatter, z: 0 };
     var T = 1.6 - 0.65 * power;
     var errChance = 0.03 + power * 0.1 * (1.3 - rt.serve / 100);
+    if (this.script) { tgt = this.keepIn(1 - s, { x: aim.x + gauss() * scatter * 0.2, y: aim.y + gauss() * scatter * 0.2, z: 0 }); errChance = 0; }
     if (Math.random() < errChance) {
       if (Math.random() < 0.5) { tgt = { x: C.NET_X + dir * 0.6, y: clamp(tgt.y, 0.5, 8.5), z: 1.0 }; }
       else tgt = this.pushOut(1 - s, tgt);
@@ -183,8 +196,15 @@
 
   R.cpuServe = function () {
     var s = this.m.server, rt = this.m.ratings[s];
-    var aim = world(1 - s, rnd(1.0, 7.0), rnd(0.8, 8.2));
+    var aim = world(1 - s, rnd(1.0, 7.0), rnd(0.8, 8.2)), sc = this.script && this.script.cpuServe;
+    if (sc) { this.serve(world(1 - s, sc[0], sc[1]), sc[2]); return; }
     this.serve(aim, clamp(rnd(0.3, 0.85) * rt.serve / 80, 0.2, 1));
+  };
+
+  // Pull a target point inside a team's half (the demo's scripted rallies).
+  R.keepIn = function (team, tgt) {
+    var l = local(team, tgt.x, tgt.y), w = world(team, clamp(l.x, 0.4, 8.2), clamp(l.y, 0.4, C.W - 0.4));
+    return { x: w.x, y: w.y, z: 0 };
   };
 
   // Move a target point beyond the nearest boundary of a team's half.
@@ -237,6 +257,7 @@
     var L = P.at(f.p0, f.v, f.landT);
     var onSide = team === 0 ? L.x < C.NET_X : L.x > C.NET_X;
     if (!onSide) return;
+    if (this.script && this.script.noDig === team) return;
     var out = L.x < -0.25 || L.x > C.L + 0.25 || L.y < -0.25 || L.y > C.W + 0.25;
     if (out && Math.random() > 0.06) return; // let it go
     var tc = P.timeAtHeight(f.p0, f.v, 1.0);
@@ -283,6 +304,7 @@
     var rating = this.m.ratings[team].pass;
     var serveHeat = (this.lastOffense && this.lastOffense.type === 'serve') ? this.servePower * 0.22 : 0;
     var q = clamp(0.28 + rating / 100 * 0.62 + rnd(-0.22, 0.22) - Math.max(0, spd - 11) * 0.022 - (o.stretch ? 0.2 : 0) + (o.bonus || 0) - serveHeat, 0, 1);
+    if (this.script) q = 0.85;
     p.lock = false;
     p.contactAt = 0;
     p.contactPt = { x: this.ball.x, y: this.ball.y, z: Math.max(0.3, this.ball.z) };
@@ -308,6 +330,7 @@
     var lx = clamp(SET_SPOT[0] + gauss() * e * 1.6, 3.5, 8.6), ly = clamp(SET_SPOT[1] + gauss() * e * 2.0, 0.5, 8.5);
     var tw = world(team, lx, ly), tgt = { x: tw.x, y: tw.y, z: 2.15 };
     var T = clamp(0.9 + dist(cp, tgt) * 0.06, 1.0, 1.6);
+    if (this.moreTime(team)) T = Math.min(1.9, T * 1.25);
     this.launch(cp, tgt, T);
 
     // Setter: the real setter unless they made the pass or can't get there.
@@ -337,7 +360,7 @@
       ud.prompt = 'block';
       ud.blockCall = 'read';
       ud.blockThreats = hitters.map(function (h) { return h.p; });
-    } else if (Math.random() < 0.22 && hitters.length) {
+    } else if (!this.script && Math.random() < 0.22 && hitters.length) {
       this.commitBlock(def, hitters[Math.floor(Math.random() * hitters.length)].slot);
     }
     var self = this;
@@ -373,6 +396,7 @@
     if (this.state !== 'rally') return;
     var team = s.team, def = 1 - team, self = this;
     s.lock = false;
+    this.slowTo = 1;
     this.act(s, 'set', 0.45);
     this.touches[team] = 2;
     this.lastTouch = team;
@@ -384,6 +408,9 @@
     var ua = this.uis[team];
     if (this.isHuman(team) && ua.hitterChoice) {
       pick = opts.find(function (h) { return h.p === ua.hitterChoice; }) || null;
+    }
+    if (!pick && this.script && this.script.cpuHitter) {
+      pick = opts.find(function (h) { return h.slot === self.script.cpuHitter; }) || null;
     }
     if (!pick) {
       var bestScore = -1e9, q = this.passQ;
@@ -397,10 +424,12 @@
     ua.prompt = null;
     var rt = this.m.ratings[team];
     var qs = clamp(0.35 + rt.pass / 100 * 0.4 + this.passQ * 0.25 + rnd(-0.15, 0.15), 0, 1);
+    if (this.script) qs = 0.92;
     var e = 1 - qs, hx = clamp(HIT[pick.slot][0] + gauss() * e * 0.7, 6.5, 8.7), hy = clamp(HIT[pick.slot][1] + gauss() * e * 0.7, 0.3, 8.7);
     var hw = world(team, hx, hy), tgt = { x: hw.x, y: hw.y, z: 2.8 + rt.attack / 100 * 0.3 };
     var T = pick.slot === 'middle' ? 0.62 : 1.05;
     if (this.passQ < 0.45) T += 0.25;
+    if (this.moreTime(team)) T += pick.slot === 'middle' ? 0.2 : 0.35;
     var cp = { x: this.ball.x, y: this.ball.y, z: this.ball.z };
     this.launch(cp, tgt, T);
     SR.audio.play('set');
@@ -446,7 +475,7 @@
     if (this.isHuman(def) && commit !== 'read') this.say(SR.t(commit === pick.slot ? 'READ IT!' : 'WRONG GUESS'), this.human === 'both' ? this.m.teams[def].name : '', commit === pick.slot ? '#ffd23f' : '#ff9e9e', 0.9);
 
     this.hitSlot = pick.slot;
-    this.timeScale = 1;
+    this.slowTo = 1;
     if (this.isHuman(team)) { ua.prompt = 'target'; ua.attackTarget = null; ua.tip = false; ua.shot = 'power'; }
     this.at(T, function () { self.attack(h); });
   };
@@ -499,17 +528,20 @@
     if (this.state !== 'rally') return;
     var team = h.team, def = 1 - team, rt = this.m.ratings[team], self = this;
     h.lock = false;
-    this.timeScale = 1;
+    this.slowTo = 1;
     var ua = this.uis[team];
     ua.prompt = null;
     var cp = { x: this.ball.x, y: this.ball.y, z: this.ball.z };
+    // You must pick a spot (or Line, Cross or Tool): no aim, no swing at the ball.
+    if (this.isHuman(team) && !ua.attackTarget) { this.whiff(h, cp); return; }
     var shot, aim;
     if (this.isHuman(team)) {
       shot = ua.tip ? 'tip' : (ua.shot || 'power');
       aim = ua.attackTarget || this.shotTarget(team, shot, cp);
     } else {
-      shot = this.aiShot();
-      aim = this.shotTarget(team, shot, cp);
+      var sca = this.script;
+      shot = sca && sca.cpuShot ? sca.cpuShot : this.aiShot();
+      aim = sca && sca.cpuAim ? world(def, sca.cpuAim[0], sca.cpuAim[1]) : this.shotTarget(team, shot, cp);
     }
     var S = SR.SHOTS[shot], tip = shot === 'tip', qs = this.setQ;
     this.lastShot = shot;
@@ -520,7 +552,8 @@
     var errChance = 0.04 + S.err + (1 - qs) * 0.1 - (rt.attack - 75) * 0.002 + (edge < 0.5 ? (0.5 - edge) * 0.3 : 0);
     var scatter = (0.2 + (1 - qs) * 0.8 + (1 - rt.attack / 100) * 0.6) * S.scatter;
     tgt.x += gauss() * scatter; tgt.y += gauss() * scatter;
-    var netErr = false;
+    var netErr = false, sc = this.script;
+    if (sc) { tgt = this.keepIn(def, { x: aim.x + (tgt.x - aim.x) * 0.25, y: aim.y + (tgt.y - aim.y) * 0.25, z: 0 }); errChance = 0; }
     if (Math.random() < errChance) {
       if (Math.random() < 0.5) { netErr = true; tgt = { x: C.NET_X + (def === 1 ? 0.6 : -0.6), y: clamp(cp.y + rnd(-1, 1), 0.3, 8.7), z: 0.9 }; }
       else tgt = this.pushOut(def, tgt);
@@ -547,16 +580,29 @@
         });
         var rd = this.m.ratings[def];
         var pTouch = cross.z < 3.45 ? Math.min(0.85, nb * 0.22 * (rd.block / 75) * (1.15 - rt.attack / 200) * S.block * (this.blockBonus || 1)) : 0;
+        if (sc) pTouch = sc.block ? 1 : 0;
         if (Math.random() < pTouch) {
           var r = Math.random(), outcome;
           if (shot === 'tool') outcome = r < 0.75 ? 'out' : r < 0.88 ? 'soft' : 'stuff';
           else outcome = r < 0.28 ? 'stuff' : r < 0.78 ? 'soft' : 'out';
+          if (sc) outcome = sc.block;
           this.at(tn, function () { self.blockResult(outcome, def, cross); });
           return;
         }
       }
     }
     this.planReception(def, S.dig || 0);
+  };
+
+  // The hitter swings at nothing and the ball drops onto their own floor.
+  R.whiff = function (h, cp) {
+    var team = h.team, l = local(team, cp.x, cp.y);
+    var w = world(team, clamp(l.x - rnd(0.6, 1.2), 5, 8.4), clamp(l.y + rnd(-0.5, 0.5), 0.4, 8.6));
+    this.launch(cp, { x: w.x, y: w.y, z: 0 }, 0.55);
+    this.lastTouch = team;
+    this.lastOffense = null;
+    this.clearPrompts();
+    this.say(SR.t('NO AIM'), this.human === 'both' ? this.m.teams[team].name : SR.t('Pick a spot to spike'), '#ff9e9e', 0.9);
   };
 
   R.blockResult = function (outcome, def, cross) {
@@ -573,7 +619,7 @@
       this.launch(from, { x: tw.x, y: tw.y, z: 0 }, 0.42);
       this.lastOffense = { team: def, type: 'block' };
       this.touches[att] = 0;
-      if (Math.random() < 0.35) this.planReception(att, -0.15); // block cover is rarely there in time
+      if (!this.script && Math.random() < 0.35) this.planReception(att, -0.15); // block cover is rarely there in time
     } else if (outcome === 'soft') {
       tw = world(def, rnd(3, 6.5), rnd(1.5, 7.5));
       from = { x: C.NET_X + side * 0.15, y: cross.y, z: cross.z + 0.2 };
@@ -615,7 +661,7 @@
 
     this.state = 'dead';
     this.stateT = 0;
-    this.timeScale = 1;
+    this.timeScale = this.slowTo = 1;
     this.clearPrompts();
     var v = f ? P.vel(f.v, f.t) : { x: 0, y: 0, z: -3 };
     this.bounce = { x: b.x, y: b.y, z: 0, vx: v.x * 0.5, vy: v.y * 0.5, vz: Math.abs(v.z) * 0.45 };
@@ -663,7 +709,7 @@
   R.pickHitter = function (p, team) {
     var u = this.uiOf(team);
     if (u.prompt !== 'hitter') return;
-    if (u.hitters.some(function (h) { return h.p === p; })) { u.hitterChoice = p; if (!team) SR.audio.play('click'); }
+    if (u.hitters.some(function (h) { return h.p === p; })) { u.hitterChoice = p; this.slowTo = 1; if (!team) SR.audio.play('click'); }
   };
 
   R.pickHitterIndex = function (i, team) {
@@ -679,7 +725,7 @@
     if (!team) SR.audio.play('click');
     if (SR.SHOTS[id].auto && this.hitter) {
       u.attackTarget = this.shotTarget(this.hitter.team, id, this.hitter);
-      this.timeScale = 1;
+      this.slowTo = 1;
     }
   };
 
@@ -694,7 +740,7 @@
     if (!slot) return;
     u.blockCall = id;
     this.commitBlock(team, slot);
-    this.timeScale = 1;
+    this.slowTo = 1;
     if (!team) SR.audio.play('click');
   };
 
@@ -705,13 +751,20 @@
     u.tip = !!tip;
     if (tip) u.shot = 'tip';
     if (SR.SHOTS[u.shot].auto) u.shot = 'power';
-    this.timeScale = 1;
+    this.slowTo = 1;
     if (!team) SR.audio.play('click');
   };
 
   // ---- simulation step ----------------------------------------------------
 
   R.update = function (dt) {
+    // Ease the game speed toward its target over about a tenth of a second of
+    // real time (dt is already scaled, so divide it back out).
+    if (this.timeScale !== this.slowTo) {
+      var k = 1 - Math.exp(-dt / Math.max(0.05, this.timeScale) / 0.1);
+      this.timeScale += (this.slowTo - this.timeScale) * k;
+      if (Math.abs(this.slowTo - this.timeScale) < 0.01) this.timeScale = this.slowTo;
+    }
     this.t += dt;
     this.stateT += dt;
     if (this.banner) { this.banner.t += dt; if (this.banner.t > this.banner.dur) this.banner = null; }
@@ -720,6 +773,12 @@
       if (this.timer.t <= 0) { var fn = this.timer.fn; this.timer = null; fn(); }
     }
     this.movePlayers(dt);
+    // The aim ring stays up while the spike is on its way, and goes once the
+    // ball crosses into the other court, so it never lingers into the next play.
+    var bx = this.ball.x;
+    this.uis.forEach(function (u, t) {
+      if (u.attackTarget && u.prompt !== 'target' && (t === 0 ? bx > C.NET_X : bx < C.NET_X)) u.attackTarget = null;
+    });
 
     if (this.state === 'serve') {
       var sp = this.server, dir = sp.team === 0 ? 1 : -1, tz = this.toss;

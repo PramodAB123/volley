@@ -129,7 +129,393 @@
     });
   }
 
-  function drawBoards(ctx, t) {
+  // ---- venue floor art (league and tournament arenas, see SR.ARENAS) -------
+
+  // Points on a circle (or a star when r2 is given) around (cx, cy).
+  function ring(cx, cy, r, n, r2, rot) {
+    var pts = [];
+    for (var i = 0; i < n; i++) {
+      var a = (rot || 0) + i / n * Math.PI * 2, rr = r2 && i % 2 ? r2 : r;
+      pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]);
+    }
+    return pts;
+  }
+  // Emblem coordinates as the camera sees them: u to the right, v up the screen.
+  function em(cx, cy, pts, k) { return pts.map(function (p) { return [cx + p[1] * k, cy - p[0] * k]; }); }
+  function alpha(ctx, a, fn) { ctx.save(); ctx.globalAlpha = a; fn(); ctx.restore(); }
+  // Clip drawing to the floor around the court.
+  function clipFreeZone(ctx) {
+    ctx.save();
+    ctx.beginPath();
+    [[[-12, -3.5], [21.6, -3.5], [21.6, 12.6], [-12, 12.6]], [[0, 0], [18, 0], [18, 9], [0, 9]]].forEach(function (pts) {
+      pts.forEach(function (p, i) { var q = proj(p[0], p[1], 0); if (i) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y); });
+      ctx.closePath();
+    });
+    ctx.clip('evenodd');
+  }
+  // One emblem in each back court, between the end line and the attack line.
+  var EMBLEMS = [[3, 4.5], [15, 4.5]];
+
+  // floor(ctx, style): art around the court; court(ctx, style, cx, cy): an emblem.
+  var MOTIFS = {
+    // Harbor Dome: rolling waves down both sidelines, wing chevrons on court.
+    waves: {
+      floor: function (ctx, st) {
+        [-1, 1].forEach(function (side) {
+          for (var k = 0; k < 4; k++) {
+            var top = [], bot = [];
+            for (var x = -12; x <= 21.6; x += 0.6) {
+              var y = (side < 0 ? -0.5 : 9.5) + side * k * 0.8 + 0.22 * Math.sin(x * 0.75 + k * 1.3);
+              top.push([x, y]); bot.unshift([x, y + side * 0.32]);
+            }
+            alpha(ctx, 0.3 - k * 0.05, function () { poly(ctx, top.concat(bot), st.accent); });
+          }
+        });
+      },
+      court: function (ctx, st, cx, cy) {
+        for (var i = 0; i < 3; i++) {
+          var o = 0.9 - i * 0.75;
+          alpha(ctx, 0.2 - i * 0.04, function () {
+            poly(ctx, em(cx, cy, [[0, o + 0.6], [2, o - 0.9], [2, o - 1.35], [0, o + 0.15], [-2, o - 1.35], [-2, o - 0.9]], 1), '#ffffff');
+          });
+        }
+      }
+    },
+    // Copper Den: sun rays fanning out from centre court, a lion's-mane badge.
+    sunburst: {
+      floor: function (ctx, st) {
+        alpha(ctx, 0.2, function () {
+          for (var i = 0; i < 32; i += 2) {
+            var a0 = i / 32 * Math.PI * 2, a1 = (i + 1) / 32 * Math.PI * 2;
+            poly(ctx, [[9, 4.5], [9 + Math.cos(a0) * 20, 4.5 + Math.sin(a0) * 20], [9 + Math.cos(a1) * 20, 4.5 + Math.sin(a1) * 20]], st.accent);
+          }
+        });
+      },
+      court: function (ctx, st, cx, cy) {
+        alpha(ctx, 0.24, function () { poly(ctx, ring(cx, cy, 2.05, 36, 1.55), st.accent); });
+        poly(ctx, ring(cx, cy, 1.2, 32), st.court);
+        alpha(ctx, 0.3, function () { poly(ctx, ring(cx, cy, 0.8, 32), null, st.accent, 3); });
+      }
+    },
+    // Frost Arena: cracked-ice facets around the court, a snowflake on it.
+    frost: {
+      floor: function (ctx) {
+        var n = 0;
+        for (var x = -12; x < 21.6; x += 1.7) {
+          for (var y = -3.6; y < 12.7; y += 1.7) {
+            var j = function (dx, dy) { n++; return [x + dx + (hash(n) - 0.5) * 0.9, y + dy + (hash(n + 500) - 0.5) * 0.9]; };
+            var a = j(0, 0), b = j(1.7, 0), c = j(1.7, 1.7), d = j(0, 1.7);
+            alpha(ctx, 0.05 + hash(n * 3) * 0.22, function () { poly(ctx, [a, b, c], '#ffffff'); });
+            alpha(ctx, 0.04 + hash(n * 7) * 0.16, function () { poly(ctx, [a, c, d], '#0d3a5c'); });
+          }
+        }
+      },
+      court: function (ctx, st, cx, cy) {
+        alpha(ctx, 0.4, function () {
+          for (var i = 0; i < 6; i++) {
+            var a = i / 6 * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
+            line(ctx, [cx, cy], [cx + ca * 2, cy + sa * 2], '#ffffff', 3);
+            [0.8, 1.35].forEach(function (d) {
+              [-1, 1].forEach(function (s) {
+                var b = a + s * 0.7;
+                line(ctx, [cx + ca * d, cy + sa * d], [cx + ca * d + Math.cos(b) * 0.55, cy + sa * d + Math.sin(b) * 0.55], '#ffffff', 2.2);
+              });
+            });
+          }
+        });
+      }
+    },
+    // Sunset Beach: sunset-coloured stripes on the sand, a setting sun badge.
+    sunset: {
+      floor: function (ctx) {
+        var cols = ['#ff7a59', '#ffb347', '#ffd56b', '#ff5f7e'];
+        alpha(ctx, 0.32, function () {
+          for (var i = 0, x = -12; x < 22; x += 1.6, i++) poly(ctx, [[x, -3.6], [x + 0.8, -3.6], [x + 6.8, 12.7], [x + 6, 12.7]], cols[i % 4]);
+        });
+      },
+      court: function (ctx, st, cx, cy) {
+        alpha(ctx, 0.3, function () {
+          for (var i = 0; i < 14; i++) {
+            var a = i / 14 * Math.PI * 2, b = a + 0.12;
+            poly(ctx, [[cx + Math.cos(a) * 1.35, cy + Math.sin(a) * 1.35], [cx + Math.cos(a + 0.11) * 2.1, cy + Math.sin(a + 0.11) * 2.1], [cx + Math.cos(b + 0.11) * 1.35, cy + Math.sin(b + 0.11) * 1.35]], st.accent);
+          }
+        });
+        alpha(ctx, 0.4, function () { poly(ctx, ring(cx, cy, 1.05, 32), st.accent); });
+      }
+    },
+    // Moonlight Hall: a starry floor and a crescent moon.
+    stars: {
+      floor: function (ctx, st) {
+        for (var i = 0; i < 170; i++) {
+          var x = -12 + hash(i + 7) * 33.6, y = -3.5 + hash(i + 311) * 16.1, s = 0.08 + hash(i + 97) * 0.22;
+          alpha(ctx, 0.35 + hash(i + 13) * 0.6, function () { poly(ctx, ring(x, y, s, 8, s * 0.3), st.accent); });
+        }
+      },
+      court: function (ctx, st, cx, cy) {
+        alpha(ctx, 0.28, function () { poly(ctx, ring(cx, cy, 1.8, 40), st.accent); });
+        poly(ctx, ring(cx + 0.55, cy - 0.55, 1.55, 40), st.court);
+        alpha(ctx, 0.35, function () { [[-1.6, 1.5], [1.4, -1.7], [-0.4, -2.1]].forEach(function (p) { poly(ctx, ring(cx + p[0], cy + p[1], 0.3, 8, 0.09), st.accent); }); });
+      }
+    },
+    // Coral Reef: bubbles and coral by the sidelines, a shark fin on court.
+    reef: {
+      floor: function (ctx, st) {
+        for (var i = 0; i < 26; i++) {
+          var cx = -11 + hash(i + 40) * 32, cy = hash(i + 80) < 0.5 ? -3.2 + hash(i + 3) * 2.4 : 9.8 + hash(i + 3) * 2.4;
+          alpha(ctx, 0.4, function () { poly(ctx, ring(cx, cy, 0.55 + hash(i) * 0.4, 14, 0.25), st.accent); });
+        }
+        for (var k = 0; k < 120; k++) {
+          var x = -12 + hash(k + 900) * 33.6, y = -3.5 + hash(k + 1300) * 16.1;
+          alpha(ctx, 0.45, function () { groundEllipse(ctx, x, y, 0.08 + hash(k + 50) * 0.3, null, '#c9fbff', 1.4); });
+        }
+      },
+      court: function (ctx, st, cx, cy) {
+        alpha(ctx, 0.2, function () {
+          poly(ctx, em(cx, cy, [[-1.6, -0.6], [1.7, -0.6], [1.2, -0.2], [0.2, 0.4], [-0.4, 2], [-0.6, 0.6], [-1.1, -0.1]], 1), '#ffffff');
+          var w = [];
+          for (var u = -2; u <= 2.01; u += 0.25) w.push([u, -1.2 + 0.18 * Math.sin(u * 3.2)]);
+          for (u = 2; u >= -2.01; u -= 0.25) w.push([u, -1.5 + 0.18 * Math.sin(u * 3.2)]);
+          poly(ctx, em(cx, cy, w, 1), '#ffffff');
+        });
+      }
+    },
+    // Storm Hangar: lightning down the sidelines, hazard stripes at the ends.
+    storm: {
+      floor: function (ctx, st) {
+        [-1.8, 10.8].forEach(function (y0) {
+          var top = [], bot = [];
+          for (var x = -11, i = 0; x <= 21; x += 1.6, i++) {
+            var y = y0 + (i % 2 ? 0.55 : -0.55);
+            top.push([x, y]); bot.unshift([x, y + 0.3]);
+          }
+          alpha(ctx, 0.6, function () { poly(ctx, top.concat(bot), st.accent); });
+        });
+        alpha(ctx, 0.45, function () {
+          [[18.8, 21.6], [-3.4, -0.6]].forEach(function (r) {
+            for (var y = -3.5; y < 12.6; y += 1.2) poly(ctx, [[r[0], y], [r[0], y + 0.6], [r[1], y + 1.4], [r[1], y + 0.8]], st.accent);
+          });
+        });
+      },
+      court: function (ctx, st, cx, cy) {
+        alpha(ctx, 0.26, function () {
+          poly(ctx, em(cx, cy, [[-0.3, 2.1], [0.9, 2.1], [0.2, 0.4], [1, 0.4], [-0.7, -2.2], [-0.1, -0.3], [-0.9, -0.3]], 1), st.accent);
+        });
+      }
+    },
+    // Jade Temple: tiger stripes clawing in from the edges, a temple diamond.
+    stripes: {
+      floor: function (ctx) {
+        [[-3.6, 1], [12.7, -1]].forEach(function (e) {
+          for (var i = 0, x = -11.5; x < 21.6; i++, x += 1.1 + hash(i + 70) * 0.7) {
+            var len = 1.4 + hash(i + 30 + e[0]) * 1.6, y0 = e[0], s = e[1], bend = (hash(i + 11) - 0.5) * 0.8;
+            alpha(ctx, 0.6, function () {
+              poly(ctx, [[x, y0], [x + 0.75, y0], [x + 0.95 + bend, y0 + s * len * 0.55], [x + 0.55 + bend * 1.6, y0 + s * len], [x + 0.3 + bend, y0 + s * len * 0.55]], '#06140c');
+            });
+          }
+        });
+      },
+      court: function (ctx, st, cx, cy) {
+        alpha(ctx, 0.32, function () {
+          [2.1, 1.45, 0.8].forEach(function (r) { poly(ctx, ring(cx, cy, r, 4), null, st.accent, 3); });
+          poly(ctx, ring(cx, cy, 0.4, 4), st.accent);
+        });
+      }
+    },
+    // ---- Quick match courts ----
+    // Neon Grid: a glowing grid on the floor, a neon triangle on court.
+    grid: {
+      floor: function (ctx, st) {
+        ctx.save(); ctx.shadowColor = st.accent; ctx.shadowBlur = 6;
+        alpha(ctx, 0.55, function () {
+          for (var x = -12; x <= 21.6; x += 1.5) line(ctx, [x, -3.5], [x, 12.6], st.accent, 1.2);
+          for (var y = -3.5; y <= 12.6; y += 1.5) line(ctx, [-12, y], [21.6, y], st.accent, 1.2);
+        });
+        ctx.restore();
+      },
+      court: function (ctx, st, cx, cy) {
+        ctx.save(); ctx.shadowColor = st.line; ctx.shadowBlur = 10;
+        alpha(ctx, 0.5, function () {
+          poly(ctx, em(cx, cy, [[0, 1.9], [1.8, -1.2], [-1.8, -1.2]], 1), null, st.line, 3);
+          poly(ctx, em(cx, cy, [[0, 1.1], [1.0, -0.6], [-1.0, -0.6]], 1), null, st.accent, 2);
+        });
+        ctx.restore();
+      }
+    },
+    // Cherry Blossom: petals scattered round the court, a big flower on it.
+    petals: {
+      floor: function (ctx, st) {
+        for (var i = 0; i < 110; i++) {
+          var x = -12 + hash(i + 21) * 33.6, y = -3.5 + hash(i + 77) * 16.1, s = 0.12 + hash(i + 5) * 0.2, a = hash(i + 9) * 6.3;
+          alpha(ctx, 0.5 + hash(i + 3) * 0.4, function () { poly(ctx, ring(x, y, s, 10, s * 0.45, a), hash(i + 1) < 0.6 ? st.accent : '#ffffff'); });
+        }
+      },
+      court: function (ctx, st, cx, cy) {
+        alpha(ctx, 0.3, function () {
+          for (var k = 0; k < 5; k++) {
+            var a = k / 5 * Math.PI * 2 - Math.PI / 2, px = cx + Math.cos(a) * 1.05, py = cy + Math.sin(a) * 1.05;
+            poly(ctx, ring(px, py, 0.85, 20), '#ffffff');
+          }
+        });
+        alpha(ctx, 0.45, function () { poly(ctx, ring(cx, cy, 0.45, 16), st.accent); });
+      }
+    },
+    // Desert Dunes: rippled sand contours and a desert sun.
+    dunes: {
+      floor: function (ctx, st) {
+        alpha(ctx, 0.45, function () {
+          for (var k = 0; k < 14; k++) {
+            var y0 = -3.4 + k * 1.2, pts = [];
+            for (var x = -12; x <= 21.6; x += 0.6) pts.push([x, y0 + 0.35 * Math.sin(x * 0.45 + k * 0.9)]);
+            ctx.beginPath();
+            pts.forEach(function (p, i) { var q = proj(p[0], p[1], 0); if (i) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y); });
+            ctx.strokeStyle = st.accent; ctx.lineWidth = 2; ctx.stroke();
+          }
+        });
+      },
+      court: function (ctx, st, cx, cy) {
+        alpha(ctx, 0.3, function () {
+          poly(ctx, ring(cx + 0.5, cy, 1.1, 32), st.accent);
+          for (var k = 0; k < 3; k++) {
+            var w = [];
+            for (var u = -2; u <= 2.01; u += 0.25) w.push([u, -0.6 - k * 0.55 + 0.2 * Math.sin(u * 2 + k)]);
+            for (u = 2; u >= -2.01; u -= 0.25) w.push([u, -0.8 - k * 0.55 + 0.2 * Math.sin(u * 2 + k)]);
+            poly(ctx, em(cx, cy, w, 1), st.accent);
+          }
+        });
+      }
+    },
+    // Street Park: paint splats on the asphalt and a painted target.
+    street: {
+      floor: function (ctx) {
+        var cols = ['#ff5a5f', '#ffd23f', '#3bf0a0', '#4d8bff', '#c77dff'];
+        for (var i = 0; i < 34; i++) {
+          var x = -11.5 + hash(i + 300) * 32.5, y = hash(i + 600) < 0.5 ? -3.2 + hash(i + 2) * 2.6 : 9.6 + hash(i + 2) * 2.6, r = 0.35 + hash(i + 8) * 0.5;
+          alpha(ctx, 0.6, function () {
+            poly(ctx, ring(x, y, r, 18, r * 0.62, hash(i) * 3), cols[i % 5]);
+            poly(ctx, ring(x + r * 1.3, y + r * 0.4, r * 0.18, 10), cols[i % 5]);
+          });
+        }
+        alpha(ctx, 0.5, function () {
+          for (var x = -11; x < 21; x += 1.4) { line(ctx, [x, -1.7], [x + 0.7, -1.7], '#ffffff', 2); line(ctx, [x, 10.7], [x + 0.7, 10.7], '#ffffff', 2); }
+        });
+      },
+      court: function (ctx, st, cx, cy) {
+        var cols = ['#ffd23f', '#ff5a5f', '#ffffff'];
+        [2, 1.35, 0.7].forEach(function (r, i) { alpha(ctx, 0.3, function () { poly(ctx, ring(cx, cy, r, 36), null, cols[i], 4); }); });
+      }
+    },
+    // ---- Shop courts ----
+    // Galaxy: stars and nebula clouds, a ringed planet.
+    galaxy: {
+      floor: function (ctx, st) {
+        ['#7c5cff', '#ff4fd8', '#2fd3ff'].forEach(function (c, k) {
+          for (var i = 0; i < 4; i++) {
+            var x = -10 + hash(k * 10 + i + 40) * 30, y = hash(k * 10 + i + 90) < 0.5 ? -2 : 11;
+            alpha(ctx, 0.14, function () { poly(ctx, ring(x, y, 2 + hash(i + k) * 1.5, 24), c); });
+          }
+        });
+        for (var i = 0; i < 150; i++) {
+          var x = -12 + hash(i + 501) * 33.6, y = -3.5 + hash(i + 811) * 16.1, s = 0.05 + hash(i + 31) * 0.16;
+          alpha(ctx, 0.5 + hash(i + 17) * 0.5, function () { poly(ctx, ring(x, y, s, 8, s * 0.3), '#ffffff'); });
+        }
+      },
+      court: function (ctx, st, cx, cy) {
+        alpha(ctx, 0.3, function () { poly(ctx, ring(cx, cy, 1.1, 32), st.accent); });
+        alpha(ctx, 0.45, function () {
+          var pts = [];
+          for (var i = 0; i < 40; i++) { var a = i / 40 * Math.PI * 2; pts.push([Math.cos(a) * 2.1, Math.sin(a) * 0.55]); }
+          poly(ctx, em(cx, cy, pts.map(function (p) { var c = Math.cos(0.4), s = Math.sin(0.4); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c]; }), 1), null, st.line, 3);
+        });
+      }
+    },
+    // Lava Pit: glowing cracks in dark rock, a flame on court.
+    lava: {
+      floor: function (ctx, st) {
+        ctx.save(); ctx.shadowColor = st.accent; ctx.shadowBlur = 8;
+        for (var i = 0; i < 26; i++) {
+          var x = -11 + hash(i + 70) * 31, y = hash(i + 140) < 0.5 ? -3.3 : 12.4, dir = y < 0 ? 1 : -1;
+          ctx.beginPath();
+          var q = proj(x, y, 0); ctx.moveTo(q.x, q.y);
+          for (var k = 1; k < 6; k++) {
+            x += (hash(i * 7 + k) - 0.5) * 1.4; y += dir * (0.4 + hash(i * 11 + k) * 0.4);
+            q = proj(x, y, 0); ctx.lineTo(q.x, q.y);
+          }
+          ctx.strokeStyle = hash(i) < 0.5 ? st.accent : st.line; ctx.lineWidth = 2.4; ctx.stroke();
+        }
+        ctx.restore();
+      },
+      court: function (ctx, st, cx, cy) {
+        alpha(ctx, 0.35, function () {
+          poly(ctx, em(cx, cy, [[0, 2.1], [0.7, 0.7], [1.2, 1.1], [1.3, -0.4], [0.8, -1.4], [0, -1.7], [-0.8, -1.4], [-1.3, -0.4], [-1.0, 0.9], [-0.5, 0.4]], 1), st.accent);
+          poly(ctx, em(cx, cy, [[0, 0.7], [0.5, -0.3], [0.3, -1.1], [0, -1.25], [-0.3, -1.1], [-0.5, -0.3]], 1), st.line);
+        });
+      }
+    },
+    // Candy Land: candy stripes, sprinkles and a lollipop.
+    candy: {
+      floor: function (ctx, st) {
+        alpha(ctx, 0.45, function () {
+          for (var x = -12; x < 22; x += 1.2) poly(ctx, [[x, -3.6], [x + 0.6, -3.6], [x - 2.6, 12.7], [x - 3.2, 12.7]], st.accent);
+        });
+        var cols = ['#ffd23f', '#3bd6ff', '#7dff6b', '#ffffff', '#b46bff'];
+        for (var i = 0; i < 140; i++) {
+          var x = -12 + hash(i + 401) * 33.6, y = -3.5 + hash(i + 733) * 16.1, a = hash(i + 61) * 3.1;
+          line(ctx, [x, y], [x + Math.cos(a) * 0.3, y + Math.sin(a) * 0.3], cols[i % 5], 3);
+        }
+      },
+      court: function (ctx, st, cx, cy) {
+        alpha(ctx, 0.4, function () {
+          poly(ctx, ring(cx, cy, 1.9, 40), '#ffffff');
+          var pts = [];
+          for (var t = 0; t < 4 * Math.PI; t += 0.15) pts.push([cx + Math.cos(t) * t * 0.14, cy + Math.sin(t) * t * 0.14]);
+          ctx.beginPath();
+          pts.forEach(function (p, i) { var q = proj(p[0], p[1], 0); if (i) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y); });
+          ctx.strokeStyle = st.accent; ctx.lineWidth = 6; ctx.stroke();
+        });
+      }
+    },
+    // Retro Arcade: falling-block pixels and a pixel invader.
+    pixels: {
+      floor: function (ctx) {
+        var cols = ['#ff4d6d', '#ffd23f', '#3bf0a0', '#4d8bff', '#c77dff', '#ff9e3b'];
+        for (var i = 0; i < 160; i++) {
+          var x = -12 + Math.floor(hash(i + 900) * 56) * 0.6, y = -3.6 + Math.floor(hash(i + 1700) * 27) * 0.6;
+          alpha(ctx, 0.55, function () { poly(ctx, [[x, y], [x + 0.55, y], [x + 0.55, y + 0.55], [x, y + 0.55]], cols[i % 6]); });
+        }
+      },
+      court: function (ctx, st, cx, cy) {
+        var art = ['..X.....X..', '...X...X...', '..XXXXXXX..', '.XX.XXX.XX.', 'XXXXXXXXXXX', 'X.XXXXXXX.X', 'X.X.....X.X', '...XX.XX...'], px = 0.36;
+        alpha(ctx, 0.4, function () {
+          art.forEach(function (row, r) {
+            for (var c = 0; c < row.length; c++) if (row[c] === 'X') {
+              var u = (c - 5) * px, v = (3.5 - r) * px;
+              poly(ctx, em(cx, cy, [[u, v], [u + px, v], [u + px, v - px], [u, v - px]], 1), st.line);
+            }
+          });
+        });
+      }
+    },
+    // Champions Court: a gold checkerboard, a gold frame and a star.
+    gold: {
+      floor: function (ctx, st) {
+        alpha(ctx, 0.1, function () {
+          for (var x = -12, i = 0; x < 21.6; x += 1.2, i++) {
+            for (var y = -3.6, j = 0; y < 12.6; y += 1.2, j++) if ((i + j) % 2) poly(ctx, [[x, y], [x + 1.2, y], [x + 1.2, y + 1.2], [x, y + 1.2]], st.accent);
+          }
+        });
+        alpha(ctx, 0.7, function () {
+          poly(ctx, [[-0.9, -0.9], [18.9, -0.9], [18.9, 9.9], [-0.9, 9.9]], null, st.accent, 3);
+          poly(ctx, [[-1.3, -1.3], [19.3, -1.3], [19.3, 10.3], [-1.3, 10.3]], null, st.accent, 1.5);
+        });
+      },
+      court: function (ctx, st, cx, cy) {
+        alpha(ctx, 0.25, function () { poly(ctx, ring(cx, cy, 2, 10, 0.8, Math.PI), st.accent); });
+        alpha(ctx, 0.3, function () { poly(ctx, ring(cx, cy, 2.25, 40), null, st.accent, 2); });
+      }
+    }
+  };
+
+  function drawBoards(ctx, t, style) {
     // LED boards: far end shows scrolling text, sides show moving colour bands.
     var hgt = 0.9;
     path(ctx, [[20.8, -1.5, 0], [20.8, 10.5, 0], [20.8, 10.5, hgt], [20.8, -1.5, hgt]]);
@@ -138,7 +524,7 @@
     var c = proj(20.8, 4.5, hgt / 2), s = c.s;
     ctx.font = '900 ' + Math.round(0.62 * s) + 'px system-ui, sans-serif';
     ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-    var msg = 'SPIKE RALLY   ★   PLAY HARD   ★   SIDE OUT   ★   ', tw = ctx.measureText(msg).width;
+    var msg = style && style.motif ? SR.upper(SR.t(style.name)) + '   ★   SPIKE RALLY   ★   ' : 'SPIKE RALLY   ★   PLAY HARD   ★   SIDE OUT   ★   ', tw = ctx.measureText(msg).width;
     var off = (t * 60) % tw;
     var hue = (t * 40) % 360;
     ctx.fillStyle = 'hsl(' + hue + ',90%,62%)';
@@ -171,8 +557,11 @@
     else drawBackdrop(ctx, style);
     drawStands(ctx, style, t, cheer);
     poly(ctx, [[-12, -3.5], [21.6, -3.5], [21.6, 12.6], [-12, 12.6]], style.floor);
+    var motif = MOTIFS[style.motif];
+    if (motif) { clipFreeZone(ctx); motif.floor(ctx, style); ctx.restore(); }
     poly(ctx, [[0, 0], [18, 0], [18, 9], [0, 9]], style.court);
     poly(ctx, [[6, 0], [12, 0], [12, 9], [6, 9]], style.zone);
+    if (motif) EMBLEMS.forEach(function (e) { motif.court(ctx, style, e[0], e[1]); });
     // Floor sheen under the arena lights
     var c = proj(9, 4.5, 0), sg = ctx.createRadialGradient(c.x, c.y - 40, 10, c.x, c.y, 420);
     sg.addColorStop(0, 'rgba(255,255,255,0.16)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
@@ -508,9 +897,11 @@
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.42)');
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
     if (rally && rally.timeScale < 1) {
-      // Slow motion: cinematic bars and a cool tint.
-      ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, W, 6); ctx.fillRect(0, H - 6, W, 6);
-      ctx.fillStyle = 'rgba(60,120,255,0.07)'; ctx.fillRect(0, 0, W, H);
+      // Slow motion: cinematic bars and a cool tint that slide and fade in
+      // with the slowdown, so it eases in and out instead of popping.
+      var sm = Math.min(1, (1 - rally.timeScale) / 0.2), bh = 7 * sm;
+      ctx.fillStyle = 'rgba(0,0,0,' + (0.55 * sm).toFixed(3) + ')'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+      ctx.fillStyle = 'rgba(60,120,255,' + (0.07 * sm).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H);
     }
     if (SR.fx.flash > 0) { ctx.globalAlpha = SR.fx.flash * 1.6; ctx.fillStyle = SR.fx.flashColor; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   }
@@ -538,7 +929,10 @@
       var id = SR.save.data.equipped.ball;
       return SR.SHOP.balls.find(function (b) { return b.id === id; }) || SR.SHOP.balls[0];
     },
-    courtStyle: function () {
+    // A league or tournament match is played at its venue's arena.
+    courtStyle: function (game) {
+      var venue = game && game.cfg.venue && SR.ARENAS[game.cfg.venue];
+      if (venue) return venue;
       var id = SR.save.data.equipped.court;
       return SR.SHOP.courts.find(function (c) { return c.id === id; }) || SR.SHOP.courts[0];
     },
@@ -567,9 +961,9 @@
       var pk = SR.fx.punch, zm = 1 + 0.045 * pk * pk * (3 - 2 * pk);
       var zoomed = zm > 1.0005;
       if (zoomed) { var zc = proj(9, 4.5, 1); ctx.translate(zc.x, zc.y); ctx.scale(zm, zm); ctx.translate(-zc.x, -zc.y); }
-      var style = this.courtStyle();
+      var style = this.courtStyle(game);
       arenaLayer(ctx, style, now, SR.fx.cheer, zoomed);
-      drawBoards(ctx, now);
+      drawBoards(ctx, now, style);
       this.heads = [];
       this.buttons = [];
       if (!rally) { drawOverlay(ctx, null); return; }
@@ -647,6 +1041,8 @@
         this.buttons = buttonRow(ctx, [{ id: 'left', label: SR.t('Left') }, { id: 'middle', label: SR.t('Middle') }, { id: 'right', label: SR.t('Right') }, { id: 'read', label: SR.t('Read') }], ui.blockCall, 'block');
       }
       if (rally.banner) drawBanner(ctx, rally.banner);
+      // The How to play demo's pointer, drawn over everything.
+      if (game.cfg.demo && SR.demo) SR.demo.draw(ctx, { proj: proj, panX: panX, W: W, H: H, buttons: this.buttons, heads: this.heads, portrait: portrait });
     },
     scale: 1
   };

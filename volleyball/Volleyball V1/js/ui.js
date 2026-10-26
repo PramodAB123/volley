@@ -47,6 +47,32 @@
     $('teams-title').textContent = title;
     teamCards($('team-grid'), pickStep === 1 && pickedHome ? pickedHome.id : null, pickTeam);
     rulesPicker($('team-rules'));
+    courtPicker($('team-courts'));
+  }
+
+  // Quick match only: play on your Shop court or one of the free themed courts.
+  function courtPicker(box) {
+    if (mode !== 'quick') { box.classList.add('hidden'); return; }
+    box.classList.remove('hidden');
+    var cur = data().settings.quickCourt || 'mine', mine = SR.render.courtStyle();
+    var opts = [{ id: 'mine', a: mine, name: 'My court' }].concat(SR.QUICK_COURTS.map(function (id) { return { id: id, a: SR.ARENAS[id], name: SR.ARENAS[id].name }; }));
+    box.innerHTML = '<span class="rule-name">Court</span><div class="court-pick" role="radiogroup" aria-label="Court">' +
+      opts.map(function (o) {
+        return '<button type="button" role="radio" aria-checked="' + (o.id === cur) + '" class="' + (o.id === cur ? 'on' : '') + '" data-v="' + o.id + '">' + courtSwatch(o.a) + '<span>' + o.name + '</span></button>';
+      }).join('') + '</div>';
+    box.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        data().settings.quickCourt = b.getAttribute('data-v');
+        save();
+        SR.audio.play('click');
+        courtPicker(box);
+      });
+    });
+  }
+
+  // A small picture of a court: floor, court, net, and its floor art if it has one.
+  function courtSwatch(a) {
+    return '<span class="venue-swatch' + (a.motif ? ' v-' + a.motif : '') + '" style="--vc:' + a.court + ';--vf:' + a.floor + ';--va:' + (a.accent || a.line) + ';--vl:' + a.line + '" aria-hidden="true"><i></i></span>';
   }
 
   // Points-per-set and number-of-sets choices, saved as the match format.
@@ -103,10 +129,33 @@
 
   // ---- matches ------------------------------------------------------------
 
-  function startMatch(home, away) {
+  function startMatch(home, away, venue) {
     var s = data().settings;
     show(null);
-    SR.game = new SR.Game({ home: home, away: away, format: s.format, difficulty: s.difficulty, human: 0, mode: mode, onEnd: finishMatch });
+    if (mode === 'quick' && SR.ARENAS[s.quickCourt]) venue = s.quickCourt;
+    SR.game = new SR.Game({ home: home, away: away, format: s.format, difficulty: s.difficulty, human: 0, mode: mode, venue: venue || null, onEnd: finishMatch });
+  }
+
+  // ---- venues -------------------------------------------------------------
+
+  // League rounds are played at the opponent's arena, the last round at yours.
+  function leagueVenue(L) {
+    return L.round === L.rounds.length - 1 ? L.me : myFixture(L);
+  }
+
+  // Tournament: the opponent's arena, and Champions Court for the final.
+  function cupVenue(T, m) {
+    return T.round === 2 ? 'final' : (m.a === T.me ? m.b : m.a);
+  }
+
+  // A small card naming the next venue, with a swatch of its court.
+  function venueCard(el, id, me) {
+    var a = id && SR.ARENAS[id];
+    if (!a) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    var host = id === 'final' ? 'Tournament final' : id === me ? 'Your home court' : 'Home of the ' + team(id).name;
+    el.innerHTML = courtSwatch(a) +
+      '<span class="venue-text"><small>Venue</small><b>' + a.name + '</b><span>' + host + '</span></span>';
   }
 
   function finishMatch(game) {
@@ -209,6 +258,7 @@
     var opp = myFixture(L);
     $('league-next').textContent = L.done ? 'Season complete.' : 'Round ' + (L.round + 1) + ' of 5: ' + team(L.me).name + ' vs ' + team(opp).name;
     $('league-log').textContent = L.log.slice(0, 6).join('  ·  ');
+    venueCard($('league-venue'), L.done ? null : leagueVenue(L), L.me);
     $('btn-league-play').classList.toggle('hidden', L.done);
     $('btn-league-new').classList.toggle('hidden', !L.done);
     show('scr-league');
@@ -287,6 +337,7 @@
     if (T.champion) msg = T.champion === T.me ? 'You won the cup!' : team(T.champion).name + ' won the cup.';
     else msg = names[T.round] + ': ' + team(mine.a).name + ' vs ' + team(mine.b).name;
     $('cup-next').textContent = msg;
+    venueCard($('cup-venue'), mine ? cupVenue(T, mine) : null, T.me);
     $('btn-cup-play').classList.toggle('hidden', !!T.champion);
     $('btn-cup-new').classList.toggle('hidden', !T.champion);
     show('scr-cup');
@@ -304,7 +355,7 @@
         b.className = 'shop-item' + (eq ? ' equipped' : '');
         var sw = kind === 'balls'
           ? '<span class="swatch ball" style="background:radial-gradient(circle at 35% 35%,' + it.main + ' 55%,' + it.stripe + ' 56%)"></span>'
-          : '<span class="swatch" style="background:linear-gradient(135deg,' + it.court + ' 50%,' + it.floor + ' 50%);border-color:' + it.line + '"></span>';
+          : it.motif ? courtSwatch(it) : '<span class="swatch" style="background:linear-gradient(135deg,' + it.court + ' 50%,' + it.floor + ' 50%);border-color:' + it.line + '"></span>';
         b.innerHTML = sw + '<span class="iname">' + it.name + '</span><span class="iprice">' +
           (eq ? 'Equipped' : owned ? 'Equip' : '★ ' + it.price) + '</span>';
         b.addEventListener('click', function () {
@@ -406,10 +457,10 @@
       document.querySelectorAll('[data-back]').forEach(function (b) {
         b.addEventListener('click', function () { SR.audio.play('click'); show('scr-menu'); });
       });
-      on('btn-league-play', function () { var L = data().league; startMatch(team(L.me), team(myFixture(L))); });
+      on('btn-league-play', function () { var L = data().league; startMatch(team(L.me), team(myFixture(L)), leagueVenue(L)); });
       on('btn-league-new', function () { data().league = null; save(); openTeams('league'); });
       on('btn-league-quit', function () { data().league = null; save(); show('scr-menu'); });
-      on('btn-cup-play', function () { var T = data().tournament, m = cupMyMatch(T); startMatch(team(T.me), team(m.a === T.me ? m.b : m.a)); });
+      on('btn-cup-play', function () { var T = data().tournament, m = cupMyMatch(T); startMatch(team(T.me), team(m.a === T.me ? m.b : m.a), cupVenue(T, m)); });
       on('btn-cup-new', function () { data().tournament = null; save(); openTeams('cup'); });
       on('btn-cup-quit', function () { data().tournament = null; save(); show('scr-menu'); });
       on('btn-result-ok', function () {

@@ -39,6 +39,7 @@
     this.state = 'idle';
     this.stateT = 0;
     this.timeScale = 1;
+    this.slowTo = 1; // timeScale eases toward this (see update)
     this.flight = null;
     this.bounce = null;
     this.ball = { x: 4, y: 4.5, z: 1 };
@@ -89,6 +90,14 @@
 
   R.fx = function (name, data) { if (SR.fx) SR.fx.emit(name, data); };
 
+  // Time to make your calls: when you are attacking in single-player, your
+  // pass and set fly a little higher and slower. Only the ball's flight
+  // changes, so players keep moving at full speed (no slow motion). Not
+  // online (both sides share one clock) or in the demo (scripted timing).
+  R.moreTime = function (team) {
+    return this.human === 0 && team === 0 && !this.script && !(SR.demo && SR.demo.active);
+  };
+
   R.act = function (p, type, dur) { p.act = { type: type, t: this.t, dur: dur }; };
 
   // ---- formations -------------------------------------------------------
@@ -124,7 +133,7 @@
     this.bounce = null;
     this.touches = [0, 0];
     this.lastOffense = null;
-    this.timeScale = 1;
+    this.timeScale = this.slowTo = 1;
     this.all().forEach(function (p) { p.lock = false; p.jumpAt = -9; p.jumpKind = null; p.act = null; p.delayUntil = 0; });
     this.setter = null;
     this.commit = 'read';
@@ -321,6 +330,7 @@
     var lx = clamp(SET_SPOT[0] + gauss() * e * 1.6, 3.5, 8.6), ly = clamp(SET_SPOT[1] + gauss() * e * 2.0, 0.5, 8.5);
     var tw = world(team, lx, ly), tgt = { x: tw.x, y: tw.y, z: 2.15 };
     var T = clamp(0.9 + dist(cp, tgt) * 0.06, 1.0, 1.6);
+    if (this.moreTime(team)) T = Math.min(1.9, T * 1.25);
     this.launch(cp, tgt, T);
 
     // Setter: the real setter unless they made the pass or can't get there.
@@ -386,6 +396,7 @@
     if (this.state !== 'rally') return;
     var team = s.team, def = 1 - team, self = this;
     s.lock = false;
+    this.slowTo = 1;
     this.act(s, 'set', 0.45);
     this.touches[team] = 2;
     this.lastTouch = team;
@@ -418,6 +429,7 @@
     var hw = world(team, hx, hy), tgt = { x: hw.x, y: hw.y, z: 2.8 + rt.attack / 100 * 0.3 };
     var T = pick.slot === 'middle' ? 0.62 : 1.05;
     if (this.passQ < 0.45) T += 0.25;
+    if (this.moreTime(team)) T += pick.slot === 'middle' ? 0.2 : 0.35;
     var cp = { x: this.ball.x, y: this.ball.y, z: this.ball.z };
     this.launch(cp, tgt, T);
     SR.audio.play('set');
@@ -463,7 +475,7 @@
     if (this.isHuman(def) && commit !== 'read') this.say(commit === pick.slot ? 'READ IT!' : 'WRONG GUESS', this.human === 'both' ? this.m.teams[def].name : '', commit === pick.slot ? '#ffd23f' : '#ff9e9e', 0.9);
 
     this.hitSlot = pick.slot;
-    this.timeScale = 1;
+    this.slowTo = 1;
     if (this.isHuman(team)) { ua.prompt = 'target'; ua.attackTarget = null; ua.tip = false; ua.shot = 'power'; }
     this.at(T, function () { self.attack(h); });
   };
@@ -516,7 +528,7 @@
     if (this.state !== 'rally') return;
     var team = h.team, def = 1 - team, rt = this.m.ratings[team], self = this;
     h.lock = false;
-    this.timeScale = 1;
+    this.slowTo = 1;
     var ua = this.uis[team];
     ua.prompt = null;
     var cp = { x: this.ball.x, y: this.ball.y, z: this.ball.z };
@@ -649,7 +661,7 @@
 
     this.state = 'dead';
     this.stateT = 0;
-    this.timeScale = 1;
+    this.timeScale = this.slowTo = 1;
     this.clearPrompts();
     var v = f ? P.vel(f.v, f.t) : { x: 0, y: 0, z: -3 };
     this.bounce = { x: b.x, y: b.y, z: 0, vx: v.x * 0.5, vy: v.y * 0.5, vz: Math.abs(v.z) * 0.45 };
@@ -697,7 +709,7 @@
   R.pickHitter = function (p, team) {
     var u = this.uiOf(team);
     if (u.prompt !== 'hitter') return;
-    if (u.hitters.some(function (h) { return h.p === p; })) { u.hitterChoice = p; if (!team) SR.audio.play('click'); }
+    if (u.hitters.some(function (h) { return h.p === p; })) { u.hitterChoice = p; this.slowTo = 1; if (!team) SR.audio.play('click'); }
   };
 
   R.pickHitterIndex = function (i, team) {
@@ -713,7 +725,7 @@
     if (!team) SR.audio.play('click');
     if (SR.SHOTS[id].auto && this.hitter) {
       u.attackTarget = this.shotTarget(this.hitter.team, id, this.hitter);
-      this.timeScale = 1;
+      this.slowTo = 1;
     }
   };
 
@@ -728,7 +740,7 @@
     if (!slot) return;
     u.blockCall = id;
     this.commitBlock(team, slot);
-    this.timeScale = 1;
+    this.slowTo = 1;
     if (!team) SR.audio.play('click');
   };
 
@@ -739,13 +751,20 @@
     u.tip = !!tip;
     if (tip) u.shot = 'tip';
     if (SR.SHOTS[u.shot].auto) u.shot = 'power';
-    this.timeScale = 1;
+    this.slowTo = 1;
     if (!team) SR.audio.play('click');
   };
 
   // ---- simulation step ----------------------------------------------------
 
   R.update = function (dt) {
+    // Ease the game speed toward its target over about a tenth of a second of
+    // real time (dt is already scaled, so divide it back out).
+    if (this.timeScale !== this.slowTo) {
+      var k = 1 - Math.exp(-dt / Math.max(0.05, this.timeScale) / 0.1);
+      this.timeScale += (this.slowTo - this.timeScale) * k;
+      if (Math.abs(this.slowTo - this.timeScale) < 0.01) this.timeScale = this.slowTo;
+    }
     this.t += dt;
     this.stateT += dt;
     if (this.banner) { this.banner.t += dt; if (this.banner.t > this.banner.dur) this.banner = null; }
@@ -754,6 +773,12 @@
       if (this.timer.t <= 0) { var fn = this.timer.fn; this.timer = null; fn(); }
     }
     this.movePlayers(dt);
+    // The aim ring stays up while the spike is on its way, and goes once the
+    // ball crosses into the other court, so it never lingers into the next play.
+    var bx = this.ball.x;
+    this.uis.forEach(function (u, t) {
+      if (u.attackTarget && u.prompt !== 'target' && (t === 0 ? bx > C.NET_X : bx < C.NET_X)) u.attackTarget = null;
+    });
 
     if (this.state === 'serve') {
       var sp = this.server, dir = sp.team === 0 ? 1 : -1, tz = this.toss;

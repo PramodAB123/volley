@@ -14,7 +14,10 @@
     rally.formation(0, 'base');
     rally.formation(1, 'base');
     rally.snap();
-    if (cfg.human !== -1) rally.say(SR.t('SET {n}', { n: 1 }), SR.t('{a} vs {b}', { a: cfg.home.name, b: cfg.away.name }), '#ffffff', 2);
+    if (cfg.demo) return; // the How to play demo stages its own rallies (demo.js)
+    // League and tournament matches open by naming the venue.
+    var venue = cfg.venue && SR.ARENAS[cfg.venue];
+    if (cfg.human !== -1) rally.say(SR.t('SET {n}', { n: 1 }), venue ? SR.t(venue.name) : SR.t('{a} vs {b}', { a: cfg.home.name, b: cfg.away.name }), venue ? venue.accent : '#ffffff', 2);
     rally.wait(cfg.human !== -1 ? 1.4 : 0.4, function () { rally.startServe({ snap: true }); });
   };
 
@@ -25,6 +28,7 @@
     else if (info.kind === 'kill') st.kills++;
     else if (info.kind === 'block') st.blocks++;
     else if (info.kind === 'error') m.stats[1 - winner].errors++;
+    if (this.cfg.demo) { m.point(winner); return; }
     var res = m.point(winner);
     if (res.matchOver) {
       var t = m.teams[winner];
@@ -97,8 +101,11 @@
 
   function resize() {
     var vw = window.innerWidth, vh = window.innerHeight;
-    SR.render.setView(vw, vh);
-    var s = Math.min(vw / SR.render.W, vh / SR.render.H);
+    // The How to play demo keeps a strip (right or bottom) for its captions;
+    // the court fits in what is left.
+    var dm = SR.demo && SR.demo.active ? SR.demo.layout(vw, vh) : null, bw = dm ? dm.w : vw, bh = dm ? dm.h : vh;
+    SR.render.setView(bw, bh);
+    var s = Math.min(bw / SR.render.W, bh / SR.render.H);
     // Very sharp phone screens cost a lot of pixels for little gain: cap the
     // backing resolution, and lower it further if the device is struggling.
     var dpr = Math.min(window.devicePixelRatio || 1, SR.lowFx ? 1.25 : 2);
@@ -110,7 +117,8 @@
     SR.render.scale = s * dpr;
     // Pause button sits on the canvas corner: top right in landscape,
     // bottom right in portrait where the scoreboard fills the top.
-    var cw = SR.render.W * s, ch = SR.render.H * s, left = (vw - cw) / 2, top = (vh - ch) / 2;
+    var cw = SR.render.W * s, ch = SR.render.H * s, left = (bw - cw) / 2, top = (bh - ch) / 2;
+    canvas.style.margin = dm ? '0 ' + (vw - bw) + 'px ' + (vh - bh) + 'px 0' : '';
     var hud = document.getElementById('hud');
     hud.style.left = (left + cw - 56) + 'px';
     hud.style.top = (SR.render.portrait ? top + ch - 56 : top + 12) + 'px';
@@ -121,8 +129,10 @@
     var dt = last ? Math.min(document.hidden ? 0.25 : 0.05, (ts - last) / 1000) : 0;
     last = ts;
     var g = SR.game;
-    // Hit-stop freeze on big hits; skipped online so the match never stalls.
-    if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; if (!(g && g.cfg.online)) dt = 0; }
+    if (SR.demo && SR.demo.active) SR.demo.tick(dt);
+    // Hit-stop on big hits: a short, light slow-down rather than a dead
+    // freeze, so motion never visibly stops. Skipped online so the match never stalls.
+    if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; if (!(g && g.cfg.online)) dt *= 0.6; }
     if (g && !g.paused) {
       acc += dt * (g.rally.loopScale || g.rally.timeScale) * (SR.speed || 1);
       var n = 0;
@@ -158,6 +168,8 @@
     beat.onmessage = hiddenTick;
   } catch (e) { setInterval(hiddenTick, 50); }
 
+  SR.resize = function () { if (canvas) resize(); };
+
   function boot() {
     SR.cg.loadingStart();
     SR.save.load();
@@ -172,6 +184,10 @@
     var q = new URLSearchParams(window.location.search);
     if (q.get('speed')) SR.speed = Number(q.get('speed')) || 1;
     if (SR.net) SR.net.init(q);
+    if (q.get('demo') !== null && SR.demo && !q.get('room')) SR.demo.start('menu', q.get('demo'));
+    // Every visit opens on a choice: watch the demo or skip to the menu (not
+    // when the player arrived through a friend's invite).
+    else if (SR.ui.current() === 'scr-menu' && !(SR.NET_CONFIG && SR.NET_CONFIG.online && (q.get('room') || SR.cg.inviteParam('room') || SR.cg.instantMultiplayer))) SR.ui.intro();
     SR.cg.onSettingsChange(function () { SR.audio.setMuted(SR.cg.muted()); SR.ui.refresh(); });
     // Signing in to CrazyGames swaps in that account's saved progress.
     SR.cg.onAuthChange(function () { setTimeout(function () { SR.save.load(); SR.i18n.init(); SR.ui.refresh(); }, 300); });

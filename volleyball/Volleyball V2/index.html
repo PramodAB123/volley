@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Spike Rally: 6v6 Volley ball Game</title>
+  <title>Spike Rally: 6v6 Volleyball Game</title>
   <meta name="description"
     content="Coach a six-player volleyball team: call the serve, the set and the spike. Free in your browser, play the computer or a friend online.">
   <meta name="theme-color" content="#0b1220">
@@ -16,11 +16,6 @@
   <!-- CrazyGames HTML5 SDK v3: loaded before the game code. -->
   <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
   <link rel="stylesheet" href="css/style.css">
-  <!-- Vercel Speed Insights -->
-  <script>
-    window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-  </script>
-  <script defer src="/_vercel/speed-insights/script.js"></script>
 </head>
 
 <body>
@@ -36,6 +31,75 @@
     <div id="hud" class="hidden">
       <button id="btn-pause" class="icon-btn" aria-label="Pause">II</button>
     </div>
+
+    <aside id="demo" class="demo hidden" aria-label="How to play demo">
+      <div class="demo-head">
+        <span class="demo-tag">Demo</span>
+        <span id="demo-count" class="demo-count">1 / 11</span>
+        <div id="demo-mode" class="demo-mode" role="radiogroup" aria-label="Demo mode">
+          <button type="button" role="radio" data-mode="try" aria-checked="true" class="on">Try it</button>
+          <button type="button" role="radio" data-mode="watch" aria-checked="false">Watch</button>
+        </div>
+        <button id="demo-exit" class="demo-x" type="button" aria-label="Close demo">✕</button>
+      </div>
+      <div class="demo-progress" aria-hidden="true"><span id="demo-bar"></span></div>
+      <ol id="demo-chapters" class="demo-chapters" aria-label="Skills" data-i18n-skip></ol>
+      <div id="demo-scroll" class="demo-scroll" data-i18n-skip>
+        <h2 id="demo-title"></h2>
+        <p id="demo-now" class="demo-now" role="status" aria-live="polite"></p>
+        <div id="demo-body" class="demo-body"></div>
+        <p id="demo-keys" class="demo-keys"></p>
+      </div>
+      <div id="demo-end" class="demo-end hidden">
+        <button id="demo-quick" class="btn primary" type="button">Play a quick match</button>
+        <button id="demo-again" class="btn" type="button">Watch again</button>
+        <button id="demo-help" class="btn ghost" type="button">How to play</button>
+      </div>
+      <div class="demo-ctrl">
+        <button id="demo-prev" class="btn" type="button" aria-label="Previous skill">◀<span class="lbl"> Back</span></button>
+        <button id="demo-play" class="btn" type="button" data-i18n-skip>❚❚<span class="lbl"> Pause</span></button>
+        <button id="demo-replay" class="btn icon" type="button" aria-label="Replay this skill" title="Replay">↻</button>
+        <button id="demo-next" class="btn primary" type="button" aria-label="Next skill"><span class="lbl">Next </span>▶</button>
+      </div>
+    </aside>
+
+    <section id="scr-intro" class="screen intro hidden" aria-labelledby="intro-title">
+      <div class="intro-card">
+        <svg class="intro-art" viewBox="0 0 320 130" aria-hidden="true">
+          <defs>
+            <linearGradient id="ia-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16305e"/><stop offset="1" stop-color="#0b1a36"/></linearGradient>
+          </defs>
+          <rect x="0" y="0" width="320" height="130" rx="16" fill="url(#ia-sky)"/>
+          <g class="ia-lights" fill="#fff6d0"><circle cx="40" cy="10" r="16" opacity=".12"/><circle cx="160" cy="6" r="20" opacity=".14"/><circle cx="280" cy="10" r="16" opacity=".12"/></g>
+          <rect x="0" y="108" width="320" height="22" fill="#2e7a4f"/>
+          <rect x="22" y="108" width="276" height="9" fill="#f28a3a"/>
+          <rect x="106" y="108" width="108" height="9" fill="#ec7c2b"/>
+          <line x1="160" y1="117" x2="160" y2="52" stroke="#dfe5ee" stroke-width="3"/>
+          <rect x="157" y="54" width="6" height="26" fill="none" stroke="#e8eef8" stroke-width="1.2" stroke-dasharray="2 2"/>
+          <line x1="157" y1="54" x2="163" y2="54" stroke="#fff" stroke-width="2.5"/>
+          <g class="ia-p1"><circle cx="78" cy="70" r="6" fill="#f1c7a3"/><rect x="71" y="77" width="14" height="20" rx="5" fill="#2f6fe0"/><rect x="72" y="96" width="5" height="12" rx="2" fill="#1b3f86"/><rect x="79" y="96" width="5" height="12" rx="2" fill="#1b3f86"/><path d="M84 79 L95 60" stroke="#f1c7a3" stroke-width="4" stroke-linecap="round"/></g>
+          <g class="ia-p2"><circle cx="242" cy="74" r="6" fill="#d9a37e"/><rect x="235" y="81" width="14" height="19" rx="5" fill="#d9822b"/><rect x="236" y="99" width="5" height="9" rx="2" fill="#7a3f10"/><rect x="243" y="99" width="5" height="9" rx="2" fill="#7a3f10"/><path d="M236 84 L226 74 M248 84 L256 74" stroke="#d9a37e" stroke-width="4" stroke-linecap="round"/></g>
+          <path d="M96 58 Q160 -14 228 74" fill="none" stroke="#ffd23f" stroke-width="2" stroke-dasharray="4 6" opacity=".55"/>
+          <g class="ia-ball">
+            <circle r="8" fill="#f4d03f" stroke="#2453a6" stroke-width="2"/>
+            <path d="M-8 0 Q0 -5 8 0" fill="none" stroke="#2453a6" stroke-width="1.6"/>
+            <animateMotion dur="2.4s" repeatCount="indefinite" path="M96 58 Q160 -14 228 74 Q160 -2 96 58" keyPoints="0;1" keyTimes="0;1" calcMode="linear"/>
+          </g>
+        </svg>
+        <div class="intro-brand" data-i18n-skip>Spike<span>Rally</span></div>
+        <h2 id="intro-title">New here? Learn it in a minute</h2>
+        <p class="intro-sub">Watch a short demo of the calls you make in every rally.</p>
+        <ul class="intro-steps">
+          <li><span>1</span>Serve</li>
+          <li><span>2</span>Set</li>
+          <li><span>3</span>Attack</li>
+          <li><span>4</span>Block</li>
+        </ul>
+        <button id="btn-intro-watch" class="intro-watch" type="button"><span class="intro-play" aria-hidden="true">▶</span> <span>Watch demo</span></button>
+        <button id="btn-intro-skip" class="intro-skip" type="button">Skip</button>
+        <p class="intro-note">You can watch it again any time from How to play.</p>
+      </div>
+    </section>
 
     <section id="scr-menu" class="screen">
       <div class="panel menu">
@@ -59,6 +123,7 @@
       <div class="panel">
         <h2 id="teams-title">Choose your team</h2>
         <div id="team-rules" class="rules"></div>
+        <div id="team-courts" class="rule courts hidden" data-i18n-skip></div>
         <div id="team-grid" class="team-grid"></div>
         <button class="btn ghost" data-back>Back</button>
       </div>
@@ -102,6 +167,7 @@
       <div class="panel">
         <h2>League</h2>
         <p id="league-next" class="lead"></p>
+        <p id="league-venue" class="venue hidden" data-i18n-skip></p>
         <div class="table-wrap">
           <table id="league-table" class="table"></table>
         </div>
@@ -119,6 +185,7 @@
       <div class="panel">
         <h2>Tournament</h2>
         <p id="cup-next" class="lead"></p>
+        <p id="cup-venue" class="venue hidden" data-i18n-skip></p>
         <div id="cup-bracket" class="bracket"></div>
         <div class="row">
           <button id="btn-cup-play" class="btn primary">Play match</button>
@@ -173,6 +240,11 @@
         <h2>How to play</h2>
         <p data-i18n="help.intro">You coach the team in the near half. Your players move on their own; you make the
           three calls that decide each rally.</p>
+        <button id="btn-demo" class="demo-cta" type="button">
+          <span class="demo-cta-icon" aria-hidden="true">▶</span>
+          <span class="demo-cta-text"><b>Try the guided demo</b><small>Play a real rally step by step: you make every call, the captions show you how</small></span>
+        </button>
+        <p class="demo-alt">Rather just see it first? <button id="btn-demo-watch" class="link-btn" type="button">Watch the demo play itself</button></p>
         <ol>
           <li data-i18n="help.serve"><b>Serve.</b> Move the pointer over the far court to aim, then click or tap (or
             press Space). The power bar swings up and down: a harder serve is tougher to pass but less accurate.</li>
@@ -182,7 +254,8 @@
             or keys 1 to 6, then click where it should land:
             <b>Power</b> is fastest; <b>Line</b> and <b>Cross</b> aim themselves down the sideline or across court;
             <b>Roll</b> is a slow, high shot over the block into open space; <b>Tip</b> drops it just over the net;
-            <b>Tool</b> hits off the blockers' hands to send the ball out. Aiming right on the lines is risky.
+            <b>Tool</b> hits off the blockers' hands to send the ball out. If you don't pick a spot, your hitter misses
+            and the point goes to the other team. Aiming right on the lines is risky.
           </li>
           <li id="help-online" class="hidden" data-i18n="help.online"><b>Online.</b> Choose Play online, create a room
             and send the code or invite link to a friend. Each of you makes the calls for your own team, and you both
@@ -197,7 +270,10 @@
           you the serve and rotates your team. Press P or Esc to pause.</p>
         <p class="muted small" data-i18n="help.stars">Stars: 1 per win. League title +3, tournament cup +5. Spend them
           in the Shop.</p>
-        <button class="btn ghost" data-back>Back</button>
+        <div class="row">
+          <button id="btn-demo-2" class="btn primary" type="button">Try the guided demo</button>
+          <button class="btn ghost" data-back>Back</button>
+        </div>
       </div>
     </section>
 
@@ -241,6 +317,7 @@
   <script src="js/net-config.js"></script>
   <script src="js/relay.js"></script>
   <script src="js/net.js"></script>
+  <script src="js/demo.js"></script>
   <script src="js/main.js"></script>
 </body>
 

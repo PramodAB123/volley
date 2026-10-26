@@ -82,9 +82,37 @@ SR.SHOP = {
     { id: 'maple', name: 'Arena',  price: 0, floor: '#2e7a4f', court: '#f28a3a', zone: '#ec7c2b', line: '#ffffff', wall: '#10261b', seat: '#ef7d2d', riser: '#173324' },
     { id: 'ocean', name: 'Ocean',  price: 3, floor: '#2d7a5a', court: '#2f6fa8', zone: '#285f94', line: '#ffffff', wall: '#0e1f33', seat: '#2f6fa8', riser: '#101c2c' },
     { id: 'clay',  name: 'Clay',   price: 5, floor: '#3f5d3a', court: '#b5583a', zone: '#a24b30', line: '#fff3e6', wall: '#2a160e', seat: '#b5583a', riser: '#26150e' },
-    { id: 'night', name: 'Night',  price: 8, floor: '#1b1530', court: '#2b2150', zone: '#352866', line: '#53f3ff', wall: '#09060f', seat: '#6b3fd1', riser: '#120c22', glow: true }
+    { id: 'night', name: 'Night',  price: 8, floor: '#1b1530', court: '#2b2150', zone: '#352866', line: '#53f3ff', wall: '#09060f', seat: '#6b3fd1', riser: '#120c22', glow: true },
+    // Themed courts with floor art (motifs in render.js).
+    { id: 'galaxy', name: 'Galaxy',       price: 10, motif: 'galaxy', floor: '#05040f', court: '#1a1446', zone: '#221a5c', line: '#c7b8ff', wall: '#020108', seat: '#7c5cff', riser: '#0a0820', accent: '#ff4fd8', glow: true },
+    { id: 'lava',   name: 'Lava Pit',     price: 12, motif: 'lava',   floor: '#1a0a06', court: '#3a1a12', zone: '#4a2016', line: '#ffb347', wall: '#0c0402', seat: '#ff5a1f', riser: '#200c06', accent: '#ff5a1f', glow: true },
+    { id: 'candy',  name: 'Candy Land',   price: 15, motif: 'candy',  floor: '#ffc2e0', court: '#7cc6f5', zone: '#6ab8ea', line: '#ffffff', wall: '#3a1030', seat: '#ff5fa2', riser: '#2a0c22', accent: '#ff5fa2' },
+    { id: 'arcade', name: 'Retro Arcade', price: 20, motif: 'pixels', floor: '#101018', court: '#24245a', zone: '#2c2c70', line: '#7dff6b', wall: '#05050a', seat: '#ff4d6d', riser: '#0c0c18', accent: '#ffd23f', glow: true }
   ]
 };
+
+// League and tournament venues: every team has a home arena with its own
+// floor art (motif, drawn in render.js) and colours. League rounds are played
+// at the opponent's arena and the last round at yours; the tournament final
+// is at Champions Court. Quick matches use the court equipped in the Shop.
+SR.ARENAS = {
+  hawks:   { id: 'a-hawks',   name: 'Harbor Dome',     motif: 'waves',    floor: '#123a5c', court: '#2a6fb5', zone: '#245f9c', line: '#ffffff', wall: '#06121f', seat: '#2f6fe0', riser: '#0a1a2c', accent: '#8fd3ff' },
+  lions:   { id: 'a-lions',   name: 'Copper Den',      motif: 'sunburst', floor: '#5a2e12', court: '#d9822b', zone: '#c46f1f', line: '#fff4e0', wall: '#1f1006', seat: '#d9822b', riser: '#2a1608', accent: '#ffcf7a' },
+  wolves:  { id: 'a-wolves',  name: 'Frost Arena',     motif: 'frost',    floor: '#b9d3e6', court: '#5e95c4', zone: '#5389b8', line: '#ffffff', wall: '#0d1a2b', seat: '#9fb7cf', riser: '#162638', accent: '#ffffff' },
+  rays:    { id: 'a-rays',    name: 'Sunset Beach',    motif: 'sunset',   floor: '#2f8796', court: '#e2b66c', zone: '#d6a65a', line: '#ffffff', wall: '#2a0f2e', seat: '#e5484d', riser: '#2b1230', accent: '#ff8a5c' },
+  owls:    { id: 'a-owls',    name: 'Moonlight Hall',  motif: 'stars',    floor: '#1c1438', court: '#4b3a8c', zone: '#55449c', line: '#f1ecff', wall: '#07051a', seat: '#7c5cd6', riser: '#120c26', accent: '#fff3b0', glow: true },
+  sharks:  { id: 'a-sharks',  name: 'Coral Reef',      motif: 'reef',     floor: '#0b5a63', court: '#12a594', zone: '#0f9283', line: '#e6fffb', wall: '#03242a', seat: '#ff7f6b', riser: '#06353b', accent: '#ff9e80' },
+  falcons: { id: 'a-falcons', name: 'Storm Hangar',    motif: 'storm',    floor: '#2a2c33', court: '#3d4048', zone: '#474b55', line: '#ffd23f', wall: '#0b0c10', seat: '#e0b100', riser: '#17181d', accent: '#ffd23f' },
+  tigers:  { id: 'a-tigers',  name: 'Jade Temple',     motif: 'stripes',  floor: '#0f3d26', court: '#2f9e44', zone: '#278a3b', line: '#fffbe6', wall: '#06180f', seat: '#e0a800', riser: '#0b2617', accent: '#ffd75e' },
+  // Free courts to pick on the Quick match screen (SR.QUICK_COURTS).
+  neon:    { id: 'q-neon',    name: 'Neon Grid',       motif: 'grid',     floor: '#0a0620', court: '#140b3a', zone: '#1b1050', line: '#ff3bd4', wall: '#04020c', seat: '#ff3bd4', riser: '#0c0620', accent: '#3bf0ff', glow: true },
+  blossom: { id: 'q-blossom', name: 'Cherry Blossom',  motif: 'petals',   floor: '#4a2e26', court: '#e89bb0', zone: '#de8ba2', line: '#ffffff', wall: '#1e0f14', seat: '#ff8fb1', riser: '#2a1612', accent: '#ffc9d8' },
+  dunes:   { id: 'q-dunes',   name: 'Desert Dunes',    motif: 'dunes',    floor: '#c98a4b', court: '#d9a25e', zone: '#cd9350', line: '#ffffff', wall: '#2a1408', seat: '#e07a2e', riser: '#3a1e0c', accent: '#8a4a1c' },
+  street:  { id: 'q-street',  name: 'Street Park',     motif: 'street',   floor: '#3a3f47', court: '#3f7fbf', zone: '#3570aa', line: '#ffffff', wall: '#0e1116', seat: '#ffd23f', riser: '#1a1d22', accent: '#ffd23f' },
+  final:   { id: 'a-final',   name: 'Champions Court', motif: 'gold',     floor: '#0d1633', court: '#1c2f6b', zone: '#22397f', line: '#ffd75e', wall: '#04081a', seat: '#e0a800', riser: '#0a1230', accent: '#ffd75e', glow: true }
+};
+
+SR.QUICK_COURTS = ['neon', 'blossom', 'dunes', 'street'];
 
 SR.STARS = { quickWin: 1, leagueWin: 1, leagueTitle: 3, cupWin: 1, cupTitle: 5, adReward: 2 };
 // Minimum gap between rewarded videos in the shop.

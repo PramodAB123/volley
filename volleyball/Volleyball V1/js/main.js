@@ -15,7 +15,9 @@
     rally.formation(1, 'base');
     rally.snap();
     if (cfg.demo) return; // the How to play demo stages its own rallies (demo.js)
-    if (cfg.human !== -1) rally.say('SET 1', cfg.home.name + ' vs ' + cfg.away.name, '#ffffff', 2);
+    // League and tournament matches open by naming the venue.
+    var venue = cfg.venue && SR.ARENAS[cfg.venue];
+    if (cfg.human !== -1) rally.say('SET 1', venue ? venue.name : cfg.home.name + ' vs ' + cfg.away.name, venue ? venue.accent : '#ffffff', 2);
     rally.wait(cfg.human !== -1 ? 1.4 : 0.4, function () { rally.startServe({ snap: true }); });
   };
 
@@ -130,7 +132,7 @@
     if (SR.demo && SR.demo.active) SR.demo.tick(dt);
     // Hit-stop on big hits: a brief slow-motion beat rather than a dead
     // freeze, so motion never visibly stops. Skipped online so the match never stalls.
-    if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; if (!(g && g.cfg.online)) dt *= 0.2; }
+    if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; if (!(g && g.cfg.online)) dt *= 0.6; }
     if (g && !g.paused) {
       acc += dt * (g.rally.loopScale || g.rally.timeScale) * (SR.speed || 1);
       var n = 0;
