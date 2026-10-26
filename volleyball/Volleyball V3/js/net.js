@@ -3,11 +3,21 @@
 // WebRTC. The host's browser runs the match (team 0 = host, team 1 = friend);
 // the friend sends their calls and receives the game state ~30 times a second,
 // drawn from their own end of the court. If a direct link can't be made, the
-// same messages go through a public relay server instead (see relay.js).
+// same messages go through a relay server instead (see relay.js). The servers
+// are set in net-config.js (your own Cloudflare Worker, or public test ones).
+//
+// CrazyGames: the room is reported with updateRoom/leftRoom so friends can use
+// the site's Join and Invite buttons, invite links come from the SDK, a join
+// from the CrazyGames UI opens the room without a reload, Instant Multiplayer
+// opens a room straight away, players see each other's CrazyGames usernames,
+// and after a match both can rematch in the same room.
 (function () {
   var PREFIX = 'spikerally-v1-';
   var ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  var SNAP_MS = 33, FAST_ID = 7, PING_MS = 1000, LOST_MS = 6000, REJOIN_MS = 30000, JOIN_TIMEOUT_MS = 20000, P2P_WAIT_MS = 6000, ROOM_CHECK_MS = 3500;
+  var SNAP_MS = 33, RELAY_SNAP_MS = 80, RELAY_LOST_MS = 8000, FAST_ID = 7, PING_MS = 1000, LOST_MS = 6000, REJOIN_MS = 30000, JOIN_TIMEOUT_MS = 30000, P2P_WAIT_MS = 6000, ROOM_CHECK_MS = 3500;
+  // A room that can't be found is retried for a while before giving up (the host's
+  // phone may be busy in the share sheet); a host cut off from every server gives up after a while.
+  var NOTFOUND_MS = 14000, RETRY_MS = 2500, HOST_OFFLINE_MS = 25000, SLOW_JOIN_MS = 9000;
   var C = SR.COURT;
   var $ = function (id) { return document.getElementById(id); };
 
@@ -30,13 +40,20 @@
 
   function cleanCode(c) { return String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); }
 
-  // On CrazyGames the invite link comes from the SDK (the game runs in an
-  // iframe, so its own address isn't a link anyone can open).
+  // The link a friend opens to join. On the live site (or its old vercel.app
+  // address, which redirects) it always points at the main domain, so it never
+  // carries a stray path like /index.html or a redirect that might drop ?room=.
   function inviteLink(code) {
+    // On CrazyGames the link comes from the SDK (the game runs in an iframe, so
+    // its own address isn't a link anyone can open).
     var cgLink = SR.cg.inviteLink({ room: code });
     if (cgLink) return cgLink;
-    var u = window.location.href.split('#')[0].split('?')[0];
-    return u + '?room=' + code;
+    var c = SR.NET_CONFIG || {}, loc = window.location, base;
+    if (c.inviteBase) base = c.inviteBase;
+    else if (/(^|\.)spikerally\.buzz$/i.test(loc.hostname) || /\.vercel\.app$/i.test(loc.hostname)) base = 'https://spikerally.buzz/';
+    else if (loc.protocol === 'http:' || loc.protocol === 'https:') base = loc.origin + loc.pathname.replace(/index\.html$/i, '');
+    else base = loc.href.split('#')[0].split('?')[0];
+    return base + '?room=' + code;
   }
 
   // Keep CrazyGames' Join / Invite buttons in step with the room.
@@ -44,6 +61,9 @@
     if (!N.code) return;
     SR.cg.updateRoom({ roomId: N.code, isJoinable: !!joinable, inviteParams: { room: N.code } });
   }
+
+  function playerName(v) { return typeof v === 'string' && v.trim() ? v.trim().slice(0, 24) : null; }
+  function friendName() { return N.oppName || SR.t('Your friend'); }
 
   var N = {
     role: null,      // 'host' | 'guest'
@@ -68,7 +88,19 @@
     links: {},       // host: relay links by guest id
     relayRoom: null, // guest: does the relay say the room exists? (null = not known yet)
     p2pDown: false,  // guest: the direct path has failed
-    via: null        // 'p2p' | 'relay' once connected
+    via: null,       // 'p2p' | 'relay' once connected
+    shown: false,    // host: the code is on screen (and may already be shared), so it must not change
+    offSince: 0,     // host: when it last lost every server
+    peerTry: 0,
+    helloAt: 0,
+    retryAt: 0,
+    beats: 0,
+    path: null,     // 'direct' or 'Cloudflare' for a direct (WebRTC) link
+    netRtt: 0,
+    friendAway: false,
+    oppName: null,   // the friend's CrazyGames username, if they have one
+    names: null,     // [mine, friend's] for the scoreboard during a match
+    again: null      // after a match: { me, them } wanting a rematch
   };
   SR.net = N;
 
@@ -97,8 +129,51 @@
     el.classList.toggle('hidden', !on);
     if (!on) return;
     var ms = Math.round(N.rtt || 0), bad = N.via === 'relay' || ms > 180;
-    el.textContent = (ms ? ms + ' ms' : '…') + (N.via === 'relay' ? ' · backup server' : '');
+    var how = N.via === 'relay' ? ' · backup server' : N.path ? ' · ' + N.path : '';
+    // A game in a background tab, a minimised window or a locked phone barely
+    // runs, which looks like a terrible connection. Say so instead.
+    if (N.friendAway) { el.textContent = 'Friend\'s game is in the background'; el.className = 'net-link bad'; return; }
+    // The browser's own measure of the network alone; when it's much lower than
+    // the game's ping, the delay is a busy device, not the connection.
+    var net = N.netRtt && ms > N.netRtt * 2 + 60 ? ' (network ' + Math.round(N.netRtt) + ')' : '';
+    el.textContent = (ms ? ms + ' ms' : '…') + net + how;
     el.className = 'net-link' + (bad ? ' bad' : ms > 90 ? ' meh' : '');
+  }
+
+  // Which way the direct link goes (straight between the players, or through
+  // Cloudflare's TURN relay), from the browser's own connection stats.
+  function checkPath() {
+    var c = N.conn, pc = c && !c.relay && c.peerConnection;
+    if (!pc || !pc.getStats || N.pathBusy) return;
+    N.pathBusy = true;
+    pc.getStats().then(function (stats) {
+      N.pathBusy = false;
+      var pair = null, byId = {};
+      stats.forEach(function (r) { byId[r.id] = r; });
+      stats.forEach(function (r) { if (r.type === 'transport' && r.selectedCandidatePairId) pair = byId[r.selectedCandidatePairId]; });
+      if (!pair) stats.forEach(function (r) { if (r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded') pair = r; });
+      if (!pair) return;
+      var lc = byId[pair.localCandidateId] || {}, rc = byId[pair.remoteCandidateId] || {};
+      var relayed = lc.candidateType === 'relay' || rc.candidateType === 'relay';
+      N.path = relayed ? 'Cloudflare' + (lc.relayProtocol === 'tcp' || lc.relayProtocol === 'tls' ? ' TCP' : '') : 'direct';
+      N.netRtt = typeof pair.currentRoundTripTime === 'number' ? pair.currentRoundTripTime * 1000 : 0;
+    }).catch(function () { N.pathBusy = false; });
+  }
+
+  // Tell the other player when this game goes into the background or comes back.
+  function sendVis() { send({ t: 'vis', away: !!document.hidden }); }
+
+  // Who is in the room (CrazyGames usernames when signed in).
+  function showPlayers() {
+    var el = $('on-players');
+    if (!el) return;
+    var me = SR.cg.username;
+    el.innerHTML = '';
+    if (!me && !N.oppName) { el.classList.add('hidden'); return; }
+    var add = function (txt, cls) { var s = document.createElement('span'); s.textContent = txt; if (cls) s.className = cls; el.appendChild(s); };
+    add(me ? me : SR.t('You'), 'me');
+    if (N.oppName) add(N.oppName);
+    el.classList.remove('hidden');
   }
 
   function view(which) {
@@ -109,12 +184,85 @@
     if (N.timers[name]) { clearTimeout(N.timers[name]); clearInterval(N.timers[name]); N.timers[name] = null; }
   }
 
+  // ---- emoji reactions -----------------------------------------------------
+  // Four quick reactions during a match. Each shows for a moment beside the
+  // sender's half of the scoreboard; a short cooldown on both ends stops spam.
+
+  var EMOTES = { laugh: '\ud83d\ude02', cry: '\ud83d\ude2d', angry: '\ud83d\ude21', idle: '\ud83d\ude10' };
+  var EMOTE_MS = 2000, EMOTE_IN_MS = 700;
+  var emoteOut = 0, emoteIn = 0, emoteBar = false;
+  N.reacts = [null, null]; // [mine, friend's]: { e: emoji, at: seconds }
+
+  function showReact(side, id) { N.reacts[side] = { e: EMOTES[id], at: performance.now() / 1000 }; }
+
+  function sendEmote(id) {
+    var t = now();
+    if (!EMOTES[id] || N.phase !== 'playing' || t - emoteOut < EMOTE_MS) return;
+    if (!send({ t: 'emo', e: id })) return;
+    emoteOut = t;
+    showReact(0, id);
+    SR.audio.play('emote');
+    var bar = $('emotes');
+    bar.classList.add('cooling');
+    clearTimer('emote');
+    N.timers.emote = setTimeout(function () { bar.classList.remove('cooling'); }, EMOTE_MS);
+  }
+
+  // CrazyGames can switch chat off for a player; reactions count as chat here.
+  function chatOff() { return !!(SR.cg.settings && SR.cg.settings.disableChat); }
+
+  function gotEmote(id) {
+    var t = now();
+    if (chatOff() || !EMOTES.hasOwnProperty(id) || N.phase !== 'playing' || t - emoteIn < EMOTE_IN_MS) return;
+    emoteIn = t;
+    showReact(1, id);
+    SR.audio.play('emote');
+  }
+
+  // The bar shows only while an online match is on screen (not under a menu).
+  function syncEmoteBar() {
+    var on = !!(SR.game && SR.game.cfg.online && N.phase === 'playing' && !chatOff() && !$('hud').classList.contains('hidden'));
+    if (on === emoteBar) return;
+    emoteBar = on;
+    $('emotes').classList.toggle('hidden', !on);
+  }
+
   // ---- connection plumbing -------------------------------------------------
 
-  function makePeer(id) {
+  // TURN servers let two phones connect directly even when their networks
+  // (mobile data, strict Wi-Fi) block a plain peer-to-peer link; without them
+  // those matches fall back to the much slower public relay. Credentials are
+  // short-lived, so they come from the site's /api/turn endpoint (see api/turn.js).
+  var ice = { list: null, at: 0, busy: null };
+  function loadIce(done) {
+    var c = SR.NET_CONFIG || {}, base = c.iceServers || [{ urls: 'stun:stun.cloudflare.com:3478' }];
+    if (!c.turn || !window.fetch || location.protocol === 'file:') { done(base); return; }
+    if (ice.list && now() - ice.at < 4 * 3600 * 1000) { done(ice.list); return; }
+    if (ice.busy) { ice.busy.push(done); return; }
+    var waiting = ice.busy = [done], finished = false;
+    var finish = function (list) {
+      if (finished) return;
+      finished = true;
+      ice.busy = null;
+      waiting.forEach(function (f) { f(list); });
+    };
+    // Never hold the player up for long: without TURN most networks still work.
+    setTimeout(function () { finish(base); }, 3000);
+    fetch(c.turn, { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      var extra = (j && Array.isArray(j.iceServers) ? j.iceServers : []).filter(function (s) { return s && s.urls; });
+      var list = extra.length ? base.concat(extra) : base;
+      if (extra.length) { ice.list = list; ice.at = now(); N.turn = true; }
+      finish(list);
+    }).catch(function () { finish(base); });
+  }
+
+  function p2pWait() { return N.turn ? P2P_WAIT_MS + 3000 : P2P_WAIT_MS; }
+
+  function makePeer(id, relayOnly) {
     if (typeof window.Peer === 'undefined') throw new Error('nopeer');
     var c = SR.NET_CONFIG || {};
-    var opts = { debug: 0, config: { iceServers: c.iceServers || [{ urls: 'stun:stun.cloudflare.com:3478' }] } };
+    var opts = { debug: 0, config: { iceServers: ice.list || c.iceServers || [{ urls: 'stun:stun.cloudflare.com:3478' }] } };
+    if (relayOnly) opts.config.iceTransportPolicy = 'relay';
     if (c.host) { opts.host = c.host; opts.port = c.port; opts.path = c.path || '/'; opts.secure = c.secure !== false; }
     return id ? new window.Peer(id, opts) : new window.Peer(opts);
   }
@@ -122,9 +270,11 @@
   // ---- relay (backup path) --------------------------------------------------
 
   function topic(rest) { return 'spikerally/v1/' + N.code + '/' + rest; }
+  // Your own server keeps one relay per room ({room} in its address).
   function relayUrls() {
     var c = SR.NET_CONFIG || {};
-    return c.relays || ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081/mqtt'];
+    var list = c.relays || ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081/mqtt'];
+    return list.map(function (u) { return u.replace('{room}', N.code); });
   }
   function closeHub() {
     var h = N.hub;
@@ -134,19 +284,28 @@
   }
   function relayLive() { return !!(N.hub && N.hub.live().length); }
 
+  // A public broker hung up. If the match was running through it, treat it as
+  // a dropped link right away (the rejoin goes through the other brokers)
+  // instead of freezing until the heartbeat notices.
+  function relayDropped(client) {
+    var c = N.conn;
+    if (c && c.relay && c.open && c.client === client) c.close();
+  }
+
   function startRelayHost() {
     closeHub();
     if (!SR.relay || !relayUrls().length) return;
-    var h = N.hub = new SR.relay.Hub(relayUrls(), { topic: topic('room'), payload: '', retain: true });
+    // The last will clears the "room is open" mark if the host vanishes; the hub
+    // dials dropped brokers again and puts the mark back.
+    var h = N.hub = new SR.relay.Hub(relayUrls(), { topic: topic('room'), payload: '', retain: true }, { keep: true });
     var code = N.code;
     h.roomTopic = topic('room');
     h.subscribe(topic('h'));
     h.publishAll(topic('room'), '1', true);
     h.onopen = function () { if (N.hub === h) roomReady(); };
-    h.onclose = function () {
-      if (N.hub !== h || !h.dead()) return;
-      if (N.phase === 'waiting' && (!N.peer || !N.peer.open)) abort('Could not reach the online servers. Check your internet connection and try again.');
-    };
+    // Losing every server is handled by the heartbeat, which waits a while: a
+    // phone in the share sheet drops its connections and gets them back after.
+    h.onclose = function (c) { if (N.hub === h) relayDropped(c); };
     h.onmessage = function (t, text, client) {
       if (N.hub !== h || N.code !== code || t !== topic('h')) return;
       var w;
@@ -172,7 +331,7 @@
     closeHub();
     N.relayRoom = null;
     if (!SR.relay || !relayUrls().length) return;
-    var h = N.hub = new SR.relay.Hub(relayUrls(), null), code = N.code, first = true;
+    var h = N.hub = new SR.relay.Hub(relayUrls(), null, { keep: true }), code = N.code, first = true;
     var inbox = 'g/' + h.id;
     h.subscribe(topic(inbox));
     h.subscribe(topic('room'));
@@ -186,14 +345,35 @@
         guestDecide();
       }, ROOM_CHECK_MS);
     };
-    h.onclose = function () { if (N.hub === h && h.dead()) guestDecide(); };
+    h.onclose = function (c) {
+      if (N.hub !== h) return;
+      relayDropped(c);
+      if (h.dead()) guestDecide();
+    };
     h.onmessage = function (t, text, client) {
       if (N.hub !== h || N.code !== code) return;
-      if (t === topic('room')) { N.relayRoom = text === '1'; guestDecide(); return; }
+      if (t === topic('room')) {
+        var was = N.relayRoom;
+        N.relayRoom = text === '1';
+        // The room just (re)appeared, e.g. the host came back from sharing the
+        // link: give the faster direct link another go before using the relay.
+        if (N.relayRoom && was !== true && (!N.p2pDown || N.p2pDown === 'notfound') && N.peer && N.peer.open && !(N.conn && N.conn.relay)) {
+          N.p2pFrom = now();
+          if (N.p2pDown) { N.p2pDown = false; N.retryAt = now(); connectToHost(false); }
+        }
+        guestDecide();
+        return;
+      }
       if (t !== topic(inbox)) return;
       var w;
       try { w = JSON.parse(text); } catch (e) { return; }
       var l = N.conn;
+      if (w && w.f === 'h' && w.m && w.m.t === 'relink') {
+        // The host lost our link (their broker hung up): reconnect now instead
+        // of waiting for the silence to time out.
+        if (N.phase === 'playing' && N.via === 'relay') lost();
+        return;
+      }
       if (!w || w.f !== 'h' || !w.m || !l || !l.relay) return;
       if (!l.open) { l.client = client; l.start(); }
       if (l.client === client) l.deliver(w.m);
@@ -210,6 +390,7 @@
       dropConn();
       attach(new SR.relay.Link(null, topic('h'), h.id, {}));
     }
+    N.helloAt = now();
     var msg = JSON.stringify({ f: h.id, m: { t: 'hello', token: N.token } });
     h.live().forEach(function (c) { c.publish(topic('h'), msg); });
     return true;
@@ -219,22 +400,22 @@
   function guestDecide() {
     if (N.role !== 'guest' || N.phase !== 'waiting') return;
     if (N.conn && N.conn.open) return;
-    var relayOk = relayLive();
-    if (N.relayRoom === true && (N.p2pDown || N.joinT && now() - N.joinT > P2P_WAIT_MS)) {
+    // ('notfound' may only mean the host's PeerJS side is still coming back: give it the same few seconds.)
+    if (N.relayRoom === true && ((N.p2pDown && N.p2pDown !== 'notfound') || now() - N.p2pFrom > p2pWait())) {
       if (!(N.conn && N.conn.relay)) { status('Connecting to room ' + N.code + ' through the backup server…'); relayHello(); }
       return;
     }
-    if (N.p2pDown === 'notfound' && (N.relayRoom === false || !relayOk && (!N.hub || N.hub.dead()))) {
-      abort('Room ' + N.code + ' was not found. Check the code, or ask your friend to create a new room.');
+    if (!N.p2pDown) return;
+    // Not found yet: keep looking for a while before giving up. The friend who
+    // made the room may still be in their share sheet or messaging app, with
+    // the game paused in the background.
+    var late = now() - N.joinT > NOTFOUND_MS, relayGone = !N.hub || N.hub.dead();
+    if (N.relayRoom === false || (N.p2pDown === 'notfound' && relayGone)) {
+      if (late) abort('Room ' + N.code + ' was not found. Check the code, and ask your friend to keep the game open on the room screen (or create a new room).');
+      else status('Looking for room ' + N.code + '… ask your friend to keep the game open.');
       return;
     }
-    if (N.p2pDown && N.relayRoom === false) {
-      abort('Room ' + N.code + ' was not found. Check the code, or ask your friend to create a new room.');
-      return;
-    }
-    if (N.p2pDown && (!N.hub || N.hub.dead())) {
-      abort('Could not reach the online servers. Check your internet connection and try again.');
-    }
+    if (relayGone && late) abort('Could not reach the online servers. Check your internet connection and try again.');
   }
 
   function send(msg) {
@@ -254,6 +435,10 @@
   // Tear everything down. Safe to call more than once.
   function cleanup() {
     Object.keys(N.timers).forEach(clearTimer);
+    altClose();
+    if (N.altPeer) { try { N.altPeer.destroy(); } catch (e) { /* ignore */ } N.altPeer = null; }
+    N.slowN = 0;
+    N.altAt = 0;
     dropConn();
     if (N.peer) { try { N.peer.destroy(); } catch (e) { /* ignore */ } }
     N.peer = null;
@@ -261,11 +446,17 @@
     N.links = {};
     N.via = null;
     N.rtt = 0;
+    N.shown = false;
     N.role = null;
     N.phase = 'idle';
     N.events = [];
+    N.reacts = [null, null];
     N.oppName = null;
+    N.names = null;
+    N.again = null;
+    $('emotes').classList.remove('cooling');
     SR.cg.leftRoom();
+    showPlayers();
     banner('');
     showLink();
   }
@@ -283,7 +474,7 @@
   // retransmits or waits for order: a lost update is simply replaced by the next
   // one instead of holding up everything behind it. Both sides create it with
   // the same id, so no extra signalling is needed.
-  function openFast(c) {
+  function makeFast(c) {
     try {
       var dc = c.peerConnection.createDataChannel('snap', { negotiated: true, id: FAST_ID, ordered: false, maxRetransmits: 0 });
       dc.onmessage = function (e) {
@@ -293,9 +484,10 @@
         try { msg = JSON.parse(e.data); } catch (err) { return; }
         if (msg && typeof msg === 'object') onData(msg);
       };
-      N.fast = dc;
-    } catch (e) { N.fast = null; }
+      return dc;
+    } catch (e) { return null; }
   }
+  function openFast(c) { N.fast = makeFast(c); }
 
   function attach(c) {
     N.conn = c;
@@ -303,9 +495,14 @@
       if (N.conn !== c) return;
       N.lastRecv = now();
       N.via = c.relay ? 'relay' : 'p2p';
+      N.path = null; N.netRtt = 0; N.friendAway = false;
       if (!c.relay) openFast(c);
       onOpen(c);
     });
+    bind(c);
+  }
+
+  function bind(c) {
     c.on('data', function (msg) {
       if (N.conn !== c || !msg || typeof msg !== 'object') return;
       N.lastRecv = now();
@@ -315,12 +512,116 @@
     c.on('error', function () { if (N.conn === c) lost(); });
   }
 
+  // ---- faster route ----------------------------------------------------------
+  // The browser always prefers a direct link when one works, even when it is
+  // slow (a long, congested route between two mobile networks). When the
+  // direct ping stays above ~150 ms, the friend's game quietly opens a second
+  // link that must go through Cloudflare's TURN relay, measures it, and both
+  // sides move the match onto it if it is clearly faster. Only with TURN set up.
+
+  function altSlowMs() { var c = SR.NET_CONFIG || {}; return typeof c.altMs === 'number' ? c.altMs : 150; }
+  var ALT_CHECKS = 4, ALT_RETRY_MS = 60000;
+
+  function altClose() {
+    var a = N.alt;
+    N.alt = null;
+    if (!a) return;
+    clearInterval(a.timer);
+    if (a.c && N.conn !== a.c) { try { a.c.close(); } catch (e) { /* ignore */ } }
+    if (a.peer && N.altPeer !== a.peer) { try { a.peer.destroy(); } catch (e) { /* ignore */ } }
+  }
+
+  // Move the match onto another, already open connection.
+  function adopt(c, dc) {
+    var old = N.conn, oldFast = N.fast;
+    if (c.removeAllListeners) { c.removeAllListeners('data'); c.removeAllListeners('close'); c.removeAllListeners('error'); }
+    N.conn = c;
+    N.fast = dc || null;
+    N.lastRecv = now();
+    N.path = null; N.netRtt = 0; N.rtt = 0;
+    bind(c);
+    // Let anything still in flight on the old link arrive, then close it.
+    setTimeout(function () {
+      if (oldFast) { try { oldFast.close(); } catch (e) { /* ignore */ } }
+      if (old && N.conn !== old) { try { old.close(); } catch (e) { /* ignore */ } }
+    }, 1500);
+    checkPath();
+  }
+
+  // Guest, every 2 s during a match on a direct link.
+  function altWatch() {
+    if (N.role !== 'guest' || N.phase !== 'playing' || N.via !== 'p2p' || N.path !== 'direct' || !N.turn || N.alt) return;
+    var ms = N.netRtt || N.rtt;
+    N.slowN = ms > altSlowMs() ? (N.slowN || 0) + 1 : 0;
+    if (N.slowN < ALT_CHECKS || now() - (N.altAt || 0) < ALT_RETRY_MS) return;
+    N.altAt = now();
+    N.slowN = 0;
+    var peer;
+    try { peer = makePeer(null, true); } catch (e) { return; }
+    var a = N.alt = { peer: peer, c: null, rtts: [], timer: null };
+    peer.on('error', function () { if (N.alt === a) altClose(); });
+    peer.on('open', function () {
+      if (N.alt !== a || N.phase !== 'playing') { altClose(); return; }
+      var c = a.c = peer.connect(PREFIX + N.code, { reliable: true, serialization: 'json', metadata: { token: N.token, alt: 1, v: 1 } });
+      if (!c) { altClose(); return; }
+      c.on('open', function () {
+        if (N.alt !== a) return;
+        a.fast = makeFast(c);
+        var n = 0;
+        a.timer = setInterval(function () {
+          if (N.alt !== a) return;
+          if (++n > 6) { clearInterval(a.timer); altDecide(a); return; }
+          try { c.send({ t: 'ping', s: now() }); } catch (e) { /* counted as missing */ }
+        }, 500);
+      });
+      c.on('data', function (m) { if (N.alt === a && m && m.t === 'pong' && num(m.s)) a.rtts.push(now() - m.s); });
+      c.on('close', function () { if (N.alt === a) altClose(); });
+      c.on('error', function () { if (N.alt === a) altClose(); });
+    });
+    // TURN never came up: forget it until the next try.
+    setTimeout(function () { if (N.alt === a && !a.timer) altClose(); }, 10000);
+  }
+
+  function altDecide(a) {
+    var r = a.rtts.slice().sort(function (x, y) { return x - y; });
+    var med = r.length >= 3 ? r[Math.floor(r.length / 2)] : Infinity;
+    var cur = N.rtt || Infinity;
+    var c = SR.NET_CONFIG || {};
+    if (N.phase === 'playing' && N.alt === a && ((med < cur * 0.8 && cur - med > 30) || c.altTest)) {
+      try { a.c.send({ t: 'use' }); } catch (e) { altClose(); return; }
+      if (N.altPeer) { try { N.altPeer.destroy(); } catch (e) { /* ignore */ } }
+      N.altPeer = a.peer;
+      N.alt = null;
+      clearInterval(a.timer);
+      adopt(a.c, a.fast);
+      N.rtt = med === Infinity ? 0 : med;
+      return;
+    }
+    altClose();
+  }
+
+  // Host: the friend's trial link through Cloudflare. Answer its pings, and
+  // move the match onto it when they ask.
+  function onAltConnection(c) {
+    var meta = c.metadata || {};
+    if (!(meta.token && meta.token === N.token && N.phase === 'playing')) { c.on('open', function () { c.close(); }); return; }
+    var dc = null;
+    c.on('open', function () { dc = makeFast(c); });
+    c.on('data', function (m) {
+      if (!m || N.conn === c) return;
+      if (m.t === 'ping' && num(m.s)) { try { c.send({ t: 'pong', s: m.s }); } catch (e) { /* ignore */ } }
+      else if (m.t === 'use' && N.phase === 'playing') adopt(c, dc);
+    });
+    setTimeout(function () { if (N.conn !== c) { try { c.close(); } catch (e) { /* ignore */ } } }, 20000);
+  }
+
   function heartbeat() {
     clearTimer('beat');
     N.timers.beat = setInterval(function () {
       if (N.conn && N.conn.open) send({ t: 'ping', s: now() });
+      if (N.phase === 'playing' && ++N.beats % 2 === 0) { checkPath(); altWatch(); }
       showLink();
-      if (N.conn && N.conn.open && (N.phase === 'lobby' || N.phase === 'playing') && now() - N.lastRecv > LOST_MS) lost();
+      if (N.conn && N.conn.open && (N.phase === 'lobby' || N.phase === 'playing' || N.phase === 'over') && now() - N.lastRecv > (N.via === 'relay' ? RELAY_LOST_MS : LOST_MS)) lost();
       if (N.phase === 'rejoining') {
         var left = Math.max(0, Math.ceil((REJOIN_MS - (now() - N.lostAt)) / 1000));
         if (left <= 0) {
@@ -332,15 +633,77 @@
       }
       // A peer that lost the signalling server reconnects on its own.
       if (N.peer && !N.peer.destroyed && N.peer.disconnected) { try { N.peer.reconnect(); } catch (e) { /* retry next beat */ } }
+      if (N.role === 'host') hostWatch();
+      else if (N.role === 'guest' && N.phase === 'waiting') guestWatch();
     }, PING_MS);
+  }
+
+  // Host: keep the room reachable. Rebuild the PeerJS side if it was torn down,
+  // and give up only after a long spell with no server at all.
+  function hostWatch() {
+    if (N.phase === 'idle' || N.phase === 'over' || !N.code) return;
+    if ((!N.peer || N.peer.destroyed) && now() - N.peerTry > 5000 && !document.hidden) makeHostPeer();
+    if (N.phase === 'rejoining' && N.relink && relayLive() && now() - (N.relinkAt || 0) > 2000) {
+      N.relinkAt = now();
+      var note = JSON.stringify({ f: 'h', m: { t: 'relink' } });
+      N.hub.live().forEach(function (c) { c.publish(N.relink, note); });
+    }
+    if (N.phase !== 'waiting') return;
+    var up = (N.peer && N.peer.open && !N.peer.disconnected) || relayLive();
+    if (up) {
+      if (N.offSince && N.shown) status('Waiting for your friend to join. Send them the code or the invite link.');
+      N.offSince = 0;
+      return;
+    }
+    if (document.hidden) return; // timers barely run in the background; judge when the page is back
+    if (!N.offSince) N.offSince = now();
+    if (now() - N.offSince > HOST_OFFLINE_MS) { abort('Could not reach the online servers. Check your internet connection and try again.'); return; }
+    if (N.shown && now() - N.offSince > 2500) status('Reconnecting your room to the online servers…');
+  }
+
+  // Guest: keep knocking until the room answers or the join times out.
+  function guestWatch() {
+    if (N.conn && N.conn.open) return;
+    var t = now();
+    if (N.conn && N.conn.relay) {
+      if (t - N.helloAt > RETRY_MS) relayHello(); // the host may not have heard the first one
+    } else if (N.p2pDown === 'notfound' && N.peer && N.peer.open && t - N.retryAt > RETRY_MS) {
+      N.retryAt = t;
+      N.p2pDown = false;
+      connectToHost(false);
+    }
+    if (N.hub && N.hub.dead() && N.hub.keep) N.hub.revive();
+    guestDecide();
+    if (N.phase === 'waiting' && t - N.joinT > SLOW_JOIN_MS && !N.slowSaid) {
+      N.slowSaid = true;
+      if (!(N.conn && N.conn.relay)) status('Still connecting to room ' + N.code + '… make sure your friend keeps the game open.');
+    }
+  }
+
+  // Phones pause the page while the player is in another app (for example
+  // sending the invite) and often cut its connections. Mend them straight away
+  // when the page is back instead of waiting for the next heartbeat.
+  function revive() {
+    if (N.phase === 'idle' || N.phase === 'over') return;
+    if (N.hub && N.hub.keep) N.hub.revive();
+    if (N.peer && !N.peer.destroyed && N.peer.disconnected) { try { N.peer.reconnect(); } catch (e) { /* heartbeat retries */ } }
+    if (N.role === 'host') { N.offSince = 0; N.peerTry = 0; hostWatch(); }
+    else if (N.role === 'guest' && N.phase === 'waiting') { N.retryAt = 0; guestWatch(); }
   }
 
   function onPeerError(err) {
     var type = err && err.type;
-    if (type === 'unavailable-id' && N.role === 'host' && N.phase === 'waiting' && N.idTries < 4) {
-      // Code already taken: pick another.
-      N.idTries++;
-      startHostPeer();
+    if (type === 'unavailable-id' && N.role === 'host') {
+      if (!N.shown && N.phase === 'waiting' && N.idTries < 4) {
+        // Code already taken: pick another.
+        N.idTries++;
+        startHostPeer();
+        return;
+      }
+      // The code is already out there: keep it. The server usually still holds
+      // our old connection for a moment; hostWatch tries again shortly.
+      if (N.peer) { try { N.peer.destroy(); } catch (e) { /* ignore */ } }
+      N.peerTry = now();
       return;
     }
     if (type === 'peer-unavailable') {
@@ -354,7 +717,7 @@
       if (N.phase === 'playing' || N.phase === 'rejoining') return; // the heartbeat reconnects
       // The PeerJS server is unreachable: carry on over the relay if it works.
       if (N.role === 'guest') { N.p2pDown = N.p2pDown || 'down'; guestDecide(); return; }
-      if (N.role === 'host' && (relayLive() || (N.hub && !N.hub.dead()))) return;
+      if (N.role === 'host') return; // hostWatch reconnects, or gives up after a while
       abort('Could not reach the online servers. Check your internet connection and try again.');
       return;
     }
@@ -364,14 +727,19 @@
 
   // The link to the other player dropped.
   function lost() {
-    if (N.phase === 'over' || N.phase === 'idle') return;
+    if (N.phase === 'idle') return;
+    if (N.phase === 'over') { friendGone(); return; }
+    // Host on the relay: remember the friend's inbox so we can tell them to reconnect.
+    if (N.role === 'host' && N.conn && N.conn.relay) N.relink = N.conn.out;
     dropConn();
     if (N.role === 'host') {
       if (N.phase === 'lobby' || N.phase === 'waiting') {
         N.phase = 'waiting';
+        N.oppName = null;
+        showPlayers();
+        roomInfo(true);
         status('Your friend disconnected. Waiting for them to join again…');
         view('on-room');
-        roomInfo(true);
         return;
       }
       if (N.phase === 'playing') {
@@ -398,7 +766,7 @@
     clearTimer('rejoin');
     if (N.phase !== 'rejoining') return;
     // Came in through the relay, or the direct path isn't coming back: use the relay.
-    if (N.via === 'relay' || now() - N.lostAt > P2P_WAIT_MS) {
+    if (N.via === 'relay' || now() - N.lostAt > p2pWait()) {
       if (!N.hub || N.hub.dead()) startRelayGuest();
       relayHello();
       N.timers.rejoin = setTimeout(tryRejoin, 3000);
@@ -423,61 +791,138 @@
   function host(team) {
     cleanup();
     N.role = 'host';
+    N.code = null;
     N.myTeam = team;
     N.token = makeCode() + makeCode();
     N.format = SR.save.data.settings.format || 'standard';
     N.idTries = 0;
+    N.shown = false;
+    N.offSince = 0;
     view('on-room');
     $('on-code-big').textContent = '······';
+    inviteReady(false);
     status('Creating your room…');
-    startHostPeer();
     heartbeat();
+    loadIce(function () { if (N.role === 'host' && !N.code && N.myTeam === team) startHostPeer(); });
   }
 
   function startHostPeer() {
-    if (N.peer) { try { N.peer.destroy(); } catch (e) { /* ignore */ } }
     N.code = makeCode();
     N.phase = 'waiting';
-    try { N.peer = makePeer(PREFIX + N.code); } catch (e) { N.peer = null; }
-    if (!N.peer) { startRelayHost(); if (!N.hub) abort('Online play could not load. Check your connection and reload the page.'); return; }
-    N.peer.on('open', roomReady);
-    N.peer.on('connection', onHostConnection);
-    N.peer.on('error', onPeerError);
+    var ok = makeHostPeer();
     startRelayHost();
+    if (!ok && !N.hub) abort('Online play could not load. Check your connection and reload the page.');
+  }
+
+  // (Re)register the room's code with the PeerJS server.
+  function makeHostPeer() {
+    N.peerTry = now();
+    if (N.peer) { try { N.peer.destroy(); } catch (e) { /* ignore */ } }
+    var p;
+    try { p = makePeer(PREFIX + N.code); } catch (e) { p = null; }
+    N.peer = p;
+    if (!p) return false;
+    p.on('open', function () { if (N.peer === p) roomReady(); });
+    p.on('connection', function (c) { if (N.peer === p) onHostConnection(c); else { try { c.close(); } catch (e) { /* ignore */ } } });
+    p.on('error', function (err) { if (N.peer === p) onPeerError(err); });
+    return true;
   }
 
   function roomReady() {
-    if (N.role !== 'host' || N.phase !== 'waiting' || $('on-code-big').textContent === N.code) return;
+    if (N.role !== 'host' || N.phase !== 'waiting' || N.shown) return;
+    N.shown = true;
     $('on-code-big').textContent = N.code;
-    status('Waiting for your friend to join. Send them the code or the invite link.');
+    inviteReady(true);
+    showPlayers();
     roomInfo(true);
+    status('Waiting for your friend to join. Send them the code or the invite link.');
   }
 
-  function playerName(v) { return typeof v === 'string' && v ? v.slice(0, 24) : null; }
+  // ---- invite: copy and share ------------------------------------------------
+
+  function inviteReady(on) {
+    $('btn-on-copy').disabled = !on;
+    $('btn-on-share').disabled = !on;
+    var box = $('on-link');
+    box.value = on ? inviteLink(N.code) : '';
+    box.classList.toggle('hidden', !on);
+  }
+
+  function flash(btn, text, label) {
+    clearTimer('flash');
+    btn.textContent = text;
+    N.timers.flash = setTimeout(function () { btn.textContent = label; }, 1800);
+  }
+
+  // Copy with the Clipboard API, or the old select-and-copy way where that is
+  // missing or blocked (in-app browsers, plain http). If both fail, the link is
+  // left selected in its box so the player can copy it by hand.
+  function copyLink(after) {
+    var link = inviteLink(N.code), box = $('on-link'), btn = $('btn-on-copy');
+    box.value = link;
+    box.classList.remove('hidden');
+    var ok = function () { flash(btn, 'Link copied!', 'Copy invite link'); if (after) after(true); };
+    var manual = function () {
+      box.focus();
+      box.setSelectionRange(0, link.length);
+      status('Copy the link in the box above and send it to your friend.');
+      if (after) after(false);
+    };
+    var legacy = function () {
+      var done = false;
+      try {
+        box.focus();
+        box.setSelectionRange(0, link.length);
+        done = document.execCommand('copy');
+      } catch (e) { done = false; }
+      if (done) { box.blur(); try { window.getSelection().removeAllRanges(); } catch (e) { /* ignore */ } ok(); } else manual();
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext !== false) {
+      navigator.clipboard.writeText(link).then(ok, legacy);
+    } else legacy();
+  }
+
+  function shareLink() {
+    var link = inviteLink(N.code);
+    var data = { title: 'Spike Rally', text: 'Play volleyball with me in Spike Rally! Room code ' + N.code + '.', url: link };
+    if (!navigator.share || (navigator.canShare && !navigator.canShare(data))) { copyLink(); return; }
+    var p;
+    try { p = navigator.share(data); } catch (e) { copyLink(); return; }
+    if (p && p.catch) p.catch(function (err) {
+      // Closing the share sheet is fine; anything else (blocked, not allowed): copy instead.
+      if (!err || err.name !== 'AbortError') copyLink();
+    });
+  }
 
   function onHostConnection(c) {
     var meta = c.metadata || {};
-    if (N.phase === 'waiting' && playerName(meta.name)) N.oppName = playerName(meta.name);
+    if (meta.alt) { onAltConnection(c); return; }
     var busy = N.conn && N.conn.open;
-    var rejoin = N.phase === 'rejoining' && meta.token === N.token;
+    // The friend coming back with their match token. Their side may have noticed
+    // the drop before ours did, so accept it while we still think we're playing
+    // too (and replace the dead link) rather than turn them away as a third player.
+    var rejoin = !!meta.token && meta.token === N.token && (N.phase === 'rejoining' || N.phase === 'playing');
     if ((busy && !rejoin) || (N.phase !== 'waiting' && !rejoin)) {
       c.on('open', function () { try { c.send({ t: 'full' }); } catch (e) { /* ignore */ } setTimeout(function () { c.close(); }, 400); });
       return;
     }
+    if (N.phase === 'waiting') N.oppName = playerName(meta.name);
     dropConn();
     attach(c);
   }
 
   function onOpen() {
     if (N.role === 'host') {
-      if (N.phase === 'rejoining') {
+      if (N.phase === 'rejoining' || N.phase === 'playing') {
         N.phase = 'playing';
+        N.relink = null;
         if (SR.game) SR.game.paused = false;
         banner('');
         send({ t: 'start', resume: true, home: N.myTeam.id, away: N.oppTeam.id, format: N.format });
       } else {
         N.phase = 'lobby';
-        status((N.oppName || 'Your friend') + ' is here and is choosing a team…');
+        showPlayers();
+        status(friendName() + ' is here and is choosing a team…');
         send({ t: 'lobby', team: N.myTeam.id, format: N.format, token: N.token, name: SR.cg.username });
         roomInfo(false);
       }
@@ -491,7 +936,9 @@
   function startHostMatch(guestTeam) {
     N.oppTeam = guestTeam;
     N.phase = 'playing';
+    N.again = null;
     N.events = [];
+    N.names = [SR.cg.username || SR.t('You'), N.oppName || SR.t('Friend')];
     SR.ui.show(null);
     SR.game = new SR.Game({ home: N.myTeam, away: guestTeam, format: N.format, difficulty: 'normal', human: 'both', online: 'host', onEnd: hostEnd });
     send({ t: 'start', home: N.myTeam.id, away: guestTeam.id, format: N.format });
@@ -505,12 +952,47 @@
     finishOnline({ me: m.teams[0], opp: m.teams[1], oppName: N.oppName, mySets: m.sets[0], oppSets: m.sets[1], history: hist, stats: m.stats[0] });
   }
 
+  // The match is over but the room stays open, so the two can play again
+  // without going back through the menus (CrazyGames asks for this).
   function finishOnline(r) {
-    // Leave the link open a moment so the last message gets through.
-    var peer = N.peer;
-    setTimeout(function () { if (N.peer === peer && N.phase === 'over') cleanup(); }, 1500);
     banner('');
+    N.again = { me: false, them: false };
     SR.ui.onlineResult(r);
+    rematchStatus();
+  }
+
+  function rematchStatus(text) {
+    var btn = $('btn-rematch'), el = $('rematch-status');
+    if (!btn || !el) return;
+    var a = N.again;
+    if (text) { el.textContent = text; el.className = 'status error'; btn.disabled = true; return; }
+    if (!a) return;
+    btn.disabled = a.me;
+    el.className = 'status';
+    if (a.me) el.textContent = SR.t('Waiting for {name}…', { name: N.oppName || SR.t('your friend') });
+    else if (a.them) el.textContent = SR.t('{name} wants a rematch!', { name: friendName() });
+    else el.textContent = '';
+  }
+
+  function rematch() {
+    if (N.phase !== 'over' || !N.again || N.again.me) return;
+    if (!send({ t: 'again' })) { friendGone(); return; }
+    N.again.me = true;
+    rematchStatus();
+    tryRematch();
+  }
+
+  function tryRematch() {
+    var a = N.again;
+    if (N.role !== 'host' || N.phase !== 'over' || !a || !a.me || !a.them) return;
+    startHostMatch(N.oppTeam);
+  }
+
+  // The friend left (or their link died) while the result screen was up.
+  function friendGone() {
+    var name = friendName();
+    cleanup();
+    rematchStatus(SR.t('{name} left the room.', { name: name }));
   }
 
   // Apply a friend's call to team 1.
@@ -580,16 +1062,23 @@
     N.phase = 'waiting';
     N.token = null;
     N.p2pDown = false;
-    N.joinT = now();
+    N.joinT = N.p2pFrom = now();
+    N.slowSaid = false;
+    N.helloAt = 0;
+    N.retryAt = now();
     status('Connecting to room ' + code + '…');
     startRelayGuest();
-    try { N.peer = makePeer(); } catch (e) { N.peer = null; N.p2pDown = 'down'; }
-    if (N.peer) {
-      N.peer.on('open', function () { connectToHost(false); });
-      N.peer.on('error', onPeerError);
-    }
-    // If the direct link isn't up after a few seconds, try the relay.
-    N.timers.p2pwait = setTimeout(guestDecide, P2P_WAIT_MS + 50);
+    loadIce(function () {
+      if (N.role !== 'guest' || N.code !== code || N.phase !== 'waiting' || N.peer || (N.conn && N.conn.relay)) return;
+      N.p2pFrom = now();
+      try { N.peer = makePeer(); } catch (e) { N.peer = null; N.p2pDown = 'down'; }
+      if (N.peer) {
+        N.peer.on('open', function () { connectToHost(false); });
+        N.peer.on('error', onPeerError);
+      }
+      // If the direct link isn't up after a few seconds, try the relay.
+      N.timers.p2pwait = setTimeout(guestDecide, p2pWait() + 50);
+    });
     N.timers.join = setTimeout(function () {
       if (N.role === 'guest' && N.phase === 'waiting') abort('Could not connect to room ' + code + '. Make sure your friend\'s room is still open, then try again.');
     }, JOIN_TIMEOUT_MS);
@@ -610,8 +1099,14 @@
       if (num(msg.s)) { var rt = now() - msg.s; if (rt >= 0 && rt < 10000) N.rtt = N.rtt ? N.rtt + (rt - N.rtt) * 0.3 : rt; }
       return;
     }
+    if (msg.t === 'emo') { gotEmote(msg.e); return; }
+    if (msg.t === 'vis') { N.friendAway = !!msg.away; showLink(); return; }
+    if (msg.t === 'again') {
+      if (N.phase === 'over' && N.again) { N.again.them = true; rematchStatus(); tryRematch(); }
+      return;
+    }
     if (msg.t === 'bye') {
-      if (N.phase === 'over') return;
+      if (N.phase === 'over') { friendGone(); return; }
       if (N.role === 'host' && N.phase !== 'playing' && N.phase !== 'rejoining') { lost(); return; }
       abort(N.role === 'host' ? 'Your friend left the match.' : 'Your friend closed the room.');
       return;
@@ -626,14 +1121,18 @@
       return;
     }
     // Guest
-    if (msg.t === 'full') { abort('That room already has two players.'); return; }
+    if (msg.t === 'full') {
+      if (N.phase === 'rejoining') { dropConn(); return; } // keep trying until the window closes
+      abort('That room already has two players.');
+      return;
+    }
     if (msg.t === 'lobby') {
       N.phase = 'lobby';
       N.token = msg.token;
       N.format = msg.format;
       N.oppTeam = SR.teamById(msg.team);
       N.oppName = playerName(msg.name);
-      $('on-teams-title').textContent = (N.oppName || 'Your friend') + ' plays ' + N.oppTeam.name + '. Choose your team';
+      $('on-teams-title').textContent = friendName() + ' plays ' + N.oppTeam.name + '. Choose your team';
       roomInfo(false);
       // The host sets the rules; the friend just sees them.
       $('on-rules').innerHTML = '<p class="rules-fixed">Match: <b>' + SR.formatOf(N.format).label + '</b></p>';
@@ -653,6 +1152,8 @@
       N.myTeam = SR.teamById(msg.away);
       N.oppTeam = SR.teamById(msg.home);
       N.format = msg.format;
+      N.again = null;
+      N.names = [SR.cg.username || SR.t('You'), N.oppName || SR.t('Friend')];
       SR.ui.show(null);
       SR.game = new GuestGame(N.myTeam, N.oppTeam, N.format);
       return;
@@ -750,7 +1251,7 @@
     // hiccups never build up into a growing delay.
     // Over the relay, updates come less often and less evenly: keep a bigger cushion.
     var relay = N.via === 'relay';
-    var delay = Math.max(relay ? 0.09 : 0.05, Math.min(relay ? 0.45 : 0.25, (relay ? 0.06 : 0.035) + this.jit * 2.5)) * ts;
+    var delay = Math.max(relay ? 0.12 : 0.05, Math.min(relay ? 0.5 : 0.25, (relay ? 0.1 : 0.035) + this.jit * 2.5)) * ts;
     var since = Math.min(0.25, (now() - this.lastArr) / 1000) * ts;
     var target = newest.T + since - delay;
     var err = target - this.ph;
@@ -906,14 +1407,16 @@
   N.leave = leave;
   N.host = host;
   N.join = join;
+  N.rematch = rematch;
 
   // Called every frame: the host streams snapshots.
   N.tick = function () {
+    syncEmoteBar();
     if (N.role !== 'host' || N.phase !== 'playing') return;
     var g = SR.game;
     if (!g || g.cfg.online !== 'host' || !N.conn || !N.conn.open) return;
     if (N.events.length) { send({ t: 'ev', e: N.events }); N.events = []; }
-    var gap = N.conn.relay ? 50 : SNAP_MS, t = now();
+    var gap = N.conn.relay ? RELAY_SNAP_MS : SNAP_MS, t = now();
     if (t - N.lastSnap < gap - 4) return;
     N.lastSnap = t - N.lastSnap < gap * 2 ? N.lastSnap + gap : t;
     var f = N.fast, msg = snapshot(g);
@@ -944,40 +1447,56 @@
     $('btn-on-join').addEventListener('click', function () { SR.audio.play('click'); join($('on-code').value); });
     $('on-code').addEventListener('keydown', function (e) { if (e.key === 'Enter') join($('on-code').value); });
     $('on-code').addEventListener('input', function (e) { var v = cleanCode(e.target.value); if (v !== e.target.value) e.target.value = v; });
-    $('btn-on-copy').addEventListener('click', function () {
-      var link = inviteLink(N.code), btn = $('btn-on-copy');
-      var done = function () { btn.textContent = 'Link copied!'; setTimeout(function () { btn.textContent = 'Copy invite link'; }, 1800); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { window.prompt('Copy this link', link); });
-      else window.prompt('Copy this link', link);
-    });
+    $('btn-on-copy').addEventListener('click', function () { if (N.shown) { SR.audio.play('click'); copyLink(); } });
     var share = $('btn-on-share');
-    if (navigator.share) {
-      share.addEventListener('click', function () {
-        navigator.share({ title: 'Spike Rally', text: 'Play volleyball with me! Room code ' + N.code, url: inviteLink(N.code) }).catch(function () { /* cancelled */ });
-      });
-    } else share.classList.add('hidden');
+    // Without a share sheet (most desktop browsers) the copy button does the job.
+    if (navigator.share) share.addEventListener('click', function () { if (N.shown) shareLink(); });
+    else share.classList.add('hidden');
+    $('on-link').addEventListener('focus', function (e) { e.target.select(); });
+    document.addEventListener('visibilitychange', function () {
+      if (N.conn && N.conn.open) sendVis();
+      if (!document.hidden) revive();
+    });
+    window.addEventListener('online', revive);
+    window.addEventListener('pageshow', function (e) { if (e.persisted) revive(); });
     $('btn-on-back').addEventListener('click', function () {
       SR.audio.play('click');
       if (N.phase !== 'idle') leave(); else SR.ui.show('scr-menu');
     });
     window.addEventListener('beforeunload', function () { if (N.phase !== 'idle') send({ t: 'bye' }); });
+    document.querySelectorAll('#emotes [data-emo]').forEach(function (b) {
+      // Never take keyboard focus, so Space still serves after a reaction.
+      b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      b.addEventListener('click', function () { b.blur(); sendEmote(b.getAttribute('data-emo')); });
+    });
     // A friend clicked Join on CrazyGames while this game was already open.
     SR.cg.onJoinRoom(function (params) {
       var code = cleanCode(params && params.room);
-      if (code.length !== 6) return;
-      if (SR.game && SR.game.cfg.human !== -1 && !SR.game.cfg.online) SR.ui.stopMatch();
+      if (code.length !== 6 || (N.code === code && N.phase !== 'idle')) return;
+      if (N.phase !== 'idle') leave();
+      if (SR.game && !SR.game.cfg.online) SR.ui.stopMatch();
+      if (SR.demo && SR.demo.active) SR.demo.stop(true);
       $('on-code').value = code;
       openLobby();
       join(code);
     });
     var room = cleanCode(SR.cg.inviteParam('room') || (query && query.get('room')));
+    if (query && query.has('room')) {
+      // Take the code out of the address bar so a reload later doesn't try to
+      // join an old room again.
+      try {
+        var u = new URL(window.location.href);
+        u.searchParams.delete('room');
+        window.history.replaceState(null, '', u.pathname + u.search + u.hash);
+      } catch (e) { /* old browser: harmless */ }
+    }
     if (room.length === 6) {
       $('on-code').value = room;
       openLobby();
       join(room);
     } else if (SR.cg.instantMultiplayer) {
-      // Started from CrazyGames' multiplayer page: open a room right away
-      // with the saved team and rules so friends can join immediately.
+      // Started from CrazyGames' multiplayer page: open a private room right
+      // away with the saved team and rules, so friends can join at once.
       openLobby();
       host(SR.teamById(SR.save.data.settings.team) || SR.TEAMS[0]);
     }

@@ -361,7 +361,7 @@
 
   // ---- HUD ----------------------------------------------------------------
 
-  var lastScore = [0, 0], popAt = [-9, -9];
+  var lastScore = [0, 0], popAt = [-9, -9], hudBottom = 0;
 
   // Scoreboard scale: bigger on small screens, never wider than the canvas.
   function sbScale() { return Math.min(UI, (W - 20) / 500); }
@@ -371,6 +371,35 @@
     ctx.save(); ctx.translate(W / 2, 0); ctx.scale(k, k); ctx.translate(-W / 2, 0);
     drawScoreboardInner(ctx, game);
     ctx.restore();
+    hudBottom = 10 + 52 * k;
+  }
+
+  // Online emoji reactions: a bubble beside each player's half of the
+  // scoreboard (under it in portrait, where the board fills the width).
+  var REACT_S = 2.4;
+  function drawReacts(ctx, game) {
+    var rs = game.cfg.online && SR.net && SR.net.reacts;
+    if (!rs) return;
+    var now = performance.now() / 1000, k = sbScale(), R = 24 * k;
+    for (var side = 0; side < 2; side++) {
+      var r = rs[side], age = r ? now - r.at : -1;
+      if (age < 0 || age > REACT_S) continue;
+      var sign = side === 0 ? -1 : 1;
+      var x = portrait ? W / 2 + sign * (W / 2 - R - 16) : W / 2 + sign * (250 * k + R + 12);
+      var y = (portrait ? hudBottom + R + 10 : 10 + 26 * k) - Math.min(age, 1) * 4;
+      // Pop in with a little overshoot, fade out at the end.
+      var a = Math.min(1, age / 0.22), sc = a < 1 ? 1 + 0.25 * Math.sin(a * Math.PI) - 0.25 * (1 - a) : 1;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, (REACT_S - age) / 0.4));
+      ctx.translate(x, y); ctx.scale(sc, sc);
+      ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(6,10,18,0.88)'; ctx.fill();
+      ctx.strokeStyle = game.match.teams[side].color; ctx.lineWidth = 3; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = Math.round(R * 1.2) + 'px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+      ctx.fillText(r.e, 0, R * 0.06);
+      ctx.restore();
+    }
   }
 
   function drawScoreboardInner(ctx, game) {
@@ -389,7 +418,11 @@
       ctx.textAlign = t === 0 ? 'left' : 'right';
       ctx.fillText(team.short, cx + sign * (w / 2 - 26), y0 + 21);
       ctx.font = '600 12px system-ui, sans-serif'; ctx.fillStyle = '#9fb0c8';
-      ctx.fillText(SR.t('rot {n}', { n: m.rot[t] + 1 }), cx + sign * (w / 2 - 26), y0 + 39);
+      // Online: the players' names (CrazyGames usernames) instead of the rotation.
+      var names = game.cfg.online && SR.net && SR.net.names, nm = names && names[t];
+      if (nm && nm.length > 11) nm = nm.slice(0, 10) + '…';
+      if (nm) ctx.fillStyle = '#e6edf7';
+      ctx.fillText(nm || SR.t('rot {n}', { n: m.rot[t] + 1 }), cx + sign * (w / 2 - 26), y0 + 39);
       // Sets box (gold) and points box (white)
       var sx = cx + sign * 118, px = cx + sign * 62;
       roundRect(ctx, sx - 15, y0 + 9, 30, h - 18, 6); ctx.fillStyle = '#f2c230'; ctx.fill();
@@ -436,6 +469,7 @@
     ctx.fillStyle = 'rgba(6,10,18,0.8)'; ctx.fill();
     ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     lines.forEach(function (l, i) { ctx.fillText(l, W / 2, y + 6 + lh * (i + 0.5)); });
+    hudBottom = y + h;
   }
 
   // A row of pill buttons along the bottom; returns their hit boxes.
@@ -446,7 +480,8 @@
     perRow = Math.ceil(items.length / rows);
     w = Math.min(w * 1.3, (W - 20 - gap * (perRow - 1)) / perRow);
     // Portrait keeps the bottom-right corner free for the pause button.
-    var bottom = portrait ? H - 74 : H - 22, out = [];
+    // Portrait keeps the bottom strip free for the pause button and online reactions.
+    var bottom = portrait ? H - 80 : H - 22, out = [];
     items.forEach(function (it, i) {
       var row = Math.floor(i / perRow), col = i % perRow, inRow = Math.min(perRow, items.length - row * perRow);
       var x0 = W / 2 - (inRow * w + (inRow - 1) * gap) / 2, y0 = bottom - (rows - row) * h - (rows - row - 1) * gap;
@@ -646,7 +681,10 @@
         hint(ctx, SR.t(SR.touch ? 'Call the block: commit to a side, or Read the set' : 'Call the block (1-4 or tap a B zone): commit to a side, or Read the set'));
         this.buttons = buttonRow(ctx, [{ id: 'left', label: SR.t('Left') }, { id: 'middle', label: SR.t('Middle') }, { id: 'right', label: SR.t('Right') }, { id: 'read', label: SR.t('Read') }], ui.blockCall, 'block');
       }
+      drawReacts(ctx, game);
       if (rally.banner) drawBanner(ctx, rally.banner);
+      // The How to play demo's pointer, drawn over everything.
+      if (game.cfg.demo && SR.demo) SR.demo.draw(ctx, { proj: proj, panX: panX, W: W, H: H, buttons: this.buttons, heads: this.heads, portrait: portrait });
     },
     scale: 1
   };

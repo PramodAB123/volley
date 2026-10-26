@@ -133,6 +133,7 @@
     $('result-stats').textContent = SR.t('Aces {a} · Kills {k} · Blocks {b} · Errors {e}', { a: m.stats[0].aces, k: m.stats[0].kills, b: m.stats[0].blocks, e: m.stats[0].errors });
     $('result-stars').textContent = stars ? SR.t(stars > 1 ? '+{n} stars' : '+{n} star', { n: stars }) : SR.t('No stars this time');
     $('result-notes').textContent = notes.join(' ');
+    onlineButtons(false);
     // End of a match is a natural break for a midgame ad (CrazyGames spaces
     // them out; if none plays, the result shows straight away).
     SR.cg.midgame(function () {
@@ -414,6 +415,13 @@
     show('scr-menu');
   }
 
+  // Online results offer a rematch in the same room instead of Continue.
+  function onlineButtons(on) {
+    $('result-online').classList.toggle('hidden', !on);
+    $('btn-result-ok').classList.toggle('hidden', on);
+    $('btn-rematch').disabled = false;
+  }
+
   // Result screen for an online match, from this player's side.
   function onlineResult(r) {
     var won = r.mySets > r.oppSets, st = data().stats, stars = won ? SR.STARS.quickWin : 0;
@@ -431,6 +439,7 @@
     $('result-stats').textContent = SR.t('Aces {a} · Kills {k} · Blocks {b} · Errors {e}', { a: r.stats.aces, k: r.stats.kills, b: r.stats.blocks, e: r.stats.errors });
     $('result-stars').textContent = stars ? SR.t('+{n} star', { n: stars }) : SR.t('No stars this time');
     $('result-notes').textContent = '';
+    onlineButtons(true);
     SR.cg.midgame(function () {
       stopMatch();
       show('scr-result');
@@ -480,6 +489,8 @@
       on('btn-result-ok', function () {
         if (mode === 'league') openLeague(); else if (mode === 'cup') openCup(); else show('scr-menu');
       });
+      on('btn-rematch', function () { SR.net.rematch(); });
+      on('btn-leave-room', function () { SR.net.leave(); });
       $('btn-ad-stars').addEventListener('click', watchAdForStars);
       on('btn-pause', togglePause);
       on('btn-resume', togglePause);

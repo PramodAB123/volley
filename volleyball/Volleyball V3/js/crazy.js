@@ -99,7 +99,7 @@
   // screen opens or closes, so it only reports real changes.
   cg.syncGameplay = function () {
     var g = SR.game;
-    var on = !!(g && g.cfg.human !== -1 && !g.paused && !cg.busy && SR.ui && SR.ui.current() === null);
+    var on = !!(g && g.cfg.human !== -1 && !g.cfg.demo && !g.paused && !cg.busy && SR.ui && SR.ui.current() === null);
     if (on === playing) return;
     playing = on;
     safe(function (s) { if (on) s.game.gameplayStart(); else s.game.gameplayStop(); });

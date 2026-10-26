@@ -92,24 +92,53 @@
 
   // Connect to every broker in the list at once; the room works over whichever
   // ones are reachable, so a single broker outage doesn't break play.
-  function Hub(urls, will) {
+  // With opts.keep, a dropped broker is dialled again (phones cut sockets while
+  // the game is in the background, e.g. while the player shares the invite).
+  function Hub(urls, will, opts) {
     var self = this;
+    this.urls = urls;
+    this.will = will;
+    this.keep = !!(opts && opts.keep);
+    this.ended = false;
     this.clients = [];
     this.subs = [];
     this.retained = [];
+    this.n = 0;
     this.id = 'sr' + Math.random().toString(36).slice(2, 12);
-    urls.forEach(function (u) {
-      var c = new Client(u, self.id + '_' + self.clients.length, will);
-      c.onopen = function () {
-        self.subs.forEach(function (t) { c.subscribe(t); });
-        self.retained.forEach(function (r) { c.publish(r[0], r[1], true); });
-        if (self.onopen) self.onopen(c);
-      };
-      c.onmessage = function (t, m) { if (self.onmessage) self.onmessage(t, m, c); };
-      c.onclose = function () { if (self.onclose) self.onclose(c); };
-      self.clients.push(c);
-    });
+    urls.forEach(function (u, i) { self.clients[i] = self.dial(u, i, 0); });
   }
+  Hub.prototype.dial = function (u, i, tries) {
+    var self = this, c = new Client(u, this.id + '_' + (this.n++), this.will);
+    c.tries = tries;
+    c.onopen = function () {
+      c.tries = 0;
+      self.subs.forEach(function (t) { c.subscribe(t); });
+      self.retained.forEach(function (r) { c.publish(r[0], r[1], true); });
+      if (self.onopen) self.onopen(c);
+    };
+    c.onmessage = function (t, m) { if (self.onmessage) self.onmessage(t, m, c); };
+    c.onclose = function () {
+      if (self.keep && !self.ended) {
+        clearTimeout(c.retry);
+        c.retry = setTimeout(function () { self.redial(i); }, Math.min(15000, 1000 * Math.pow(2, c.tries)));
+      }
+      if (self.onclose) self.onclose(c);
+    };
+    return c;
+  };
+  Hub.prototype.redial = function (i) {
+    var old = this.clients[i];
+    if (this.ended || !old || !old.closed) return;
+    clearTimeout(old.retry);
+    this.clients[i] = this.dial(this.urls[i], i, (old.tries || 0) + 1);
+  };
+  // Dial every dropped broker again right now (e.g. when the page comes back).
+  Hub.prototype.revive = function () {
+    for (var i = 0; i < this.clients.length; i++) {
+      var c = this.clients[i];
+      if (c && c.closed) { c.tries = 0; this.redial(i); }
+    }
+  };
   Hub.prototype.live = function () { return this.clients.filter(function (c) { return c.open; }); };
   Hub.prototype.dead = function () { return this.clients.every(function (c) { return c.closed; }); };
   Hub.prototype.subscribe = function (t) { this.subs.push(t); this.live().forEach(function (c) { c.subscribe(t); }); };
@@ -118,7 +147,9 @@
     this.live().forEach(function (c) { c.publish(t, m, retain); });
   };
   Hub.prototype.close = function (clearTopic) {
+    this.ended = true;
     this.clients.forEach(function (c) {
+      clearTimeout(c.retry);
       if (clearTopic && c.open) c.publish(clearTopic, '', true);
       c.onopen = c.onmessage = null;
       c.close();
