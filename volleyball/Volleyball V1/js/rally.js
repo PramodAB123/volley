@@ -520,6 +520,8 @@
     var ua = this.uis[team];
     ua.prompt = null;
     var cp = { x: this.ball.x, y: this.ball.y, z: this.ball.z };
+    // You must pick a spot (or Line, Cross or Tool): no aim, no swing at the ball.
+    if (this.isHuman(team) && !ua.attackTarget) { this.whiff(h, cp); return; }
     var shot, aim;
     if (this.isHuman(team)) {
       shot = ua.tip ? 'tip' : (ua.shot || 'power');
@@ -578,6 +580,17 @@
       }
     }
     this.planReception(def, S.dig || 0);
+  };
+
+  // The hitter swings at nothing and the ball drops onto their own floor.
+  R.whiff = function (h, cp) {
+    var team = h.team, l = local(team, cp.x, cp.y);
+    var w = world(team, clamp(l.x - rnd(0.6, 1.2), 5, 8.4), clamp(l.y + rnd(-0.5, 0.5), 0.4, 8.6));
+    this.launch(cp, { x: w.x, y: w.y, z: 0 }, 0.55);
+    this.lastTouch = team;
+    this.lastOffense = null;
+    this.clearPrompts();
+    this.say('NO AIM', this.human === 'both' ? this.m.teams[team].name : 'Pick a spot to spike', '#ff9e9e', 0.9);
   };
 
   R.blockResult = function (outcome, def, cross) {

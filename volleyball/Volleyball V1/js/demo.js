@@ -87,7 +87,7 @@
     },
     {
       name: 'Set', title: 'Set: pick your hitter',
-      body: 'When your team passes, numbers appear over your front-row hitters. Pick one before your setter touches the ball, or the setter decides for you. Then, while the set is in the air, pick a shot and where it lands.',
+      body: 'When your team passes, numbers appear over your front-row hitters. Pick one before your setter touches the ball, or the setter decides for you. Then, while the set is in the air, pick a shot and where it lands. Pick no spot and your hitter misses the ball.',
       keys: { pc: 'Click a player or press 1 to 3', touch: 'Tap a numbered player' },
       server: 1, script: { cpuServe: EASY_SERVE, noDig: 1 },
       beats: [
@@ -165,7 +165,7 @@
     },
     {
       name: 'Read', title: 'Read and dig',
-      body: 'Not sure where the set is going? Read keeps your blockers home: two of them watch the set and jump with the hitter. If the spike gets past, your back row digs it. Make no call and your setter and hitter choose for you.',
+      body: 'Not sure where the set is going? Read keeps your blockers home: two of them watch the set and jump with the hitter. If the spike gets past, your back row digs it. Make no hitter call and your setter chooses for you, but where the spike goes is always your call.',
       keys: { pc: 'Press 4 or click Read', touch: 'Tap Read' },
       server: 0, script: { cpuHitter: 'left', cpuShot: 'power', cpuAim: [2.2, 4.3] },
       beats: [
@@ -174,8 +174,12 @@
           you: function () { return called('block', 'read'); }, youSay: 'Your turn: not sure where the set goes? Pick Read (tap Read or press 4) so your blockers react to the set.',
           youWrong: 'This step is about Read. Tap Read or press 4.' },
         { wait: their, slow: 0.12, say: 'The spike gets past the block, but your back row is already moving to dig it.', aim: { w: [2.2, 4.3] }, dur: 1.8 },
-        { wait: prompt('hitter'), enter: function (r) { r.script.noDig = 1; }, slow: 0.5, say: 'No call this time: your setter picks the hitter and the shot.', dur: 1.2 },
-        { wait: dead, say: 'Point! Dug, set and put away without a single call.', dur: 2.8, end: true }
+        { wait: prompt('hitter'), enter: function (r) { r.script.noDig = 1; }, slow: 0.5, say: 'No hitter call this time: your setter picks who gets the set.', dur: 1.2 },
+        { wait: prompt('target'), slow: 0.05, say: 'The spike is still yours to aim: tap open floor on their court.', aim: { w: [13.4, 4.5] }, dur: 2.2,
+          act: function (r) { r.pickTarget({ x: 13.4, y: 4.5 }, false); },
+          you: function (r) { return called('target') || called('shot') && !!r.ui.attackTarget; },
+          youSay: 'Your turn: the setter chose the hitter, but you aim the spike. Tap open floor on their court (or pick Line, Cross or Tool).' },
+        { wait: dead, say: 'Point! Dug, set and put away.', dur: 2.8, end: true }
       ]
     },
     {
