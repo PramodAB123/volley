@@ -632,6 +632,9 @@
     N.myTeam = team;
     N.token = makeCode() + makeCode();
     N.format = SR.save.data.settings.format || 'standard';
+    // The host picks the court; 'mine' means the court equipped in their Shop.
+    var oc = SR.save.data.settings.onlineCourt;
+    N.court = (oc && oc !== 'mine' && SR.courtById(oc)) ? oc : SR.render.courtStyle().id;
     N.idTries = 0;
     N.shown = false;
     N.offSince = 0;
@@ -751,11 +754,11 @@
         N.relink = null;
         if (SR.game) SR.game.paused = false;
         banner('');
-        send({ t: 'start', resume: true, home: N.myTeam.id, away: N.oppTeam.id, format: N.format });
+        send({ t: 'start', resume: true, home: N.myTeam.id, away: N.oppTeam.id, format: N.format, court: N.court });
       } else {
         N.phase = 'lobby';
         status('Your friend is here and is choosing a team…');
-        send({ t: 'lobby', team: N.myTeam.id, format: N.format, token: N.token });
+        send({ t: 'lobby', team: N.myTeam.id, format: N.format, token: N.token, court: N.court });
       }
     } else {
       clearTimer('join');
@@ -769,8 +772,8 @@
     N.phase = 'playing';
     N.events = [];
     SR.ui.show(null);
-    SR.game = new SR.Game({ home: N.myTeam, away: guestTeam, format: N.format, difficulty: 'normal', human: 'both', online: 'host', onEnd: hostEnd });
-    send({ t: 'start', home: N.myTeam.id, away: guestTeam.id, format: N.format });
+    SR.game = new SR.Game({ home: N.myTeam, away: guestTeam, format: N.format, difficulty: 'normal', human: 'both', online: 'host', venue: N.court, onEnd: hostEnd });
+    send({ t: 'start', home: N.myTeam.id, away: guestTeam.id, format: N.format, court: N.court });
   }
 
   function hostEnd(game) {
@@ -922,7 +925,11 @@
       N.oppTeam = SR.teamById(msg.team);
       $('on-teams-title').textContent = 'Your friend plays ' + N.oppTeam.name + '. Choose your team';
       // The host sets the rules; the friend just sees them.
-      $('on-rules').innerHTML = '<p class="rules-fixed">Match: <b>' + SR.formatOf(N.format).label + '</b></p>';
+      N.court = msg.court || null;
+      var ct = SR.courtById(N.court);
+      $('on-rules').innerHTML = '<p class="rules-fixed">Match: <b>' + SR.formatOf(N.format).label + '</b>' +
+        (ct ? '</p><p class="rules-fixed on-court">' + SR.ui.courtSwatch(ct) + '<span>Court: <b>' + ct.name + '</b></span>' : '') + '</p>';
+      $('on-courts').classList.add('hidden');
       SR.ui.teamCards($('on-team-grid'), N.oppTeam.id, function (t) {
         N.myTeam = t;
         send({ t: 'pick', team: t.id });
@@ -939,8 +946,9 @@
       N.myTeam = SR.teamById(msg.away);
       N.oppTeam = SR.teamById(msg.home);
       N.format = msg.format;
+      N.court = msg.court || null;
       SR.ui.show(null);
-      SR.game = new GuestGame(N.myTeam, N.oppTeam, N.format);
+      SR.game = new GuestGame(N.myTeam, N.oppTeam, N.format, N.court);
       return;
     }
     if (msg.t === 's' && SR.game && SR.game.cfg.online === 'guest') { SR.game.rally.push(msg); return; }
@@ -955,8 +963,8 @@
 
   // The friend's view of the match: built from the host's snapshots, mirrored
   // so their own team is always the near side (team 0 here).
-  function GuestGame(me, opp, format) {
-    this.cfg = { human: 0, online: 'guest' };
+  function GuestGame(me, opp, format, court) {
+    this.cfg = { human: 0, online: 'guest', venue: court || null };
     this.paused = false;
     this.hover = null;
     this.shift = false;
@@ -1219,6 +1227,7 @@
       SR.audio.play('click');
       $('on-teams-title').textContent = 'Choose your team';
       SR.ui.rulesPicker($('on-rules'));
+      SR.ui.courtPicker($('on-courts'), 'onlineCourt');
       SR.ui.teamCards($('on-team-grid'), null, function (t) { host(t); });
       view('on-teams');
       status('');

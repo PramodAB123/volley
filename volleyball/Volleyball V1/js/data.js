@@ -114,4 +114,10 @@ SR.ARENAS = {
 
 SR.QUICK_COURTS = ['neon', 'blossom', 'dunes', 'street'];
 
+// A court by id: a venue arena (SR.ARENAS key) or a Shop court. Online matches
+// send this id so the friend sees the court the host picked.
+SR.courtById = function (id) {
+  return (id && (SR.ARENAS[id] || SR.SHOP.courts.find(function (c) { return c.id === id; }))) || null;
+};
+
 SR.STARS = { quickWin: 1, leagueWin: 1, leagueTitle: 3, cupWin: 1, cupTitle: 5 };

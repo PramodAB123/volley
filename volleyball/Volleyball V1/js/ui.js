@@ -50,22 +50,28 @@
     courtPicker($('team-courts'));
   }
 
-  // Quick match only: play on your Shop court or one of the free themed courts.
-  function courtPicker(box) {
-    if (mode !== 'quick') { box.classList.add('hidden'); return; }
+  // Quick match: play on your Shop court or one of the free themed courts.
+  // Online (key 'onlineCourt'), the host also gets every Shop court they own.
+  function courtPicker(box, key) {
+    key = key || 'quickCourt';
+    if (key === 'quickCourt' && mode !== 'quick') { box.classList.add('hidden'); return; }
     box.classList.remove('hidden');
-    var cur = data().settings.quickCourt || 'mine', mine = SR.render.courtStyle();
+    var cur = data().settings[key] || 'mine', mine = SR.render.courtStyle();
     var opts = [{ id: 'mine', a: mine, name: 'My court' }].concat(SR.QUICK_COURTS.map(function (id) { return { id: id, a: SR.ARENAS[id], name: SR.ARENAS[id].name }; }));
+    if (key === 'onlineCourt') {
+      SR.SHOP.courts.forEach(function (c) { if (c.id !== mine.id && data().owned.courts.indexOf(c.id) >= 0) opts.push({ id: c.id, a: c, name: c.name }); });
+      if (!opts.some(function (o) { return o.id === cur; })) cur = 'mine';
+    }
     box.innerHTML = '<span class="rule-name">Court</span><div class="court-pick" role="radiogroup" aria-label="Court">' +
       opts.map(function (o) {
         return '<button type="button" role="radio" aria-checked="' + (o.id === cur) + '" class="' + (o.id === cur ? 'on' : '') + '" data-v="' + o.id + '">' + courtSwatch(o.a) + '<span>' + o.name + '</span></button>';
       }).join('') + '</div>';
     box.querySelectorAll('button').forEach(function (b) {
       b.addEventListener('click', function () {
-        data().settings.quickCourt = b.getAttribute('data-v');
+        data().settings[key] = b.getAttribute('data-v');
         save();
         SR.audio.play('click');
-        courtPicker(box);
+        courtPicker(box, key);
       });
     });
   }
@@ -443,6 +449,8 @@
     stopMatch: stopMatch,
     teamCards: teamCards,
     rulesPicker: rulesPicker,
+    courtPicker: courtPicker,
+    courtSwatch: courtSwatch,
     onlineResult: onlineResult,
     init: function () {
       refreshStars();

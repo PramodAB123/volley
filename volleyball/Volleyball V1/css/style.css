@@ -547,3 +547,7 @@ html:not(.page-home) .more-cue { display: none; }
 .v-lava i { background: repeating-linear-gradient(70deg, transparent 0 6px, var(--va) 6px 7.5px, transparent 7.5px 13px), repeating-linear-gradient(-40deg, transparent 0 9px, var(--va) 9px 10px, transparent 10px 17px); opacity: 0.9; }
 .v-candy i { background: repeating-linear-gradient(-60deg, var(--va) 0 4px, #fff 4px 8px); opacity: 0.7; }
 .v-pixels i { background: conic-gradient(#ff4d6d 25%, #3bf0a0 0 50%, #4d8bff 0 75%, #ffd23f 0) 0 0 / 8px 8px; opacity: 0.55; }
+
+/* Online: the court the host picked, shown to the friend. */
+.on-court { display: flex; align-items: center; gap: 10px; }
+.on-court .venue-swatch { width: 56px; height: 34px; }

@@ -90,12 +90,13 @@
 
   R.fx = function (name, data) { if (SR.fx) SR.fx.emit(name, data); };
 
-  // Time to make your calls: when you are attacking in single-player, your
-  // pass and set fly a little higher and slower. Only the ball's flight
-  // changes, so players keep moving at full speed (no slow motion). Not
-  // online (both sides share one clock) or in the demo (scripted timing).
+  // Time to make your calls: when you are attacking, your pass and set fly a
+  // little higher and slower. Only the ball's flight changes, so players keep
+  // moving at full speed (no slow motion). Online it applies to whichever
+  // friend is attacking (the host runs the flight, the guest sees it in the
+  // snapshots). Not in the demo (scripted timing).
   R.moreTime = function (team) {
-    return this.human === 0 && team === 0 && !this.script && !(SR.demo && SR.demo.active);
+    return this.isHuman(team) && !this.script && !(SR.demo && SR.demo.active);
   };
 
   R.act = function (p, type, dur) { p.act = { type: type, t: this.t, dur: dur }; };
