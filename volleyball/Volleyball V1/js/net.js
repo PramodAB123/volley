@@ -106,7 +106,7 @@
     el.classList.toggle('hidden', !on);
     if (!on) return;
     var ms = Math.round(N.rtt || 0), bad = N.via === 'relay' || ms > 180;
-    var how = N.via === 'relay' ? ' · backup server' : N.path ? ' · ' + N.path : '';
+    var how = N.via === 'relay' ? ' · backup server' : '';
     // A game in a background tab, a minimised window or a locked phone barely
     // runs, which looks like a terrible connection. Say so instead.
     if (N.friendAway) { el.textContent = 'Friend\'s game is in the background'; el.className = 'net-link bad'; return; }
