@@ -120,4 +120,43 @@ SR.courtById = function (id) {
   return (id && (SR.ARENAS[id] || SR.SHOP.courts.find(function (c) { return c.id === id; }))) || null;
 };
 
-SR.STARS = { quickWin: 1, leagueWin: 1, leagueTitle: 3, cupWin: 1, cupTitle: 5 };
+SR.STARS = { quickWin: 1, leagueWin: 1, leagueTitle: 3, cupWin: 1, cupTitle: 5, careerStage: 2, careerFinal: 5 };
+
+// Career: every court in the game, one after another. Each stage is a court
+// (an arena or a Shop court) and the team that plays there; beating them
+// unlocks the next court. Arenas are defended by their home team. Opponents
+// and difficulty get tougher along the way; Champions Court is the last stage.
+SR.CAREER = [
+  { court: 'maple',   opp: 'tigers',  diff: 'easy' },
+  { court: 'ocean',   opp: 'falcons', diff: 'easy' },
+  { court: 'clay',    opp: 'sharks',  diff: 'easy' },
+  { court: 'street',  opp: 'tigers',  diff: 'normal' },
+  { court: 'dunes',   opp: 'falcons', diff: 'normal' },
+  { court: 'blossom', opp: 'sharks',  diff: 'normal' },
+  { court: 'tigers',  opp: 'tigers',  diff: 'normal' },
+  { court: 'falcons', opp: 'falcons', diff: 'normal' },
+  { court: 'sharks',  opp: 'sharks',  diff: 'normal' },
+  { court: 'night',   opp: 'owls',    diff: 'normal' },
+  { court: 'neon',    opp: 'rays',    diff: 'normal' },
+  { court: 'owls',    opp: 'owls',    diff: 'normal' },
+  { court: 'rays',    opp: 'rays',    diff: 'normal' },
+  { court: 'candy',   opp: 'wolves',  diff: 'normal' },
+  { court: 'wolves',  opp: 'wolves',  diff: 'hard' },
+  { court: 'galaxy',  opp: 'lions',   diff: 'hard' },
+  { court: 'lions',   opp: 'lions',   diff: 'hard' },
+  { court: 'lava',    opp: 'hawks',   diff: 'hard' },
+  { court: 'hawks',   opp: 'hawks',   diff: 'hard' },
+  { court: 'arcade',  opp: 'lions',   diff: 'hard' },
+  { court: 'final',   opp: 'hawks',   diff: 'hard' }
+];
+
+// Every Career court sits on its own island. A new career deals out fresh
+// names from these lists (first word + second word); the last island gets a
+// grand one.
+SR.ISLE_NAMES = {
+  first: ['Coconut', 'Coral', 'Mango', 'Thunder', 'Seashell', 'Palm', 'Turtle', 'Volcano', 'Sunny', 'Pearl', 'Pirate', 'Breezy',
+    'Starfish', 'Dolphin', 'Crystal', 'Tiki', 'Banana', 'Lighthouse', 'Hibiscus', 'Driftwood', 'Kraken', 'Moonlit', 'Sapphire',
+    'Pineapple', 'Seagull', 'Treasure', 'Whale', 'Papaya', 'Sandy', 'Bamboo', 'Flamingo', 'Parrot', 'Sunset', 'Skull', 'Mermaid'],
+  second: ['Isle', 'Island', 'Cay', 'Key', 'Atoll', 'Reef', 'Cove', 'Bay', 'Point', 'Rock', 'Shores', 'Lagoon', 'Peak', 'Harbor', 'Sands'],
+  final: ['Golden Crown Atoll', 'Champions Isle', 'Royal Trophy Island', 'Grand Spike Atoll', 'Victory Peak Isle']
+};

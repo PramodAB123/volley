@@ -984,6 +984,21 @@
       var id = SR.save.data.equipped.court;
       return SR.SHOP.courts.find(function (c) { return c.id === id; }) || SR.SHOP.courts[0];
     },
+    // A still picture of a court (wall, crowd and floor) `w` pixels wide, for
+    // the Career map. It has a canvas of its own and the wide camera, so the
+    // match's arena cache and the current view are left as they were.
+    courtThumb: function (style, w) {
+      var keep = [W, H, FOC, CY], sc = w / 960, cv = document.createElement('canvas');
+      W = 960; H = 640; FOC = 1250; CY = 290;
+      cv.width = Math.round(W * sc); cv.height = Math.round(H * sc);
+      var c = cv.getContext('2d');
+      c.setTransform(sc, 0, 0, sc, 0, 0);
+      drawBackdrop(c, style);
+      drawStands(c, style, 0, 0);
+      drawFloor(c, style);
+      W = keep[0]; H = keep[1]; FOC = keep[2]; CY = keep[3];
+      return cv;
+    },
     // Screen positions of player heads from the last frame, for click picking.
     heads: [],
     buttons: [],

@@ -1,4 +1,4 @@
-// Menus and modes: quick match, league, tournament, shop, stats, settings.
+// Menus and modes: quick match, career, league, tournament, shop, stats, settings.
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var current = null, mode = 'quick', pickStep = 0, pickedHome = null;
@@ -9,7 +9,7 @@
     $('hud').classList.toggle('hidden', id !== null);
   }
 
-  function save() { SR.save.write(); refreshStars(); }
+  function save() { SR.save.write(); refreshStars(); refreshCareer(); }
   function data() { return SR.save.data; }
   function team(id) { return SR.teamById(id); }
 
@@ -43,7 +43,7 @@
 
   function renderTeams() {
     var title = mode === 'quick' ? (pickStep === 0 ? 'Choose your team' : 'Choose your opponent') :
-      (mode === 'league' ? 'League: choose your team' : 'Tournament: choose your team');
+      ({ league: 'League', cup: 'Tournament', career: 'Career' })[mode] + ': choose your team';
     $('teams-title').textContent = title;
     teamCards($('team-grid'), pickStep === 1 && pickedHome ? pickedHome.id : null, pickTeam);
     rulesPicker($('team-rules'));
@@ -129,17 +129,18 @@
       return;
     }
     data().settings.team = t.id;
-    if (mode === 'league') newLeague(t.id);
+    if (mode === 'career') careerTeam(t.id);
+    else if (mode === 'league') newLeague(t.id);
     else newCup(t.id);
   }
 
   // ---- matches ------------------------------------------------------------
 
-  function startMatch(home, away, venue) {
+  function startMatch(home, away, venue, difficulty) {
     var s = data().settings;
     show(null);
     if (mode === 'quick' && SR.ARENAS[s.quickCourt]) venue = s.quickCourt;
-    SR.game = new SR.Game({ home: home, away: away, format: s.format, difficulty: s.difficulty, human: 0, mode: mode, venue: venue || null, onEnd: finishMatch });
+    SR.game = new SR.Game({ home: home, away: away, format: s.format, difficulty: difficulty || s.difficulty, human: 0, mode: mode, venue: venue || null, onEnd: finishMatch });
   }
 
   // ---- venues -------------------------------------------------------------
@@ -176,6 +177,7 @@
     if (mode === 'quick') { if (won) stars += SR.STARS.quickWin; }
     else if (mode === 'league') { var r = leagueRecord(result); stars += r.stars; notes = r.notes; }
     else if (mode === 'cup') { var c = cupRecord(result); stars += c.stars; notes = c.notes; }
+    else if (mode === 'career') { var k = careerRecord(won); stars += k.stars; notes = k.notes; }
     data().stars += stars;
     save();
 
@@ -349,6 +351,248 @@
     show('scr-cup');
   }
 
+  // ---- career -------------------------------------------------------------
+
+  // One court after another (SR.CAREER), each on an island in a sea map.
+  // data().career.unlocked is the stage you are on: every stage before it is
+  // beaten, every stage after it locked (and hidden in fog).
+  var careerPick = -1, justUnlocked = -1, thumbs = {}, thumbQueue = [];
+  var LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><rect x="4" y="10" width="16" height="11" rx="2.5" fill="currentColor"/><circle cx="12" cy="15.5" r="1.8" fill="#0b1220"/></svg>';
+  // Shapes the islands and the sea around them reuse.
+  var SEA_DEFS = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
+    '<symbol id="sr-palm" viewBox="0 0 40 50" overflow="visible"><path d="M20 48 C22 36 19 26 23 15" fill="none" stroke="#8a5a2b" stroke-width="3.6" stroke-linecap="round"/>' +
+    '<g fill="#2f9e44"><path d="M23 15 C14 8 6 10 1 17 C9 13 16 14 23 15Z"/><path d="M23 15 C30 6 38 7 42 13 C35 10 29 12 23 15Z"/><path d="M23 15 C18 4 11 1 5 3 C12 5 18 9 23 15Z"/><path d="M23 15 C27 3 34 0 39 2 C33 5 27 9 23 15Z"/><path d="M23 15 C22 7 25 1 30 -2 C27 5 25 9 23 15Z"/></g>' +
+    '<circle cx="22" cy="16.5" r="1.8" fill="#6b3f1d"/><circle cx="25" cy="16" r="1.7" fill="#6b3f1d"/></symbol>' +
+    '<symbol id="sr-boat" viewBox="0 0 40 36" overflow="visible"><path d="M4 26 H36 L31 33 H9 Z" fill="#b5542e"/><path d="M4 26 H36" stroke="#7a3518" stroke-width="1.5"/><path d="M20 4 V26" stroke="#5a3a1a" stroke-width="2"/>' +
+    '<path d="M21 5 L34 23 H21 Z" fill="#fff"/><path d="M19 8 L9 23 H19 Z" fill="#ffd23f"/><path d="M20 4 L27 6 L20 8 Z" fill="#e5484d"/></symbol>' +
+    '<symbol id="sr-gull" viewBox="0 0 20 8" overflow="visible"><path d="M1 6 Q5 0 10 5 Q15 0 19 6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></symbol>' +
+    '<symbol id="sr-wave" viewBox="0 0 30 8" overflow="visible"><path d="M1 5 Q5 1 9 5 T17 5 T25 5" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round"/></symbol>' +
+    '<symbol id="sr-whale" viewBox="0 0 40 24" overflow="visible"><path d="M20 22 C18 14 20 9 24 6 C22 3 17 2 13 3 C17 0 23 0 26 4 C29 0 35 0 39 3 C35 2 30 3 28 6 C32 9 33 14 30 22" fill="#2a4e7a"/></symbol>' +
+    '</defs></svg>';
+
+  function careerCourt(i) { return SR.courtById(SR.CAREER[i].court); }
+
+  // The team you face at a stage; if that's your own team, the closest match.
+  function careerOpp(i) {
+    var me = data().career.team, id = SR.CAREER[i].opp;
+    if (id !== me) return team(id);
+    var p = SR.teamPower(team(id));
+    return SR.TEAMS.filter(function (t) { return t.id !== me; })
+      .sort(function (a, b) { return Math.abs(SR.teamPower(a) - p) - Math.abs(SR.teamPower(b) - p); })[0];
+  }
+
+  function careerReward(i) { return i === SR.CAREER.length - 1 ? SR.STARS.careerFinal : SR.STARS.careerStage; }
+
+  // Island names are dealt out at random once per career and then kept.
+  function careerIsles(C) {
+    var n = SR.CAREER.length, N = SR.ISLE_NAMES;
+    if (C.isles && C.isles.length === n) return C.isles;
+    var first = shuffle(N.first.slice()), names = [];
+    for (var i = 0; i < n - 1; i++) {
+      var a = first[i % first.length], b;
+      do { b = N.second[Math.floor(Math.random() * N.second.length)]; } while (a === 'Sunset' && b === 'Sands');
+      names.push(a + ' ' + b);
+    }
+    names.push(N.final[Math.floor(Math.random() * N.final.length)]);
+    C.isles = names;
+    SR.save.write();
+    return names;
+  }
+
+  // Repeatable random numbers, so each island keeps its shape.
+  function seeded(seed) {
+    return function () {
+      seed = (seed + 0x6d2b79f5) | 0;
+      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // A smooth closed outline through `radii` (one per direction) around cx, cy.
+  function blob(radii, cx, cy, rx, ry) {
+    var n = radii.length, p = radii.map(function (r, i) {
+      var a = i / n * Math.PI * 2;
+      return [cx + Math.cos(a) * rx * r, cy + Math.sin(a) * ry * r];
+    });
+    var d = 'M' + p[0][0].toFixed(1) + ' ' + p[0][1].toFixed(1);
+    for (var i = 0; i < n; i++) {
+      var p0 = p[(i - 1 + n) % n], p1 = p[i], p2 = p[(i + 1) % n], p3 = p[(i + 2) % n];
+      d += ' C' + (p1[0] + (p2[0] - p0[0]) / 6).toFixed(1) + ' ' + (p1[1] + (p2[1] - p0[1]) / 6).toFixed(1) + ' ' +
+        (p2[0] - (p3[0] - p1[0]) / 6).toFixed(1) + ' ' + (p2[1] - (p3[1] - p1[1]) / 6).toFixed(1) + ' ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1);
+    }
+    return d + 'Z';
+  }
+
+  // An island 300 x 200: shallows, foam, sand, grass, palms and rocks.
+  function islandSvg(i, final, w, h) {
+    w = w || 300; h = h || 200;
+    var rnd = seeded(i * 7919 + 17), radii = [];
+    for (var k = 0; k < 9; k++) radii.push(0.86 + rnd() * 0.24);
+    var cx = w / 2, cy = h / 2 + 4, sx = w / 300, sy = h / 200;
+    var sand = final ? '#ffe39a' : '#f3d9a0', grass = final ? '#7cc45a' : '#5cb85c';
+    var out = '<svg class="cisland" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true">' +
+      '<path d="' + blob(radii, cx, cy, 148 * sx, 96 * sy) + '" fill="#8fe6f0" opacity="0.55"/>' +
+      '<path d="' + blob(radii, cx, cy, 134 * sx, 86 * sy) + '" fill="none" stroke="#fff" stroke-opacity="0.7" stroke-width="2.5" stroke-dasharray="7 9" class="cfoam"/>' +
+      '<path d="' + blob(radii, cx, cy + 5, 126 * sx, 80 * sy) + '" fill="#c9a86a"/>' +
+      '<path d="' + blob(radii, cx, cy, 126 * sx, 80 * sy) + '" fill="' + sand + '"/>' +
+      '<path d="' + blob(radii.slice().reverse(), cx, cy - 2, 104 * sx, 62 * sy) + '" fill="#3e8e41"/>' +
+      '<path d="' + blob(radii.slice().reverse(), cx, cy - 6, 102 * sx, 58 * sy) + '" fill="' + grass + '"/>';
+    // Palms and rocks round the edge, clear of the court picture in the middle.
+    var spots = [[0.1, 0.45], [0.14, 0.7], [0.86, 0.42], [0.9, 0.68], [0.2, 0.2], [0.8, 0.2]];
+    spots.forEach(function (sp, k) {
+      if (rnd() < (k < 4 ? 0.3 : 0.55)) return;
+      var x = sp[0] * w + (rnd() - 0.5) * 10, y = sp[1] * h + (rnd() - 0.5) * 8, sc = 0.75 + rnd() * 0.4;
+      out += '<use href="#sr-palm" x="' + (x - 20 * sc).toFixed(1) + '" y="' + (y - 46 * sc).toFixed(1) + '" width="' + (40 * sc).toFixed(1) + '" height="' + (50 * sc).toFixed(1) + '"/>';
+    });
+    for (var r = 0; r < 3; r++) {
+      var rx = (rnd() < 0.5 ? 0.16 + rnd() * 0.1 : 0.74 + rnd() * 0.1) * w, ry = (0.78 + rnd() * 0.08) * h;
+      out += '<ellipse cx="' + rx.toFixed(1) + '" cy="' + ry.toFixed(1) + '" rx="' + (4 + rnd() * 4).toFixed(1) + '" ry="3" fill="#8d8f98"/>';
+    }
+    if (final) out += '<path d="M' + (w * 0.88) + ' ' + (h * 0.62) + ' V' + (h * 0.3) + '" stroke="#5a3a1a" stroke-width="2.5"/><path d="M' + (w * 0.88) + ' ' + (h * 0.3) + ' l18 6 l-18 6 Z" fill="#ffd23f"/>';
+    return out + '</svg>';
+  }
+
+  // Little things in the open sea beside the islands.
+  function seaDecor(i, x, y, amp) {
+    var rnd = seeded(i * 104729 + 3), side = x > 50 ? -1 : 1, out = '';
+    var dx = 50 + side * (amp + 12 + rnd() * 8), dy = y + (rnd() - 0.5) * 60;
+    var pick = rnd();
+    if (pick < 0.32) out += '<div class="cdecor islet" style="left:' + dx + '%;top:' + dy + 'px">' + islandSvg(i + 50, false, 110, 74) + '</div>';
+    else if (pick < 0.5) out += '<svg class="cdecor boat" style="left:' + dx + '%;top:' + dy + 'px" viewBox="0 0 40 36"><use href="#sr-boat"/></svg>';
+    else if (pick < 0.64) out += '<svg class="cdecor whale" style="left:' + dx + '%;top:' + dy + 'px" viewBox="0 0 40 24"><use href="#sr-whale"/></svg>';
+    else out += '<div class="cdecor rocks" style="left:' + dx + '%;top:' + dy + 'px"><i></i><i></i><i></i></div>';
+    for (var k = 0; k < 2; k++) out += '<svg class="cdecor wave" style="left:' + (8 + rnd() * 84) + '%;top:' + (y + (rnd() - 0.5) * 160) + 'px" viewBox="0 0 30 8"><use href="#sr-wave"/></svg>';
+    if (rnd() < 0.35) out += '<svg class="cdecor gull" style="left:' + (15 + rnd() * 70) + '%;top:' + (y - 70 + rnd() * 40) + 'px" viewBox="0 0 20 8"><use href="#sr-gull"/></svg>';
+    return out;
+  }
+
+  // Menu button: how far you are.
+  function refreshCareer() {
+    var el = $('career-prog'), C = data().career, n = SR.CAREER.length, done = C ? Math.min(C.unlocked, n) : 0;
+    if (el) el.textContent = C ? (done >= n ? 'All ' + n + ' islands won' : 'Island ' + (done + 1) + ' of ' + n) : 'New: ' + n + ' islands to win';
+    var bar = $('career-prog-bar');
+    if (bar) bar.style.width = Math.round(done / n * 100) + '%';
+  }
+
+  function openCareer() {
+    var C = data().career;
+    if (!C) { openTeams('career'); return; }
+    mode = 'career';
+    if (careerPick < 0) careerPick = C.unlocked;
+    careerPick = Math.min(careerPick, C.unlocked, SR.CAREER.length - 1);
+    show('scr-career');
+    renderCareer();
+    // Bring the island you are on (or the one you just unlocked) into view.
+    var node = $('career-map').querySelector('[data-i="' + careerPick + '"]'), sc = $('career-scroll');
+    if (node) sc.scrollTop = parseFloat(node.style.top) - sc.clientHeight / 2;
+  }
+
+  function careerTeam(id) {
+    var C = data().career;
+    if (C) C.team = id; else data().career = { team: id, unlocked: 0 };
+    careerPick = data().career.unlocked;
+    save();
+    openCareer();
+  }
+
+  // Court pictures are drawn a few at a time so the screen opens at once.
+  function thumbImg(id) {
+    return thumbs[id] ? '<img alt="" src="' + thumbs[id] + '">' : '<img alt="" data-court="' + id + '">';
+  }
+  function pumpThumbs() {
+    var id = thumbQueue.shift();
+    if (!id) return;
+    if (!thumbs[id]) {
+      try { thumbs[id] = SR.render.courtThumb(SR.courtById(id), 320).toDataURL('image/jpeg', 0.82); } catch (e) { thumbs[id] = ''; }
+    }
+    document.querySelectorAll('img[data-court="' + id + '"]').forEach(function (im) { if (thumbs[id]) im.src = thumbs[id]; im.removeAttribute('data-court'); });
+    if (thumbQueue.length) setTimeout(pumpThumbs, 0);
+  }
+
+  function renderCareer() {
+    var C = data().career, n = SR.CAREER.length, me = team(C.team), done = Math.min(C.unlocked, n), isles = careerIsles(C);
+    $('career-sub').innerHTML = chip(me) + me.name + ' · ' + (done >= n ? 'Every island won! Replay any court.' : 'Island ' + (done + 1) + ' of ' + n);
+    $('career-bar').style.width = Math.round(done / n * 100) + '%';
+
+    // A winding sea route, island 1 at the top and the final island at the bottom.
+    var map = $('career-map'), mw = map.clientWidth || 600, s = mw < 560 || window.innerHeight < 520 ? 0.7 : 1;
+    var ROW = Math.round(205 * s), TOP = Math.round(130 * s), pts = [], html = '', decor = '';
+    var amp = Math.max(6, Math.min(27, (mw / 2 - 150 * s) / mw * 100));
+    SR.CAREER.forEach(function (st, i) {
+      var x = 50 + amp * Math.sin(i * 1.26), y = TOP + i * ROW, a = careerCourt(i), fin = i === n - 1;
+      var state = i < C.unlocked ? 'done' : i === C.unlocked ? 'open' : 'locked';
+      pts.push([x, y]);
+      decor += seaDecor(i, x, y, amp);
+      html += '<button type="button" class="cnode ' + state + (i === careerPick ? ' sel' : '') + (i === justUnlocked ? ' unlocking' : '') + (fin ? ' final' : '') +
+        '" data-i="' + i + '" style="left:' + x + '%;top:' + y + 'px;--s:' + s + '" aria-label="' + isles[i] + ', ' + a.name + (state === 'locked' ? ', locked' : state === 'done' ? ', won' : '') + '">' +
+        islandSvg(i, fin) + '<span class="cfog"></span>' +
+        '<span class="csign">' + (fin ? '🏆 ' : '') + isles[i] + '</span>' +
+        '<span class="cthumb">' + thumbImg(st.court) + '<span class="clock">' + LOCK + '</span>' +
+        (state === 'done' ? '<span class="ccheck">✓</span>' : '') + (state === 'open' ? '<span class="cplay">PLAY</span>' : '') + '</span>' +
+        '<span class="cnum">' + (i + 1) + '</span>' +
+        '<span class="cname">' + a.name + '</span>' +
+        (state === 'open' ? '<svg class="cboat" viewBox="0 0 40 36" aria-hidden="true"><use href="#sr-boat"/></svg>' : '') + '</button>';
+    });
+    var h = TOP + (n - 1) * ROW + Math.round(150 * s);
+    function seg(from, to) {
+      var d = '';
+      for (var i = from; i < to; i++) {
+        var p = pts[i], q = pts[i + 1];
+        d += (i === from ? 'M' + p[0] + ' ' + p[1] : '') + ' C' + p[0] + ' ' + (p[1] + ROW / 2) + ' ' + q[0] + ' ' + (q[1] - ROW / 2) + ' ' + q[0] + ' ' + q[1];
+      }
+      return d;
+    }
+    var reach = Math.min(C.unlocked, n - 1);
+    map.style.height = h + 'px';
+    map.innerHTML = SEA_DEFS + decor + '<svg class="cpath" viewBox="0 0 100 ' + h + '" preserveAspectRatio="none" aria-hidden="true">' +
+      '<path class="todo" d="' + seg(0, n - 1) + '"/>' + (reach > 0 ? '<path class="done" d="' + seg(0, reach) + '"/>' : '') + '</svg>' + html;
+    map.querySelectorAll('.cnode').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var i = +b.getAttribute('data-i');
+        SR.audio.play('click');
+        if (i > C.unlocked) {
+          b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+        } else {
+          careerPick = i;
+          map.querySelectorAll('.cnode').forEach(function (o) { o.classList.toggle('sel', o === b); });
+        }
+        careerInfo(i);
+      });
+    });
+    careerInfo(careerPick);
+    justUnlocked = -1;
+    thumbQueue = SR.CAREER.map(function (st) { return st.court; }).filter(function (id) { return !thumbs[id]; });
+    if (thumbQueue.length) setTimeout(pumpThumbs, 0);
+  }
+
+  // The card under the map: the selected island, who plays there, and Play.
+  function careerInfo(i) {
+    var C = data().career, a = careerCourt(i), st = SR.CAREER[i], opp = careerOpp(i), locked = i > C.unlocked, isles = careerIsles(C);
+    var what = locked ? 'Locked · win on ' + isles[i - 1] + ' to sail here' :
+      i < C.unlocked ? 'Won · replay for ★ ' + SR.STARS.quickWin : (i < SR.CAREER.length - 1 ? 'Win to unlock ' + isles[i + 1] : 'Win the final island') + ' · ★ ' + careerReward(i);
+    $('career-pick').innerHTML = '<span class="cpick-thumb">' + thumbImg(st.court) + '</span>' +
+      '<span class="venue-text"><small>Island ' + (i + 1) + ' · ' + isles[i] + '</small><b>' + a.name + '</b>' +
+      '<span>vs ' + chip(opp) + opp.name + ' · ' + SR.DIFFICULTY[st.diff].label + '</span><span class="cwhat">' + what + '</span></span>' +
+      '<button id="btn-career-play" type="button" class="btn primary"' + (locked ? ' disabled' : '') + '>' + (locked ? 'Locked' : 'Play') + '</button>';
+    $('career-pick').classList.toggle('locked', locked);
+    if (!locked) on('btn-career-play', function () { startMatch(team(C.team), opp, st.court, st.diff); });
+  }
+
+  function careerRecord(won) {
+    var C = data().career, out = { stars: 0, notes: [] }, i = careerPick, n = SR.CAREER.length;
+    if (!C) return out;
+    var first = i === C.unlocked, isles = careerIsles(C);
+    if (won && first) {
+      out.stars += careerReward(i);
+      C.unlocked = i + 1;
+      if (i + 1 < n) { justUnlocked = careerPick = i + 1; out.notes.push('New island unlocked: ' + isles[i + 1] + ' (' + careerCourt(i + 1).name + ')!'); }
+      else out.notes.push('Career complete! You won every island.');
+    } else if (won) out.stars += SR.STARS.quickWin;
+    else if (first && i + 1 < n) out.notes.push('Win on ' + isles[i] + ' to unlock ' + isles[i + 1] + '.');
+    return out;
+  }
+
   // ---- shop, stats, settings ----------------------------------------------
 
   function renderShop() {
@@ -454,7 +698,17 @@
     onlineResult: onlineResult,
     init: function () {
       refreshStars();
+      refreshCareer();
       on('btn-quick', function () { openTeams('quick'); });
+      on('btn-career', openCareer);
+      on('btn-career-team', function () { openTeams('career'); });
+      var careerArmed = false;
+      on('btn-career-reset', function () {
+        var b = $('btn-career-reset');
+        if (!careerArmed) { careerArmed = true; b.textContent = 'Click again to restart'; setTimeout(function () { careerArmed = false; b.textContent = 'Restart career'; }, 3000); return; }
+        careerArmed = false; b.textContent = 'Restart career';
+        data().career = null; careerPick = 0; save(); openTeams('career');
+      });
       on('btn-league', openLeague);
       on('btn-cup', openCup);
       on('btn-shop', function () { renderShop(); show('scr-shop'); });
@@ -472,7 +726,7 @@
       on('btn-cup-new', function () { data().tournament = null; save(); openTeams('cup'); });
       on('btn-cup-quit', function () { data().tournament = null; save(); show('scr-menu'); });
       on('btn-result-ok', function () {
-        if (mode === 'league') openLeague(); else if (mode === 'cup') openCup(); else show('scr-menu');
+        if (mode === 'league') openLeague(); else if (mode === 'cup') openCup(); else if (mode === 'career') openCareer(); else show('scr-menu');
       });
       on('btn-pause', togglePause);
       on('btn-resume', togglePause);
@@ -483,7 +737,13 @@
         var b = $('btn-reset');
         if (!armed) { armed = true; b.textContent = 'Click again to erase everything'; setTimeout(function () { armed = false; b.textContent = 'Reset progress'; }, 3000); return; }
         armed = false; b.textContent = 'Reset progress';
-        SR.save.reset(); renderStats(); refreshStars();
+        SR.save.reset(); renderStats(); refreshStars(); refreshCareer();
+      });
+      // The map's curve depends on its width.
+      var lastW = 0;
+      window.addEventListener('resize', function () {
+        var w = $('career-map').clientWidth;
+        if (current === 'scr-career' && w !== lastW) { lastW = w; renderCareer(); }
       });
       $('set-format').addEventListener('change', function (e) { data().settings.format = e.target.value; save(); });
       $('set-diff').addEventListener('change', function (e) { data().settings.difficulty = e.target.value; save(); });
