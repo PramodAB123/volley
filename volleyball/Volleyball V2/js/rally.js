@@ -747,7 +747,8 @@
   R.pickTarget = function (pt, tip, team) {
     var u = this.uiOf(team);
     if (u.prompt !== 'target') return;
-    u.attackTarget = { x: pt.x, y: pt.y };
+    // A tap up in the stands still means "long", but no further than the serve aim reaches.
+    u.attackTarget = { x: clamp(pt.x, -1, C.L + 1), y: clamp(pt.y, -1, C.W + 1) };
     u.tip = !!tip;
     if (tip) u.shot = 'tip';
     if (SR.SHOTS[u.shot].auto) u.shot = 'power';

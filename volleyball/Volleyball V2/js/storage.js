@@ -12,7 +12,8 @@
       settings: { format: 'standard', difficulty: 'normal', sound: true, team: 'hawks', lang: 'auto' },
       stats: { matches: 0, wins: 0, points: 0, aces: 0, kills: 0, blocks: 0 },
       league: null,
-      tournament: null
+      tournament: null,
+      career: null
     };
   }
 

@@ -15,9 +15,9 @@
     rally.formation(1, 'base');
     rally.snap();
     if (cfg.demo) return; // the How to play demo stages its own rallies (demo.js)
-    // League and tournament matches open by naming the venue.
-    var venue = cfg.venue && SR.ARENAS[cfg.venue];
-    if (cfg.human !== -1) rally.say(SR.t('SET {n}', { n: 1 }), venue ? SR.t(venue.name) : SR.t('{a} vs {b}', { a: cfg.home.name, b: cfg.away.name }), venue ? venue.accent : '#ffffff', 2);
+    // League, tournament and Career matches open by naming the venue.
+    var venue = cfg.venue && SR.courtById(cfg.venue);
+    if (cfg.human !== -1) rally.say(SR.t('SET {n}', { n: 1 }), venue ? SR.t(venue.name) : SR.t('{a} vs {b}', { a: cfg.home.name, b: cfg.away.name }), venue ? venue.accent || venue.line : '#ffffff', 2);
     rally.wait(cfg.human !== -1 ? 1.4 : 0.4, function () { rally.startServe({ snap: true }); });
   };
 

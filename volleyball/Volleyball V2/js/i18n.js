@@ -109,11 +109,11 @@
       'Jeder Ballwechsel zählt; ein Satz wird mit zwei Punkten Vorsprung gewonnen. Wähle vor dem Spiel die Punkte pro Satz (5, 11 oder 15) und die Satzzahl (1, Best of 3 oder Best of 5). Gewinnst du den Ballwechsel bei gegnerischem Aufschlag, bekommst du den Aufschlag und dein Team rotiert. Mit P oder Esc pausieren.',
       'Her ralli sayıdır; her seti iki sayı farkla kazan. Maçtan önce set başına sayıyı (5, 11 veya 15) ve set sayısını (1, 3 setin en iyisi veya 5 setin en iyisi) seç. Rakibin servisinde ralliyi kazanırsan servis sana geçer ve takımın rotasyon yapar. Duraklatmak için P veya Esc\'ye bas.'],
     'help.stars': [
-      'Estrellas: 1 por victoria. Título de liga +3, copa del torneo +5. Gástalas en la Tienda.',
-      'Estrelas: 1 por vitória. Título da liga +3, taça do torneio +5. Gaste na Loja.',
-      'Étoiles : 1 par victoire. Titre de champion +3, coupe du tournoi +5. Dépense-les à la Boutique.',
-      'Sterne: 1 pro Sieg. Ligatitel +3, Turnierpokal +5. Gib sie im Shop aus.',
-      'Yıldızlar: galibiyet başına 1. Lig şampiyonluğu +3, turnuva kupası +5. Mağazada harca.'],
+      'Estrellas: 1 por victoria. Título de liga +3, copa del torneo +5, cada nueva isla de la Carrera +2 (la isla final +5). Gástalas en la Tienda.',
+      'Estrelas: 1 por vitória. Título da liga +3, taça do torneio +5, cada nova ilha da Carreira +2 (a ilha final +5). Gaste na Loja.',
+      'Étoiles : 1 par victoire. Titre de champion +3, coupe du tournoi +5, chaque nouvelle île de la Carrière +2 (l\'île finale +5). Dépense-les à la Boutique.',
+      'Sterne: 1 pro Sieg. Ligatitel +3, Turnierpokal +5, jede neue Karriere-Insel +2 (die letzte Insel +5). Gib sie im Shop aus.',
+      'Yıldızlar: galibiyet başına 1. Lig şampiyonluğu +3, turnuva kupası +5, her yeni Kariyer adası +2 (son ada +5). Mağazada harca.'],
 
     // ---- rules picker and formats ----
     'Points per set': ['Puntos por set', 'Pontos por set', 'Points par set', 'Punkte pro Satz', 'Set başına sayı'],
@@ -943,7 +943,34 @@
     'Galaxy': ['Galaxia', 'Galáxia', 'Galaxie', 'Galaxie', 'Galaksi'],
     'Lava Pit': ['Pozo de lava', 'Poço de lava', 'Fosse de lave', 'Lavagrube', 'Lav Çukuru'],
     'Candy Land': ['Tierra de dulces', 'Terra dos doces', 'Pays des bonbons', 'Zuckerland', 'Şeker Diyarı'],
-    'Retro Arcade': ['Arcade retro', 'Fliperama retrô', 'Arcade rétro', 'Retro-Arcade', 'Retro Atari']
+    'Retro Arcade': ['Arcade retro', 'Fliperama retrô', 'Arcade rétro', 'Retro-Arcade', 'Retro Atari'],
+    // ---- 2026-10-27: Career islands and the new Home page ----
+    'Career': ['Carrera', 'Carreira', 'Carrière', 'Karriere', 'Kariyer'],
+    'Jump straight into a game': ['Entra directo a jugar', 'Comece a jogar na hora', 'Lance-toi direct dans un match', 'Sofort losspielen', 'Hemen bir maça başla'],
+    'Career: choose your team': ['Carrera: elige tu equipo', 'Carreira: escolha seu time', 'Carrière : choisis ton équipe', 'Karriere: Wähle dein Team', 'Kariyer: takımını seç'],
+    'All {n} islands won': ['Las {n} islas ganadas', 'Todas as {n} ilhas vencidas', 'Les {n} îles gagnées', 'Alle {n} Inseln gewonnen', '{n} adanın hepsi kazanıldı'],
+    'Island {i} of {n}': ['Isla {i} de {n}', 'Ilha {i} de {n}', 'Île {i} sur {n}', 'Insel {i} von {n}', 'Ada {i} / {n}'],
+    'New: {n} islands to win': ['Nuevo: {n} islas por ganar', 'Novo: {n} ilhas para vencer', 'Nouveau : {n} îles à gagner', 'Neu: {n} Inseln zu gewinnen', 'Yeni: kazanılacak {n} ada'],
+    'Every island won! Replay any court.': ['¡Todas las islas ganadas! Repite cualquier cancha.', 'Todas as ilhas vencidas! Jogue de novo em qualquer quadra.', 'Toutes les îles gagnées ! Rejoue n\'importe quel terrain.', 'Alle Inseln gewonnen! Spiel jedes Feld noch einmal.', 'Bütün adalar kazanıldı! İstediğin sahada tekrar oyna.'],
+    'locked': ['bloqueada', 'bloqueada', 'verrouillée', 'gesperrt', 'kilitli'],
+    'won': ['ganada', 'vencida', 'gagnée', 'gewonnen', 'kazanıldı'],
+    'PLAY': ['JUGAR', 'JOGAR', 'JOUER', 'SPIELEN', 'OYNA'],
+    'Locked': ['Bloqueada', 'Bloqueada', 'Verrouillée', 'Gesperrt', 'Kilitli'],
+    'Locked · win on {isle} to sail here': ['Bloqueada · gana en {isle} para navegar hasta aquí', 'Bloqueada · vença em {isle} para navegar até aqui', 'Verrouillée · gagne sur {isle} pour naviguer jusqu\'ici', 'Gesperrt · gewinne auf {isle}, um hierher zu segeln', 'Kilitli · buraya yelken açmak için {isle} adasında kazan'],
+    'Won · replay for ★ {n}': ['Ganada · repite por ★ {n}', 'Vencida · jogue de novo por ★ {n}', 'Gagnée · rejoue pour ★ {n}', 'Gewonnen · nochmal spielen für ★ {n}', 'Kazanıldı · ★ {n} için tekrar oyna'],
+    'Win to unlock {isle}': ['Gana para desbloquear {isle}', 'Vença para desbloquear {isle}', 'Gagne pour débloquer {isle}', 'Gewinne, um {isle} freizuschalten', '{isle} kilidini açmak için kazan'],
+    'Win the final island': ['Gana la isla final', 'Vença a ilha final', 'Gagne l\'île finale', 'Gewinne die letzte Insel', 'Son adayı kazan'],
+    'Island {n}': ['Isla {n}', 'Ilha {n}', 'Île {n}', 'Insel {n}', 'Ada {n}'],
+    'vs': ['vs', 'x', 'contre', 'gegen', 'vs'],
+    'New island unlocked: {isle} ({court})!': ['¡Nueva isla desbloqueada: {isle} ({court})!', 'Nova ilha desbloqueada: {isle} ({court})!', 'Nouvelle île débloquée : {isle} ({court}) !', 'Neue Insel freigeschaltet: {isle} ({court})!', 'Yeni ada açıldı: {isle} ({court})!'],
+    'Career complete! You won every island.': ['¡Carrera completada! Ganaste todas las islas.', 'Carreira concluída! Você venceu todas as ilhas.', 'Carrière terminée ! Tu as gagné toutes les îles.', 'Karriere abgeschlossen! Du hast jede Insel gewonnen.', 'Kariyer tamamlandı! Bütün adaları kazandın.'],
+    'Win on {isle} to unlock {next}.': ['Gana en {isle} para desbloquear {next}.', 'Vença em {isle} para desbloquear {next}.', 'Gagne sur {isle} pour débloquer {next}.', 'Gewinne auf {isle}, um {next} freizuschalten.', '{next} kilidini açmak için {isle} adasında kazan.'],
+    'Change team': ['Cambiar equipo', 'Trocar de time', 'Changer d\'équipe', 'Team wechseln', 'Takım değiştir'],
+    'Restart career': ['Reiniciar carrera', 'Reiniciar carreira', 'Recommencer la carrière', 'Karriere neu starten', 'Kariyeri yeniden başlat'],
+    'Click again to restart': ['Pulsa otra vez para reiniciar', 'Clique de novo para reiniciar', 'Clique encore pour recommencer', 'Zum Neustart nochmal klicken', 'Yeniden başlatmak için tekrar tıkla'],
+    'Back to menu': ['Volver al menú', 'Voltar ao menu', 'Retour au menu', 'Zurück zum Menü', 'Menüye dön'],
+    'Invite a friend with a link': ['Invita a un amigo con un enlace', 'Convide um amigo com um link', 'Invite un ami avec un lien', 'Lade einen Freund per Link ein', 'Bir arkadaşını bağlantıyla davet et'],
+    'Champions Court': ['Cancha de Campeones', 'Quadra dos Campeões', 'Terrain des Champions', 'Champions-Halle', 'Şampiyonlar Sahası']
   };
 
   var lang = 'en', table = {};

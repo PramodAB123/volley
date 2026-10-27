@@ -552,10 +552,20 @@
   }
 
   // bg: the wall and lights already drawn (a big gradient fill is slow to redo).
-  function drawArena(ctx, style, t, cheer, bg) {
-    if (bg) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(bg, 0, 0); ctx.restore(); }
+  // floor: the court and its floor art already drawn on a see-through layer.
+  function drawArena(ctx, style, t, cheer, bg, floor) {
+    if (bg) blit(ctx, bg);
     else drawBackdrop(ctx, style);
     drawStands(ctx, style, t, cheer);
+    if (floor) blit(ctx, floor);
+    else drawFloor(ctx, style);
+  }
+
+  function blit(ctx, cv) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(cv, 0, 0); ctx.restore(); }
+
+  // The floor, court, venue art and lines. None of it moves, and some venue
+  // art (glowing grids, star fields) is slow to draw, so it is drawn once.
+  function drawFloor(ctx, style) {
     poly(ctx, [[-12, -3.5], [21.6, -3.5], [21.6, 12.6], [-12, 12.6]], style.floor);
     var motif = MOTIFS[style.motif];
     if (motif) { clipFreeZone(ctx); motif.floor(ctx, style); ctx.restore(); }
@@ -580,7 +590,16 @@
   // The arena is drawn into an offscreen canvas and copied each frame. A
   // cheering crowd refreshes that copy about 20 times a second instead of the
   // whole arena being redrawn every frame (the old cause of lag after points).
-  var cache = { cv: null, bg: null, key: '', at: 0, calm: true };
+  // The wall and the floor have layers of their own, so a refresh only
+  // redraws the crowd.
+  var cache = { cv: null, bg: null, floor: null, key: '', at: 0, calm: true };
+  function layer(cv, w, h, sc, PAD) {
+    cv = cv || document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    var c = cv.getContext('2d');
+    c.setTransform(sc, 0, 0, sc, PAD * sc, 0);
+    return cv;
+  }
   function arenaLayer(ctx, style, t, cheer, zoomed) {
     if (typeof document === 'undefined') { drawArena(ctx, style, t, cheer); return; }
     if (SR.lowFx) cheer = 0;
@@ -588,17 +607,16 @@
     var redraw = cache.key !== key || (cheer > 0 ? t - cache.at > 0.05 : !cache.calm);
     if (redraw) {
       if (cache.key !== key) {
-        cache.cv = cache.cv || document.createElement('canvas');
-        cache.cv.width = Math.ceil((W + PAD * 2) * sc); cache.cv.height = Math.ceil(H * sc);
-        cache.bg = cache.bg || document.createElement('canvas');
-        cache.bg.width = cache.cv.width; cache.bg.height = cache.cv.height;
-        var cb = cache.bg.getContext('2d');
-        cb.setTransform(sc, 0, 0, sc, PAD * sc, 0);
-        drawBackdrop(cb, style);
+        var cw = Math.ceil((W + PAD * 2) * sc), ch = Math.ceil(H * sc);
+        cache.cv = layer(cache.cv, cw, ch, sc, PAD);
+        cache.bg = layer(cache.bg, cw, ch, sc, PAD);
+        drawBackdrop(cache.bg.getContext('2d'), style);
+        cache.floor = layer(cache.floor, cw, ch, sc, PAD);
+        drawFloor(cache.floor.getContext('2d'), style);
       }
       var c2 = cache.cv.getContext('2d');
       c2.setTransform(sc, 0, 0, sc, PAD * sc, 0);
-      drawArena(c2, style, t, cheer, cache.bg);
+      drawArena(c2, style, t, cheer, cache.bg, cache.floor);
       cache.key = key; cache.at = t; cache.calm = !(cheer > 0);
     }
     if (zoomed) { ctx.drawImage(cache.cv, -PAD, 0, W + PAD * 2, H); return; }
@@ -931,10 +949,25 @@
     },
     // A league or tournament match is played at its venue's arena.
     courtStyle: function (game) {
-      var venue = game && game.cfg.venue && SR.ARENAS[game.cfg.venue];
+      var venue = game && game.cfg.venue && SR.courtById(game.cfg.venue);
       if (venue) return venue;
       var id = SR.save.data.equipped.court;
       return SR.SHOP.courts.find(function (c) { return c.id === id; }) || SR.SHOP.courts[0];
+    },
+    // A still picture of a court (wall, crowd and floor) `w` pixels wide, for
+    // the Career map. It has a canvas of its own and the wide camera, so the
+    // match's arena cache and the current view are left as they were.
+    courtThumb: function (style, w) {
+      var keep = [W, H, FOC, CY], sc = w / 960, cv = document.createElement('canvas');
+      W = 960; H = 640; FOC = 1250; CY = 290;
+      cv.width = Math.round(W * sc); cv.height = Math.round(H * sc);
+      var c = cv.getContext('2d');
+      c.setTransform(sc, 0, 0, sc, 0, 0);
+      drawBackdrop(c, style);
+      drawStands(c, style, 0, 0);
+      drawFloor(c, style);
+      W = keep[0]; H = keep[1]; FOC = keep[2]; CY = keep[3];
+      return cv;
     },
     // Screen positions of player heads from the last frame, for click picking.
     heads: [],
