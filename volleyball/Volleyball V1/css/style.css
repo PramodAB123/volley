@@ -260,26 +260,79 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
   .menu-links { margin-top: 6px; }
 }
 
-/* Menus: the cover art instead of a match behind the panels. */
-#app.menu-bg { background: linear-gradient(rgba(11, 18, 32, 0.15), rgba(11, 18, 32, 0.55)), url(../img/menu-bg.jpg) center top / cover no-repeat, #0b1220; }
+/* Menus: four slanted //// strips of match scenes (img/menu, tall cuts) on
+   the left instead of a match. Each strip has its own colour and swaps
+   between two courts; the strips change one after another. The right side
+   holds only the menu. Phones get the strips full width behind the menu. */
+#app.menu-bg { background: radial-gradient(ellipse at 20% 50%, #16213d, #0b1220 60%); }
 #app.menu-bg #game { visibility: hidden; }
 #app.menu-bg .screen { background: none; }
-/* Panel low, so the logo at the top of the art stays visible. */
-#app.menu-bg .screen { align-items: flex-end; }
-/* Square-ish screens: the whole poster, full height, centred, edges faded. */
-@media (min-aspect-ratio: 1/1) {
-  #app.menu-bg {
-    background: linear-gradient(90deg, #0b1220 calc(50% - 33.3vh), rgba(11, 18, 32, 0) calc(50% - 33.3vh + 90px), rgba(11, 18, 32, 0) calc(50% + 33.3vh - 90px), #0b1220 calc(50% + 33.3vh)),
-      url(../img/menu-bg.jpg) center top / auto 100% no-repeat, #0b1220;
-  }
+.menu-slides { position: absolute; top: 0; bottom: 0; left: 0; right: 0; display: none; gap: 14px; padding: 0 34px; overflow: hidden; pointer-events: none; }
+#app.menu-bg .menu-slides { display: flex; }
+.slash {
+  --c: #4d8bff; position: relative; flex: 1 1 0; margin: -4% 0; overflow: hidden; border-radius: 14px; transform: skewX(-14deg);
+  background: #0d1424; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5), inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+  animation: slash-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-/* Wide screens: the art stands on the left, the panel beside it. */
-@media (min-aspect-ratio: 8/5) {
-  #app.menu-bg {
-    background: linear-gradient(90deg, rgba(11, 18, 32, 0) calc(66.7vh - 140px), #0b1220 66.7vh),
-      url(../img/menu-bg.jpg) left center / auto 100% no-repeat, #0b1220;
+.slash:nth-child(2) { --c: #ff9f1c; animation-delay: 0.12s; margin-top: 2%; }
+.slash:nth-child(3) { --c: #b44dff; animation-delay: 0.24s; margin-bottom: 2%; }
+.slash:nth-child(4) { --c: #ff4f9a; animation-delay: 0.36s; margin-top: 4%; }
+@keyframes slash-in { from { opacity: 0; transform: skewX(-14deg) translateY(12%); } }
+/* The pictures are skewed back upright inside the slanted strip. */
+.slash i {
+  position: absolute; top: 0; bottom: 0; left: -70%; right: -70%; transform: skewX(14deg);
+  background: center / cover no-repeat; opacity: 0; animation: slash-swap 20s ease-in-out infinite;
+}
+/* Negative delays so every strip is mid-cycle from the start: strip N swaps
+   courts 2.5 s after strip N-1, and each court stays 10 s. */
+.slash:nth-child(1) i:nth-child(1) { animation-delay: -7.5s; } .slash:nth-child(1) i:nth-child(2) { animation-delay: -17.5s; }
+.slash:nth-child(2) i:nth-child(1) { animation-delay: -5s; } .slash:nth-child(2) i:nth-child(2) { animation-delay: -15s; }
+.slash:nth-child(3) i:nth-child(1) { animation-delay: -2.5s; } .slash:nth-child(3) i:nth-child(2) { animation-delay: -12.5s; }
+.slash:nth-child(4) i:nth-child(1) { animation-delay: -20s; } .slash:nth-child(4) i:nth-child(2) { animation-delay: -10s; }
+@keyframes slash-swap {
+  0% { opacity: 0; transform: skewX(14deg) scale(1.15); }
+  6% { opacity: 1; }
+  50% { opacity: 1; }
+  56% { opacity: 0; transform: skewX(14deg) scale(1.02); }
+  100% { opacity: 0; transform: skewX(14deg) scale(1.02); }
+}
+/* With reduced motion each strip just shows its first court. */
+.slash i:nth-child(1) { opacity: 1; }
+/* Colour: a tint from the strip's colour at the foot, a glowing edge, and a sheen. */
+.slash::before {
+  content: ''; position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(180deg, rgba(11, 18, 32, 0.35) 0%, transparent 28%, transparent 52%, var(--c) 130%),
+    linear-gradient(100deg, transparent 40%, rgba(255, 255, 255, 0.12) 50%, transparent 60%);
+  mix-blend-mode: normal; opacity: 0.9;
+}
+.slash::after { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; box-shadow: inset 0 0 0 2px var(--c), inset 0 0 28px color-mix(in srgb, var(--c) 45%, transparent); opacity: 0.85; }
+.slash i { z-index: 0; }
+/* Wide screens: the strips stand whole inside the left part, rising and
+   falling like an equaliser, each with a soft glow of its colour. The menu
+   stands alone on the right. Side padding = the skew overhang (tan 14deg * height / 2). */
+@media (min-aspect-ratio: 1/1) {
+  .menu-slides { right: auto; width: min(88vh, 50vw); padding: 0 12vh; gap: 2.2vh; align-items: center; overflow: visible; }
+  .menu-slides::before {
+    content: ''; position: absolute; inset: 0; z-index: -1; filter: blur(30px);
+    background: radial-gradient(closest-side at 22% 40%, rgba(77, 139, 255, 0.28), transparent),
+      radial-gradient(closest-side at 42% 62%, rgba(255, 159, 28, 0.22), transparent),
+      radial-gradient(closest-side at 60% 45%, rgba(180, 77, 255, 0.26), transparent),
+      radial-gradient(closest-side at 78% 58%, rgba(255, 79, 154, 0.24), transparent);
   }
-  #app.menu-bg .screen { padding-left: calc(66.7vh - 24px); align-items: center; }
+  .slash { margin: 0; height: 66%; border-radius: 18px; box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), 0 0 34px color-mix(in srgb, var(--c) 35%, transparent); }
+  .slash:nth-child(2) { height: 82%; margin-top: 6vh; }
+  .slash:nth-child(3) { height: 92%; }
+  .slash:nth-child(4) { height: 74%; margin-top: -6vh; }
+  #app.menu-bg .screen { padding-left: min(88vh, 50vw); }
+  #app.menu-bg #scr-career { padding-left: 0; }
+}
+/* Phones: the strips behind the menu panel, a little dimmer. */
+@media (max-aspect-ratio: 1/1) {
+  .menu-slides { gap: 8px; padding: 0 22px; opacity: 0.75; }
+  .slash { border-radius: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slash, .slash i { animation: none; }
 }
 
 /* How to play screen */
