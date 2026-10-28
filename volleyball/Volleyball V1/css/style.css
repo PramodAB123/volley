@@ -647,6 +647,26 @@ html:not(.page-home) .more-cue { display: none; }
 .home .more-cue { display: flex; margin: 12px auto 0; color: #7fb0ff; }
 html:not(.page-home) .home .more-cue { display: none; }
 .home .more-cue:hover { background: rgba(255, 255, 255, 0.07); }
+/* CrazyGames support link at the foot of the home menu (website only). */
+.cg-support {
+  display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 9px 14px; border-radius: 14px; text-decoration: none; color: #fff;
+  background: linear-gradient(120deg, rgba(104, 66, 255, 0.28), rgba(104, 66, 255, 0.12)); border: 1px solid rgba(140, 110, 255, 0.45);
+  transition: background 0.15s, transform 0.15s, border-color 0.15s;
+}
+.cg-support:hover { background: linear-gradient(120deg, rgba(104, 66, 255, 0.45), rgba(104, 66, 255, 0.2)); border-color: rgba(160, 135, 255, 0.7); transform: translateY(-1px); }
+.cg-logo { flex: none; width: 34px; height: 34px; }
+.cg-txt { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+.cg-txt b { font-size: 15px; font-weight: 800; }
+.cg-txt small { font-size: 12px; color: #b9b0ff; }
+.cg-go { font-size: 18px; color: #b9b0ff; }
+@media (max-height: 520px) {
+  .cg-support { width: fit-content; margin: 4px auto 0; padding: 3px 12px 3px 6px; gap: 8px; border-radius: 999px; }
+  .cg-logo { width: 20px; height: 20px; }
+  .cg-txt b { font-size: 13px; }
+  .cg-txt small { display: none; }
+  .cg-go { font-size: 14px; }
+  .home .cg-support + .menu-links { margin-top: 2px; }
+}
 .home .menu-links a { color: #8a9ab3; }
 .home .menu-links a:hover { color: #e8eef8; }
 @media (max-width: 400px) {
