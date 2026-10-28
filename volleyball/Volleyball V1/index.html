@@ -251,16 +251,24 @@
     </section>
 
     <section id="scr-cup" class="screen hidden">
-      <div class="panel">
-        <h2>Tournament</h2>
-        <p id="cup-next" class="lead"></p>
-        <p id="cup-venue" class="venue hidden"></p>
-        <div id="cup-bracket" class="bracket"></div>
-        <div class="row">
-          <button id="btn-cup-play" class="btn primary">Play match</button>
-          <button id="btn-cup-new" class="btn primary hidden">New tournament</button>
-          <button id="btn-cup-quit" class="btn ghost">Abandon tournament</button>
-          <button class="btn ghost" data-back>Menu</button>
+      <div class="cup-arena" aria-hidden="true"><i></i><i></i><svg width="0" height="0"><clipPath id="cup-shield" clipPathUnits="userSpaceOnUse"><path d="M16 2l13 4.5V15c0 8.5-5.6 14.5-13 17C8.6 29.5 3 23.5 3 15V6.5z"/></clipPath></svg></div>
+      <div class="cup-ui">
+        <header class="cup-top">
+          <button class="cup-back" type="button" data-back aria-label="Back to menu">‹</button>
+          <div class="cup-title">
+            <h2>Tournament</h2>
+            <p id="cup-sub"></p>
+          </div>
+          <div class="stars-badge">★ <span data-stars>0</span></div>
+          <ol id="cup-steps" class="cup-steps"></ol>
+        </header>
+        <div id="cup-scroll" class="cup-scroll"><div id="cup-bracket" class="cup-bracket"></div></div>
+        <div class="cup-bottom">
+          <div id="cup-next" class="cup-next"></div>
+          <div class="cup-actions">
+            <button id="btn-cup-quit" class="link-btn" type="button">Abandon tournament</button>
+            <button class="link-btn" type="button" data-back>Menu</button>
+          </div>
         </div>
       </div>
     </section>
