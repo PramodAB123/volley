@@ -7,13 +7,16 @@
   function defaults() {
     return {
       stars: 0,
-      owned: { balls: ['classic'], courts: ['maple'] },
-      equipped: { ball: 'classic', court: 'maple' },
+      owned: { balls: ['classic'], courts: ['maple'], kits: ['team'] },
+      equipped: { ball: 'classic', court: 'maple', kit: 'team' },
       settings: { format: 'standard', difficulty: 'normal', sound: true, team: 'hawks', lang: 'auto' },
       stats: { matches: 0, wins: 0, points: 0, aces: 0, kills: 0, blocks: 0 },
+      // The League screen's trophy cabinet; seasons = last finishes, newest first.
+      trophies: { league: 0, unbeaten: 0, silver: 0, bronze: 0, cup: 0, seasons: [] },
       league: null,
       tournament: null,
-      career: null
+      career: null,
+      daily: { streak: 0, last: null, week: 0, claimed: [] }
     };
   }
 

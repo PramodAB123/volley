@@ -188,6 +188,7 @@
     // Every visit opens on a choice: watch the demo or skip to the menu (not
     // when the player arrived through a friend's invite).
     else if (SR.ui.current() === 'scr-menu' && !(SR.NET_CONFIG && SR.NET_CONFIG.online && (q.get('room') || SR.cg.inviteParam('room') || SR.cg.instantMultiplayer))) SR.ui.intro();
+    if (SR.daily) SR.daily.init(q);
     SR.cg.onSettingsChange(function () { SR.audio.setMuted(SR.cg.muted()); SR.ui.refresh(); });
     // Signing in to CrazyGames swaps in that account's saved progress.
     SR.cg.onAuthChange(function () { setTimeout(function () { SR.save.load(); SR.i18n.init(); SR.ui.refresh(); }, 300); });

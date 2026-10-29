@@ -45,7 +45,8 @@
     bounce:  function () { tone(140, 0.12, 'sine', 0.3, 60); },
     whistle: function () { tone(2100, 0.25, 'sine', 0.12, 1900); },
     cheer:   function () { noise(0.9, 0.12, 1500); },
-    click:   function () { tone(880, 0.04, 'square', 0.06); }
+    click:   function () { tone(880, 0.04, 'square', 0.06); },
+    reward:  function () { [523, 659, 784, 1047].forEach(function (f, i) { setTimeout(function () { tone(f, 0.18, 'triangle', 0.16); }, i * 90); }); }
   };
 
   SR.audio = {

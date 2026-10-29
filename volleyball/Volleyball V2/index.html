@@ -107,7 +107,13 @@
       <div class="panel menu home">
         <div class="home-head">
           <h1>Spike <span>Rally</span></h1>
-          <div class="stars-badge">★ <span data-stars>0</span></div>
+          <div class="home-badges">
+            <button id="btn-daily" class="daily-btn" type="button" aria-label="Daily rewards" title="Daily rewards">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="9" width="17" height="11.5" rx="2"/><path d="M2.5 9h19v-3h-19zM12 6v14.5"/><path d="M12 6c-1.6-3.4-6-3.6-5.4-.9C6.9 6.3 9.6 6.1 12 6zM12 6c1.6-3.4 6-3.6 5.4-.9-.3 1.2-3 1-5.4.9z"/></svg>
+              <i class="daily-dot" aria-hidden="true"></i>
+            </button>
+            <div class="stars-badge">★ <span data-stars>0</span></div>
+          </div>
         </div>
         <p class="tag">Coach a six-player volleyball team: call the serve, the set and the spike.</p>
         <div class="home-hero">
@@ -127,9 +133,9 @@
           <span class="t-go" aria-hidden="true">›</span>
         </button>
         <div class="home-grid">
-          <button id="btn-league" class="mini"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20v-8h4v8M10 20V5h4v15M16 20v-11h4v11M3 20h18"/></svg><span>League</span></button>
-          <button id="btn-cup" class="mini"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v3M8 20h8l-1-3H9z"/></svg><span>Tournament</span></button>
-          <button id="btn-shop" class="mini"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2L5 8z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/></svg><span>Shop</span></button>
+          <button id="btn-league" class="mini feat f-league"><span class="f-ico"><svg viewBox="0 0 32 36" aria-hidden="true"><rect x="7" y="31" width="18" height="4" rx="1.2" fill="#4a2a12"/><path d="M13 23h6l1 8h-8z" fill="#e8a400"/><circle cx="16" cy="13" r="12" fill="#ffd23f" stroke="#b86e00" stroke-width="1.2"/><circle cx="16" cy="13" r="8.5" fill="none" stroke="#fff3b0" stroke-width="1" stroke-dasharray="1.6 2"/><circle cx="16" cy="13" r="4.6" fill="#fff8e1"/><path d="M11.8 11.6c2.6.5 5 2.6 6 5.4M14.3 8.7c1.5 1.6 2.3 4 1.8 6.6" fill="none" stroke="#c98a00" stroke-width="1" stroke-linecap="round"/><path d="M7 6a10 10 0 0 1 5-3.6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".7"/></svg></span><span class="f-txt"><b>League</b><small data-i18n-skip id="league-prog"></small></span><i class="f-shine" aria-hidden="true"></i></button>
+          <button id="btn-cup" class="mini feat f-cup"><span class="f-ico"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M8 3h16v9c0 5-3.6 9-8 9s-8-4-8-9z" fill="#ffd23f" stroke="#b86e00" stroke-width="1.2"/><path d="M8 6H3.5c0 5 2.4 8 6 8.5M24 6h4.5c0 5-2.4 8-6 8.5" fill="none" stroke="#ffd23f" stroke-width="2.4" stroke-linecap="round"/><path d="M14 21h4v5h-4z" fill="#e8a400"/><path d="M9.5 27h13l1.6 5H7.9z" fill="#ffd23f" stroke="#b86e00" stroke-width="1"/><rect x="7" y="31.5" width="18" height="3" rx="1" fill="#8a4b00"/><path d="M12 6c0 4 .6 7 2.6 9.5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".65"/><path d="M16 7.5l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.2-2.4 1.2.5-2.6-1.9-1.8 2.6-.4z" fill="#fff8d6"/></svg></span><span class="f-txt"><b>Tournament</b><small data-i18n-skip id="cup-prog"></small></span><i class="f-shine" aria-hidden="true"></i></button>
+          <button id="btn-shop" class="mini feat f-shop"><span class="f-ico"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M11 13V9a5 5 0 0 1 10 0v4" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M4.5 12h23l-2 21h-19z" fill="#fff" /><path d="M4.5 12h23l-.5 5h-22z" fill="#d1fae5"/><path d="M16 18.5l2 4.1 4.5.6-3.3 3.2.8 4.5-4-2.1-4 2.1.8-4.5-3.3-3.2 4.5-.6z" fill="#ffd23f" stroke="#c98a00" stroke-width=".8" stroke-linejoin="round"/><circle cx="11" cy="14.5" r="1.3" fill="#0f766e"/><circle cx="21" cy="14.5" r="1.3" fill="#0f766e"/></svg></span><span class="f-txt"><b>Shop</b><small data-i18n-skip id="shop-prog"></small></span><i class="f-shine" aria-hidden="true"></i></button>
           <button id="btn-stats" class="mini"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M7 16v-5M12 16V6M17 16V9"/></svg><span>Stats</span></button>
           <button id="btn-settings" class="mini"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg><span>Settings</span></button>
           <button id="btn-help" class="mini"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.7.3-1 .9-1 1.7"/><path d="M12 16.8v.4"/></svg><span>How to play</span></button>
@@ -205,19 +211,24 @@
     </section>
 
     <section id="scr-league" class="screen hidden">
-      <div class="panel">
-        <h2>League</h2>
-        <p id="league-next" class="lead"></p>
-        <p id="league-venue" class="venue hidden" data-i18n-skip></p>
-        <div class="table-wrap">
-          <table id="league-table" class="table"></table>
-        </div>
-        <p id="league-log" class="muted small"></p>
-        <div class="row">
-          <button id="btn-league-play" class="btn primary">Play next match</button>
-          <button id="btn-league-new" class="btn primary hidden">New season</button>
-          <button id="btn-league-quit" class="btn ghost">Abandon league</button>
-          <button class="btn ghost" data-back>Menu</button>
+      <div class="lg-hall" aria-hidden="true"><i></i><i></i><svg width="0" height="0"><linearGradient id="lg-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset=".45" stop-color="#ffd23f"/><stop offset="1" stop-color="#e08a00"/></linearGradient><linearGradient id="lg-silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#c9d3e0"/><stop offset="1" stop-color="#7d8aa0"/></linearGradient><linearGradient id="lg-bronze" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd2a6"/><stop offset=".5" stop-color="#d68a4a"/><stop offset="1" stop-color="#8a4b1c"/></linearGradient><linearGradient id="lg-wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a3a24"/><stop offset="1" stop-color="#2e1c10"/></linearGradient><clipPath id="lg-shield" clipPathUnits="userSpaceOnUse"><path d="M16 2l13 4.5V15c0 8.5-5.6 14.5-13 17C8.6 29.5 3 23.5 3 15V6.5z"/></clipPath></svg></div>
+      <div class="cup-ui">
+        <header class="cup-top">
+          <button class="cup-back" type="button" data-back aria-label="Back to menu">‹</button>
+          <div class="cup-title">
+            <h2>League</h2>
+            <p id="league-sub" data-i18n-skip></p>
+          </div>
+          <div class="stars-badge">★ <span data-stars>0</span></div>
+          <ol id="league-steps" class="cup-steps lg-steps" data-i18n-skip></ol>
+        </header>
+        <div id="league-scroll" class="lg-scroll"><div id="league-board" class="lg-board" data-i18n-skip></div></div>
+        <div class="cup-bottom">
+          <div id="league-next" class="cup-next" data-i18n-skip></div>
+          <div class="cup-actions">
+            <button id="btn-league-quit" class="link-btn" type="button">Abandon league</button>
+            <button class="link-btn" type="button" data-back>Menu</button>
+          </div>
         </div>
       </div>
     </section>
@@ -247,7 +258,7 @@
 
     <section id="scr-shop" class="screen hidden">
       <div class="panel">
-        <h2>Shop <span class="stars-badge inline">★ <span data-stars>0</span></span></h2>
+        <h2><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button>Shop <span class="stars-badge inline">★ <span data-stars>0</span></span></h2>
         <p class="muted">Win matches to earn stars, then unlock new looks.</p>
         <div id="shop-ad" class="shop-ad hidden">
           <button id="btn-ad-stars" class="btn" data-i18n-skip></button>
@@ -257,7 +268,41 @@
         <div id="shop-balls" class="shop-grid"></div>
         <h3>Courts</h3>
         <div id="shop-courts" class="shop-grid"></div>
+        <h3>Jerseys</h3>
+        <p class="muted small">Your team wears it in every match. New jerseys come from the daily rewards.</p>
+        <div id="shop-kits" class="shop-grid"></div>
         <button class="btn ghost" data-back>Back</button>
+      </div>
+    </section>
+
+    <section id="scr-daily" class="screen hidden">
+      <div class="panel daily" role="dialog" aria-labelledby="daily-title">
+        <div class="daily-rays" aria-hidden="true"></div>
+        <div class="daily-head">
+          <span class="daily-gift" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="9" width="17" height="11.5" rx="2"/><path d="M2.5 9h19v-3h-19zM12 6v14.5"/><path d="M12 6c-1.6-3.4-6-3.6-5.4-.9C6.9 6.3 9.6 6.1 12 6zM12 6c1.6-3.4 6-3.6 5.4-.9-.3 1.2-3 1-5.4.9z"/></svg></span>
+          <div>
+            <h2 id="daily-title">Daily rewards</h2>
+            <p id="daily-sub" data-i18n-skip>Come back every day for a bigger gift.</p>
+          </div>
+          <button id="btn-daily-x" class="daily-x" type="button" aria-label="Close">×</button>
+        </div>
+        <p id="daily-note" class="daily-note hidden" data-i18n-skip></p>
+        <ol id="daily-strip" class="daily-strip" data-i18n-skip></ol>
+        <div class="daily-foot">
+          <button id="btn-daily-claim" class="btn daily-claim" data-i18n-skip>Claim</button>
+          <p id="daily-next" class="daily-next hidden" data-i18n-skip></p>
+          <p class="daily-rule">Miss a day and your streak starts again from Day 1.</p>
+        </div>
+        <div id="daily-won" class="daily-won hidden" aria-live="polite">
+          <div class="won-burst" aria-hidden="true"></div>
+          <div id="daily-won-art" class="won-art" data-i18n-skip></div>
+          <h3 id="daily-won-title" data-i18n-skip>Day 1 reward</h3>
+          <p id="daily-won-text" data-i18n-skip></p>
+          <div class="row center">
+            <button id="btn-daily-equip" class="btn daily-claim hidden">Equip now</button>
+            <button id="btn-daily-ok" class="btn ghost">Awesome!</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -362,6 +407,7 @@
   <script src="js/render.js"></script>
   <script src="js/input.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/daily.js"></script>
   <script src="js/vendor/peerjs.min.js"></script>
   <script src="js/net-config.js"></script>
   <script src="js/relay.js"></script>

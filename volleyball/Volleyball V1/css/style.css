@@ -1393,3 +1393,9 @@ html:not(.page-home) .home .more-cue { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .f-shine { display: none; }
 }
+
+/* Shop: a Back button at the top too, so a long list never hides the way out. */
+.top-back { display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 12px 0 8px; border: 1px solid rgba(127, 140, 160, 0.35); border-radius: 10px;
+  background: rgba(127, 140, 160, 0.12); color: inherit; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+.top-back:hover { background: rgba(127, 140, 160, 0.24); }
+.top-back span { font-size: 22px; line-height: 1; margin-top: -3px; }
