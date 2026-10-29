@@ -621,7 +621,7 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 .career-top {
   position: relative; z-index: 3; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 12px;
   padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 10px max(14px, env(safe-area-inset-left));
-  background: linear-gradient(180deg, rgba(5, 30, 55, 0.85), rgba(5, 30, 55, 0.55)); color: #fff; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  background: linear-gradient(180deg, rgba(5, 30, 55, 0.94), rgba(5, 30, 55, 0.8)); color: #fff;
   box-shadow: 0 4px 20px rgba(0, 20, 40, 0.3);
 }
 .career-back { width: 40px; height: 40px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.14); color: #fff; font-size: 28px; line-height: 1; cursor: pointer; padding-bottom: 4px; }
@@ -636,7 +636,8 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 .cpath { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .cpath path { fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .cpath .todo { stroke: rgba(255, 255, 255, 0.75); stroke-width: 4; stroke-dasharray: 1 12; }
-.cpath .done { stroke: #ffd23f; stroke-width: 6; stroke-dasharray: 14 8; filter: drop-shadow(0 2px 3px rgba(0, 40, 70, 0.45)); }
+.cpath .done { stroke: #ffd23f; stroke-width: 6; stroke-dasharray: 14 8; }
+.cpath .done-sh { stroke: rgba(0, 40, 70, 0.3); stroke-width: 9; stroke-dasharray: 14 8; transform: translateY(2px); }
 .cdecor { position: absolute; pointer-events: none; transform: translate(-50%, -50%); }
 .cdecor.islet { width: 110px; height: 74px; }
 .cdecor.islet svg { width: 100%; height: 100%; }
@@ -654,8 +655,9 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
   position: absolute; width: 300px; height: 200px; margin: -100px 0 0 -150px; padding: 0; border: 0; background: none; cursor: pointer;
   font: inherit; color: #fff; z-index: 1; transform: scale(var(--s, 1));
 }
-.cisland { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 6px 6px rgba(0, 40, 70, 0.35)); }
-.cfoam { animation: foam 4s linear infinite; }
+.cisland { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+/* Only the island you are on moves its foam: animating every island's SVG kept phones repainting the whole map. */
+.cnode.open .cfoam { animation: foam 4s linear infinite; }
 @keyframes foam { to { stroke-dashoffset: -64; } }
 .csign {
   position: absolute; left: 50%; top: 6px; z-index: 3; transform: translateX(-50%); max-width: 250px; padding: 3px 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -681,7 +683,7 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 .clock svg { width: 32px; height: 32px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6)); }
 .ccheck { position: absolute; right: 5px; top: 5px; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #1f9d55; color: #fff; font-size: 14px; font-weight: 900; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); }
 .cplay { position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%); padding: 3px 12px; border-radius: 999px; background: #ffd23f; color: #241a00; font-size: 12px; font-weight: 900; letter-spacing: 0.06em; }
-.cboat { position: absolute; right: 2px; top: 104px; z-index: 3; width: 46px; height: 42px; animation: boat-bob2 2.6s ease-in-out infinite; filter: drop-shadow(0 3px 2px rgba(0, 30, 50, 0.4)); }
+.cboat { position: absolute; right: 2px; top: 104px; z-index: 3; width: 46px; height: 42px; animation: boat-bob2 2.6s ease-in-out infinite; }
 @keyframes boat-bob2 { 50% { transform: translateY(-4px) rotate(-5deg); } }
 .cfog { position: absolute; inset: -6px; z-index: 4; display: none; pointer-events: none; border-radius: 50%;
   background: radial-gradient(circle at 22% 40%, rgba(255, 255, 255, 0.85) 0 14%, transparent 30%), radial-gradient(circle at 78% 36%, rgba(255, 255, 255, 0.85) 0 14%, transparent 30%),
@@ -690,7 +692,6 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 .cnode.open .cthumb { border-color: #ffd23f; animation: career-pulse 1.6s ease-in-out infinite; }
 .cnode.open .cnum { background: #ffd23f; color: #241a00; }
 .cnode.locked { cursor: not-allowed; }
-.cnode.locked .cisland { filter: grayscale(0.7) brightness(0.85) drop-shadow(0 6px 6px rgba(0, 40, 70, 0.3)); }
 .cnode.locked .cthumb { filter: grayscale(1) brightness(0.6); border-color: rgba(255, 255, 255, 0.55); }
 .cnode.locked .clock { display: flex; }
 .cnode.locked .cfog { display: block; }
@@ -712,7 +713,7 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 @keyframes fog-clear { to { opacity: 0; transform: scale(1.6); } }
 .career-bottom {
   position: relative; z-index: 3; padding: 10px max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
-  background: linear-gradient(0deg, rgba(5, 30, 55, 0.9), rgba(5, 30, 55, 0.6)); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); color: #fff;
+  background: linear-gradient(0deg, rgba(5, 30, 55, 0.96), rgba(5, 30, 55, 0.82)); color: #fff;
 }
 .career-pick { display: flex; align-items: center; gap: 12px; width: min(760px, 100%); margin: 0 auto; }
 .cpick-thumb { flex: none; width: 96px; height: 60px; border-radius: 10px; overflow: hidden; background: #1a2338; border: 2px solid #fff; }
@@ -742,7 +743,7 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
   .career-actions { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .career-sea::before, .career-sea::after, .cdecor, .cboat, .cfoam, .t-isle, .cnode.open .cthumb, .cnode.unlocking .cthumb { animation: none; }
+  .career-sea::before, .career-sea::after, .cdecor, .cboat, .cnode.open .cfoam, .t-isle, .cnode.open .cthumb, .cnode.unlocking .cthumb { animation: none; }
 }
 
 /* ---- Tournament: a lit arena, the bracket, and the trophy in the middle ---- */

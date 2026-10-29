@@ -540,18 +540,22 @@
   }
 
   // An island 300 x 200: shallows, foam, sand, grass, palms and rocks.
-  function islandSvg(i, final, w, h) {
+  // Locked islands get muted colours and the shadow is a plain shape, not a
+  // CSS filter: twenty filtered islands made phones drop parts of the map
+  // while scrolling (seen on CrazyGames mobile).
+  function islandSvg(i, final, w, h, locked) {
     w = w || 300; h = h || 200;
     var rnd = seeded(i * 7919 + 17), radii = [];
     for (var k = 0; k < 9; k++) radii.push(0.86 + rnd() * 0.24);
     var cx = w / 2, cy = h / 2 + 4, sx = w / 300, sy = h / 200;
-    var sand = final ? '#ffe39a' : '#f3d9a0', grass = final ? '#7cc45a' : '#5cb85c';
+    var sand = locked ? '#d9d3c3' : final ? '#ffe39a' : '#f3d9a0', grass = locked ? '#8ea58c' : final ? '#7cc45a' : '#5cb85c';
     var out = '<svg class="cisland" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true">' +
-      '<path d="' + blob(radii, cx, cy, 148 * sx, 96 * sy) + '" fill="#8fe6f0" opacity="0.55"/>' +
+      '<path d="' + blob(radii, cx, cy + 6 * sy, 128 * sx, 82 * sy) + '" fill="#003c5c" opacity="0.28"/>' +
+      '<path d="' + blob(radii, cx, cy, 148 * sx, 96 * sy) + '" fill="' + (locked ? '#b4d3dc' : '#8fe6f0') + '" opacity="0.55"/>' +
       '<path d="' + blob(radii, cx, cy, 134 * sx, 86 * sy) + '" fill="none" stroke="#fff" stroke-opacity="0.7" stroke-width="2.5" stroke-dasharray="7 9" class="cfoam"/>' +
-      '<path d="' + blob(radii, cx, cy + 5, 126 * sx, 80 * sy) + '" fill="#c9a86a"/>' +
+      '<path d="' + blob(radii, cx, cy + 5, 126 * sx, 80 * sy) + '" fill="' + (locked ? '#aaa392' : '#c9a86a') + '"/>' +
       '<path d="' + blob(radii, cx, cy, 126 * sx, 80 * sy) + '" fill="' + sand + '"/>' +
-      '<path d="' + blob(radii.slice().reverse(), cx, cy - 2, 104 * sx, 62 * sy) + '" fill="#3e8e41"/>' +
+      '<path d="' + blob(radii.slice().reverse(), cx, cy - 2, 104 * sx, 62 * sy) + '" fill="' + (locked ? '#6d826b' : '#3e8e41') + '"/>' +
       '<path d="' + blob(radii.slice().reverse(), cx, cy - 6, 102 * sx, 58 * sy) + '" fill="' + grass + '"/>';
     // Palms and rocks round the edge, clear of the court picture in the middle.
     var spots = [[0.1, 0.45], [0.14, 0.7], [0.86, 0.42], [0.9, 0.68], [0.2, 0.2], [0.8, 0.2]];
@@ -641,7 +645,7 @@
       decor += seaDecor(i, x, y, amp);
       html += '<button type="button" class="cnode ' + state + (i === careerPick ? ' sel' : '') + (i === justUnlocked ? ' unlocking' : '') + (fin ? ' final' : '') +
         '" data-i="' + i + '" style="left:' + x + '%;top:' + y + 'px;--s:' + s + '" aria-label="' + isles[i] + ', ' + aname + (state === 'locked' ? ', ' + SR.t('locked') : state === 'done' ? ', ' + SR.t('won') : '') + '">' +
-        islandSvg(i, fin) + '<span class="cfog"></span>' +
+        islandSvg(i, fin, 0, 0, state === 'locked' && i !== justUnlocked) + '<span class="cfog"></span>' +
         '<span class="csign">' + (fin ? '🏆 ' : '') + isles[i] + '</span>' +
         '<span class="cthumb">' + thumbImg(st.court) + '<span class="clock">' + LOCK + '</span>' +
         (state === 'done' ? '<span class="ccheck">✓</span>' : '') + (state === 'open' ? '<span class="cplay">' + SR.t('PLAY') + '</span>' : '') + '</span>' +
@@ -661,7 +665,7 @@
     var reach = Math.min(C.unlocked, n - 1);
     map.style.height = h + 'px';
     map.innerHTML = SEA_DEFS + decor + '<svg class="cpath" viewBox="0 0 100 ' + h + '" preserveAspectRatio="none" aria-hidden="true">' +
-      '<path class="todo" d="' + seg(0, n - 1) + '"/>' + (reach > 0 ? '<path class="done" d="' + seg(0, reach) + '"/>' : '') + '</svg>' + html;
+      '<path class="todo" d="' + seg(0, n - 1) + '"/>' + (reach > 0 ? '<path class="done-sh" d="' + seg(0, reach) + '"/><path class="done" d="' + seg(0, reach) + '"/>' : '') + '</svg>' + html;
     map.querySelectorAll('.cnode').forEach(function (b) {
       b.addEventListener('click', function () {
         var i = +b.getAttribute('data-i');
