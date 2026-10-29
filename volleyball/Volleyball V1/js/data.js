@@ -76,7 +76,23 @@ SR.SHOP = {
     { id: 'classic', name: 'Classic',  price: 0, main: '#f4d03f', stripe: '#2453a6' },
     { id: 'sunset',  name: 'Sunset',   price: 3, main: '#ff8a3d', stripe: '#ffffff' },
     { id: 'neon',    name: 'Neon',     price: 5, main: '#b6ff3b', stripe: '#ff3bb0' },
-    { id: 'mono',    name: 'Mono',     price: 8, main: '#f5f5f5', stripe: '#1d1d1d' }
+    { id: 'mono',    name: 'Mono',     price: 8, main: '#f5f5f5', stripe: '#1d1d1d' },
+    // Daily reward balls: not for sale, only won on the reward calendar.
+    { id: 'ember',   name: 'Ember',    daily: true, main: '#ff4d2e', stripe: '#ffd23f' },
+    { id: 'frost',   name: 'Frost',    daily: true, main: '#c8ecff', stripe: '#2f6fe0' },
+    { id: 'jungle',  name: 'Jungle',   daily: true, main: '#2f9e44', stripe: '#f4d03f' },
+    { id: 'golden',  name: 'Golden',   daily: true, main: '#ffcf3a', stripe: '#b07a00' },
+    { id: 'cosmic',  name: 'Cosmic',   daily: true, main: '#3a1f8f', stripe: '#ff4fd8' }
+  ],
+  // Jerseys your team wears in offline matches. 'team' keeps the club's own kit;
+  // the rest come from the daily reward calendar.
+  kits: [
+    { id: 'team',     name: 'Club kit', price: 0 },
+    { id: 'flame',    name: 'Flame',    daily: true, color: '#ff5a1f', trim: '#ffd23f', pattern: 'stripes' },
+    { id: 'ice',      name: 'Ice',      daily: true, color: '#7fd4ff', trim: '#ffffff', pattern: 'hoops' },
+    { id: 'midnight', name: 'Midnight', daily: true, color: '#1d1f33', trim: '#53f3ff', pattern: 'split' },
+    { id: 'champion', name: 'Champion', daily: true, color: '#e0a800', trim: '#ffffff', pattern: 'stripes' },
+    { id: 'royal',    name: 'Royal',    daily: true, color: '#5b2bd6', trim: '#ffd75e', pattern: 'hoops' }
   ],
   courts: [
     { id: 'maple', name: 'Arena',  price: 0, floor: '#2e7a4f', court: '#f28a3a', zone: '#ec7c2b', line: '#ffffff', wall: '#10261b', seat: '#ef7d2d', riser: '#173324' },
@@ -118,6 +134,32 @@ SR.QUICK_COURTS = ['neon', 'blossom', 'dunes', 'street'];
 // send this id so the friend sees the court the host picked.
 SR.courtById = function (id) {
   return (id && (SR.ARENAS[id] || SR.SHOP.courts.find(function (c) { return c.id === id; }))) || null;
+};
+
+// Daily reward calendar (js/daily.js): one gift per calendar day, seven days a
+// week. Day 3 gives a ball, day 5 a jersey and day 7 a chest of stars plus a
+// legendary item. Each week moves on to the next items in the lists; an item
+// you already own is paid out in stars instead.
+SR.DAILY = {
+  days: [{ stars: 3 }, { stars: 5 }, { item: 'ball' }, { stars: 8 }, { item: 'kit' }, { stars: 10 }, { stars: 25, item: 'legend' }],
+  balls: ['ember', 'frost', 'jungle'],
+  kits: ['flame', 'ice', 'midnight'],
+  legends: [['balls', 'golden'], ['kits', 'champion'], ['balls', 'cosmic'], ['kits', 'royal']],
+  owned: { ball: 6, kit: 8, legend: 15 }
+};
+
+// The team you control, dressed in the jersey equipped in the Shop. Keeps the
+// club kit when the jersey would look like the opponent's colours.
+SR.kitTeam = function (t, opp) {
+  var id = SR.save && SR.save.data.equipped.kit;
+  var k = SR.SHOP.kits.find(function (x) { return x.id === id; });
+  if (!k || !k.color) return t;
+  if (opp && SR.colorGap(k.color, opp.color) < 90) return t;
+  return Object.assign({}, t, { color: k.color, trim: k.trim, pattern: k.pattern });
+};
+SR.colorGap = function (a, b) {
+  var p = function (h, i) { return parseInt(h.slice(1 + i * 2, 3 + i * 2), 16); };
+  return Math.sqrt([0, 1, 2].reduce(function (s, i) { var d = p(a, i) - p(b, i); return s + d * d; }, 0));
 };
 
 SR.STARS = { quickWin: 1, leagueWin: 1, leagueTitle: 3, cupWin: 1, cupTitle: 5, careerStage: 2, careerFinal: 5 };
