@@ -1,5 +1,16 @@
 // Static game data: court constants, teams, shop items, match formats.
 window.SR = window.SR || {};
+// A recovered error: the game keeps running, but it is still logged (once
+// per message) so it shows up in the console and in error reports.
+SR.oops = (function () {
+  var seen = {};
+  return function (where, e) {
+    var msg = where + ': ' + (e && (e.stack || e.message) || e);
+    if (seen[msg] || !window.console) return;
+    seen[msg] = 1;
+    console.error(msg);
+  };
+})();
 // Touch-first devices get tap wording and no keyboard hints.
 SR.touch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 

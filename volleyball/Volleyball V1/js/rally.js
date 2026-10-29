@@ -692,7 +692,11 @@
   // ---- player input -------------------------------------------------------
 
   // Each takes the team making the call; the local player is team 0.
+  // A point that isn't a number would send the ball nowhere and stall the match.
+  function okPt(pt) { return !!pt && isFinite(pt.x) && isFinite(pt.y); }
+
   R.setAim = function (pt, team) {
+    if (!okPt(pt)) return;
     var u = this.uiOf(team);
     var lo = this.m.server === 0 ? C.NET_X + 0.3 : -1, hi = this.m.server === 0 ? C.L + 1 : C.NET_X - 0.3;
     u.aim = { x: clamp(pt.x, lo, hi), y: clamp(pt.y, -1, C.W + 1) };
@@ -747,7 +751,7 @@
 
   R.pickTarget = function (pt, tip, team) {
     var u = this.uiOf(team);
-    if (u.prompt !== 'target') return;
+    if (u.prompt !== 'target' || !okPt(pt)) return;
     // A tap up in the stands still means "long", but no further than the serve aim reaches.
     u.attackTarget = { x: clamp(pt.x, -1, C.L + 1), y: clamp(pt.y, -1, C.W + 1) };
     u.tip = !!tip;

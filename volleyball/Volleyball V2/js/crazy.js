@@ -23,10 +23,22 @@
 
   function sdk() { return cg.ready ? window.CrazyGames.SDK : null; }
 
+  // Many SDK calls return a promise; a rejected one nobody handles is
+  // reported as an error, so every promise that comes back gets a handler.
+  function settle(p) {
+    if (p && typeof p.then === 'function') p.then(null, function (e) { if (window.console) console.warn('CrazyGames SDK:', e); });
+    return p;
+  }
+
   function safe(fn) {
     var s = sdk();
     if (!s) return undefined;
-    try { return fn(s); } catch (e) { if (window.console) console.warn('CrazyGames SDK:', e); return undefined; }
+    try { return settle(fn(s)); } catch (e) { if (window.console) console.warn('CrazyGames SDK:', e); return undefined; }
+  }
+
+  // Listeners run inside SDK callbacks: an error there is logged, not thrown into the SDK.
+  function each(list, arg) {
+    list.forEach(function (fn) { try { fn(arg); } catch (e) { SR.oops('CrazyGames listener', e); } });
   }
 
   // ---- init ------------------------------------------------------------------
@@ -39,7 +51,7 @@
     try { start = Promise.resolve(C.SDK.init()); } catch (e) { start = Promise.reject(e); }
     return Promise.race([start, timeout]).then(function (r) {
       if (r === 'timeout') return false;
-      cg.environment = C.SDK.environment;
+      try { cg.environment = C.SDK.environment; } catch (e) { return false; }
       cg.ready = cg.environment === 'local' || cg.environment === 'crazygames';
       if (!cg.ready) return false;
       afterInit(C.SDK);
@@ -56,14 +68,15 @@
       cg.settings = { muteAudio: !!st.muteAudio, disableChat: !!st.disableChat };
       s.game.addSettingsChangeListener(function (ns) {
         cg.settings = { muteAudio: !!(ns && ns.muteAudio), disableChat: !!(ns && ns.disableChat) };
-        settingsListeners.forEach(function (fn) { fn(cg.settings); });
+        each(settingsListeners, cg.settings);
       });
     } catch (e) { /* settings unavailable */ }
     try { cg.instantMultiplayer = !!s.game.isInstantMultiplayer; } catch (e) { /* ignore */ }
     // Player's language on CrazyGames, e.g. "es-ES" (used by i18n.js).
     try { cg.locale = (s.user && s.user.systemInfo && s.user.systemInfo.locale) || null; } catch (e) { /* ignore */ }
     try {
-      s.ad.hasAdblock().then(function (b) { cg.adblock = !!b; }, function () { /* unknown */ });
+      var ab = s.ad.hasAdblock();
+      if (ab && ab.then) ab.then(function (b) { cg.adblock = !!b; }, function () { /* unknown */ });
     } catch (e) { /* ignore */ }
     // CrazyGames account: show the player's username online and reload saves on sign-in.
     try {
@@ -71,7 +84,7 @@
         refreshUser();
         s.user.addAuthListener(function () {
           refreshUser();
-          authListeners.forEach(function (fn) { fn(); });
+          each(authListeners);
         });
       }
     } catch (e) { /* ignore */ }
@@ -79,7 +92,8 @@
 
   function refreshUser() {
     safe(function (s) {
-      return s.user.getUser().then(function (u) { cg.username = u && u.username ? String(u.username).slice(0, 24) : null; }, function () { /* guest */ });
+      var p = s.user.getUser();
+      return p && p.then ? p.then(function (u) { cg.username = u && u.username ? String(u.username).slice(0, 24) : null; }, function () { /* guest */ }) : null;
     });
   }
 
@@ -92,8 +106,8 @@
 
   // ---- loading and gameplay events --------------------------------------------
 
-  cg.loadingStart = function () { safe(function (s) { s.game.loadingStart(); }); };
-  cg.loadingStop = function () { safe(function (s) { s.game.loadingStop(); }); };
+  cg.loadingStart = function () { safe(function (s) { return s.game.loadingStart(); }); };
+  cg.loadingStop = function () { safe(function (s) { return s.game.loadingStop(); }); };
 
   // Tell CrazyGames whether the player is in active play. Called whenever a
   // screen opens or closes, so it only reports real changes.
@@ -102,10 +116,10 @@
     var on = !!(g && g.cfg.human !== -1 && !g.cfg.demo && !g.paused && !cg.busy && SR.ui && SR.ui.current() === null);
     if (on === playing) return;
     playing = on;
-    safe(function (s) { if (on) s.game.gameplayStart(); else s.game.gameplayStop(); });
+    safe(function (s) { return on ? s.game.gameplayStart() : s.game.gameplayStop(); });
   };
 
-  cg.happytime = function () { safe(function (s) { s.game.happytime(); }); };
+  cg.happytime = function () { safe(function (s) { return s.game.happytime(); }); };
 
   // ---- ads -------------------------------------------------------------------
 
@@ -136,7 +150,7 @@
       blocker(false);
       if (err && err.code === 'adsDisabledBasicLaunch') cg.adsOff = true;
       if (err && err.code === 'adblock') cg.adblock = true;
-      done(ok, err || null);
+      try { done(ok, err || null); } catch (e) { SR.oops('after ad', e); }
       cg.syncGameplay();
     }
 
@@ -144,7 +158,7 @@
     startTimer = setTimeout(function () { if (!cg.adPlaying) end(false, { code: 'other', message: 'no response' }); }, AD_START_TIMEOUT_MS);
 
     var res = safe(function (s) {
-      s.ad.requestAd(type, {
+      var p = s.ad.requestAd(type, {
         adStarted: function () {
           clearTimeout(startTimer);
           cg.adPlaying = true;
@@ -153,6 +167,8 @@
         adFinished: function () { end(true, null); },
         adError: function (e) { end(false, e || { code: 'other' }); }
       });
+      // Some SDK builds also report a failed ad by rejecting the promise.
+      if (p && p.then) p.then(null, function (e) { end(false, e || { code: 'other' }); });
       return true;
     });
     if (!res) end(false, { code: 'other' });
@@ -189,14 +205,16 @@
 
   cg.updateRoom = function (info) {
     inRoom = true;
-    safe(function (s) { s.game.updateRoom(info); });
+    safe(function (s) { return s.game.updateRoom(info); });
   };
 
   cg.leftRoom = function () {
     if (!inRoom) return;
     inRoom = false;
-    safe(function (s) { s.game.leftRoom(); });
+    safe(function (s) { return s.game.leftRoom(); });
   };
 
-  cg.onJoinRoom = function (fn) { safe(function (s) { s.game.addJoinRoomListener(fn); }); };
+  cg.onJoinRoom = function (fn) {
+    safe(function (s) { s.game.addJoinRoomListener(function (p) { try { fn(p); } catch (e) { SR.oops('join room', e); } }); });
+  };
 })();

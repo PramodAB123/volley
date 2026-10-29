@@ -386,7 +386,7 @@
       }
       if (!shadowCanvas) shadowCanvas = document.createElement('canvas');
       // Half resolution: cheaper, and the upscale softens the edges.
-      var sw = Math.ceil(cv.width / 2), shh = Math.ceil(cv.height / 2);
+      var sw = Math.max(1, Math.ceil(cv.width / 2)), shh = Math.max(1, Math.ceil(cv.height / 2));
       if (shadowCanvas.width !== sw || shadowCanvas.height !== shh) { shadowCanvas.width = sw; shadowCanvas.height = shh; }
       else if (shadowCanvas._dirty) { var c0 = shadowCanvas.getContext('2d'); c0.setTransform(1, 0, 0, 1, 0, 0); c0.clearRect(0, 0, sw, shh); }
       shadowCanvas._dirty = true;

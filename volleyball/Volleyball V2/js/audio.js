@@ -2,13 +2,18 @@
 (function () {
   var ctx = null;
 
+  // resume() and suspend() return promises that reject when the browser
+  // refuses (no user gesture yet, page in the background): that is harmless,
+  // so the rejection is handled instead of surfacing as an error.
+  function quiet(p) { if (p && p.then) p.then(null, function () { /* not allowed right now */ }); }
+
   function ac() {
     if (!ctx) {
       var A = window.AudioContext || window.webkitAudioContext;
       if (!A) return null;
-      ctx = new A();
+      try { ctx = new A(); } catch (e) { return null; } // too many contexts, or audio blocked
     }
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === 'suspended') quiet(ctx.resume());
     return ctx;
   }
 
@@ -46,7 +51,7 @@
     whistle: function () { tone(2100, 0.25, 'sine', 0.12, 1900); },
     cheer:   function () { noise(0.9, 0.12, 1500); },
     click:   function () { tone(880, 0.04, 'square', 0.06); },
-    reward:  function () { [523, 659, 784, 1047].forEach(function (f, i) { setTimeout(function () { tone(f, 0.18, 'triangle', 0.16); }, i * 90); }); }
+    reward:  function () { [523, 659, 784, 1047].forEach(function (f, i) { setTimeout(function () { try { tone(f, 0.18, 'triangle', 0.16); } catch (e) { /* audio unavailable */ } }, i * 90); }); }
   };
 
   SR.audio = {
@@ -57,7 +62,7 @@
     // Silence anything still ringing (an ad starting, or CrazyGames muting).
     setMuted: function (on) {
       if (!ctx) return;
-      try { if (on) ctx.suspend(); else ctx.resume(); } catch (e) { /* ignore */ }
+      try { quiet(on ? ctx.suspend() : ctx.resume()); } catch (e) { /* ignore */ }
     }
   };
 })();

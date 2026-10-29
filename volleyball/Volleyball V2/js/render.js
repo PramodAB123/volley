@@ -33,9 +33,9 @@
     sx -= panX;
     var a = (sx - W / 2) / FOC, b = -(sy - CY) / FOC;
     var d = { x: f.x + r.x * a + u.x * b, y: f.y + r.y * a + u.y * b, z: f.z + r.z * a + u.z * b };
-    if (d.z >= -1e-4) return null;
-    var t = -cam.z / d.z;
-    return { x: cam.x + d.x * t, y: cam.y + d.y * t };
+    if (!(d.z < -1e-4)) return null; // above the horizon, or not a number
+    var t = -cam.z / d.z, x = cam.x + d.x * t, y = cam.y + d.y * t;
+    return isFinite(x) && isFinite(y) ? { x: x, y: y } : null;
   }
 
   function path(ctx, pts) {
@@ -607,7 +607,7 @@
     var redraw = cache.key !== key || (cheer > 0 ? t - cache.at > 0.05 : !cache.calm);
     if (redraw) {
       if (cache.key !== key) {
-        var cw = Math.ceil((W + PAD * 2) * sc), ch = Math.ceil(H * sc);
+        var cw = Math.max(1, Math.ceil((W + PAD * 2) * sc)), ch = Math.max(1, Math.ceil(H * sc));
         cache.cv = layer(cache.cv, cw, ch, sc, PAD);
         cache.bg = layer(cache.bg, cw, ch, sc, PAD);
         drawBackdrop(cache.bg.getContext('2d'), style);
@@ -960,7 +960,7 @@
     courtThumb: function (style, w) {
       var keep = [W, H, FOC, CY], sc = w / 960, cv = document.createElement('canvas');
       W = 960; H = 640; FOC = 1250; CY = 290;
-      cv.width = Math.round(W * sc); cv.height = Math.round(H * sc);
+      cv.width = Math.max(1, Math.round(W * sc)); cv.height = Math.max(1, Math.round(H * sc));
       var c = cv.getContext('2d');
       c.setTransform(sc, 0, 0, sc, 0, 0);
       drawBackdrop(c, style);

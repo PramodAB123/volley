@@ -100,7 +100,9 @@
   }
 
   function resize() {
-    var vw = window.innerWidth, vh = window.innerHeight;
+    // A collapsed or hidden game frame can report 0x0; a 0-pixel canvas makes
+    // drawImage throw, so everything is sized at least 1 pixel.
+    var vw = Math.max(1, window.innerWidth || 0), vh = Math.max(1, window.innerHeight || 0);
     // The How to play demo keeps a strip (right or bottom) for its captions;
     // the court fits in what is left.
     var dm = SR.demo && SR.demo.active ? SR.demo.layout(vw, vh) : null, bw = dm ? dm.w : vw, bh = dm ? dm.h : vh;
@@ -112,8 +114,8 @@
     lowRes = !!SR.lowFx;
     canvas.style.width = Math.floor(SR.render.W * s) + 'px';
     canvas.style.height = Math.floor(SR.render.H * s) + 'px';
-    canvas.width = Math.floor(SR.render.W * s * dpr);
-    canvas.height = Math.floor(SR.render.H * s * dpr);
+    canvas.width = Math.max(1, Math.floor(SR.render.W * s * dpr));
+    canvas.height = Math.max(1, Math.floor(SR.render.H * s * dpr));
     SR.render.scale = s * dpr;
     // Pause button sits on the canvas corner: top right in landscape,
     // bottom right in portrait where the scoreboard fills the top.
@@ -144,14 +146,24 @@
     SR.cg.syncGameplay();
     // No match (menus): show the cover art instead of the court.
     if (!g !== menuBg) { menuBg = !g; document.getElementById('app').classList.toggle('menu-bg', menuBg); }
-    if (document.hidden || !g) return;
+    if (document.hidden || !g || canvas.width < 2 || canvas.height < 2) return;
     var undo = g && !g.paused ? blend(g.rally, acc / STEP) : null;
     try { SR.render.draw(ctx, g); } finally { if (undo) undo(); }
   }
 
+  // The next frame is booked first, so one bad frame can't stop the game
+  // loop for good (that froze the whole game). The error is still logged; a
+  // match that fails frame after frame is ended and the menu shown instead.
+  var fails = 0;
   function frame(ts) {
-    step(ts);
     window.requestAnimationFrame(frame);
+    try { step(ts); fails = 0; } catch (e) {
+      SR.oops('frame', e);
+      if (++fails < 30) return;
+      fails = 0;
+      try { if (SR.demo && SR.demo.active && SR.demo.stop) SR.demo.stop(); } catch (e2) { SR.oops('demo stop', e2); }
+      if (SR.ui && SR.ui.quit) SR.ui.quit(); else SR.game = null;
+    }
   }
 
   // A hidden tab stops animation frames. When hosting online, keep the match
@@ -161,7 +173,7 @@
   function hiddenTick() {
     var g = SR.game;
     if (!document.hidden || !g || g.cfg.online !== 'host') return;
-    step(performance.now());
+    try { step(performance.now()); } catch (e) { SR.oops('hidden tick', e); }
   }
   try {
     var beat = new Worker(URL.createObjectURL(new Blob(['setInterval(function(){postMessage(0)},33)'], { type: 'text/javascript' })));
@@ -170,34 +182,66 @@
 
   SR.resize = function () { if (canvas) resize(); };
 
+  // The page's ?key=value options (URLSearchParams is missing on some old browsers).
+  function query() {
+    try { if (window.URLSearchParams) return new URLSearchParams(window.location.search); } catch (e) { /* fall through */ }
+    var map = {};
+    window.location.search.replace(/^\?/, '').split('&').forEach(function (kv) {
+      if (!kv) return;
+      var i = kv.indexOf('='), k = i < 0 ? kv : kv.slice(0, i), val = i < 0 ? '' : kv.slice(i + 1);
+      try { k = decodeURIComponent(k); val = decodeURIComponent(val.replace(/\+/g, ' ')); } catch (e) { /* keep raw */ }
+      if (!(k in map)) map[k] = val;
+    });
+    return { get: function (k) { return k in map ? map[k] : null; }, has: function (k) { return k in map; } };
+  }
+
+  // One optional part of start-up failing (online, demo, daily rewards...)
+  // must not leave the player without a menu.
+  function part(name, fn) { try { fn(); } catch (e) { SR.oops('boot ' + name, e); } }
+
+  var booted = false;
   function boot() {
+    if (booted) return;
+    booted = true;
     SR.cg.loadingStart();
     SR.save.load();
-    SR.i18n.init();
+    part('language', function () { SR.i18n.init(); });
     canvas = document.getElementById('game');
     ctx = canvas.getContext('2d');
     resize();
-    window.addEventListener('resize', resize);
-    window.addEventListener('orientationchange', function () { setTimeout(resize, 150); });
+    window.addEventListener('resize', function () { try { resize(); } catch (e) { SR.oops('resize', e); } });
+    window.addEventListener('orientationchange', function () { setTimeout(SR.resize, 150); });
     SR.input.init(canvas);
     SR.ui.init();
-    var q = new URLSearchParams(window.location.search);
+    var q = query();
     if (q.get('speed')) SR.speed = Number(q.get('speed')) || 1;
-    if (SR.net) SR.net.init(q);
-    if (q.get('demo') !== null && SR.demo && !q.get('room')) SR.demo.start('menu', q.get('demo'));
-    // Every visit opens on a choice: watch the demo or skip to the menu (not
-    // when the player arrived through a friend's invite).
-    else if (SR.ui.current() === 'scr-menu' && !(SR.NET_CONFIG && SR.NET_CONFIG.online && (q.get('room') || SR.cg.inviteParam('room') || SR.cg.instantMultiplayer))) SR.ui.intro();
-    if (SR.daily) SR.daily.init(q);
-    SR.cg.onSettingsChange(function () { SR.audio.setMuted(SR.cg.muted()); SR.ui.refresh(); });
+    part('online', function () { if (SR.net) SR.net.init(q); });
+    part('intro', function () {
+      if (q.get('demo') !== null && SR.demo && !q.get('room')) SR.demo.start('menu', q.get('demo'));
+      // Every visit opens on a choice: watch the demo or skip to the menu (not
+      // when the player arrived through a friend's invite).
+      else if (SR.ui.current() === 'scr-menu' && !(SR.NET_CONFIG && SR.NET_CONFIG.online && (q.get('room') || SR.cg.inviteParam('room') || SR.cg.instantMultiplayer))) SR.ui.intro();
+    });
+    part('daily', function () { if (SR.daily) SR.daily.init(q); });
+    SR.cg.onSettingsChange(function () {
+      try { SR.audio.setMuted(SR.cg.muted()); SR.ui.refresh(); } catch (e) { SR.oops('settings change', e); }
+    });
     // Signing in to CrazyGames swaps in that account's saved progress.
-    SR.cg.onAuthChange(function () { setTimeout(function () { SR.save.load(); SR.i18n.init(); SR.ui.refresh(); }, 300); });
+    SR.cg.onAuthChange(function () {
+      setTimeout(function () {
+        try { SR.save.load(); SR.i18n.init(); SR.ui.refresh(); } catch (e) { SR.oops('sign-in reload', e); }
+      }, 300);
+    });
     window.requestAnimationFrame(frame);
     SR.cg.loadingStop();
   }
 
-  // Start the CrazyGames SDK first (it preloads the player's cloud save), then the game.
+  // Start the CrazyGames SDK first (it preloads the player's cloud save), then
+  // the game. The game starts whatever the SDK does. A start-up error is
+  // thrown on its own, so it is reported as an error instead of being lost
+  // in a rejected promise.
   window.addEventListener('load', function () {
-    SR.cg.init().then(boot, boot);
+    function start() { try { boot(); } catch (e) { setTimeout(function () { throw e; }, 0); } }
+    SR.cg.init().then(start, start);
   });
 })();

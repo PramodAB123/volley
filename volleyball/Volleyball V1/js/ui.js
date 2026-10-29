@@ -955,6 +955,7 @@
     show: show,
     current: function () { return current; },
     stopMatch: stopMatch,
+    quit: quitMatch,
     teamCards: teamCards,
     rulesPicker: rulesPicker,
     courtPicker: courtPicker,
