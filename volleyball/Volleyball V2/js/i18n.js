@@ -970,7 +970,24 @@
     'Click again to restart': ['Pulsa otra vez para reiniciar', 'Clique de novo para reiniciar', 'Clique encore pour recommencer', 'Zum Neustart nochmal klicken', 'Yeniden başlatmak için tekrar tıkla'],
     'Back to menu': ['Volver al menú', 'Voltar ao menu', 'Retour au menu', 'Zurück zum Menü', 'Menüye dön'],
     'Invite a friend with a link': ['Invita a un amigo con un enlace', 'Convide um amigo com um link', 'Invite un ami avec un lien', 'Lade einen Freund per Link ein', 'Bir arkadaşını bağlantıyla davet et'],
-    'Champions Court': ['Cancha de Campeones', 'Quadra dos Campeões', 'Terrain des Champions', 'Champions-Halle', 'Şampiyonlar Sahası']
+    'Champions Court': ['Cancha de Campeones', 'Quadra dos Campeões', 'Terrain des Champions', 'Champions-Halle', 'Şampiyonlar Sahası'],
+    // ---- 2026-10-27: Tournament bracket redesign ----
+    'Quarter-final': ['Cuartos de final', 'Quartas de final', 'Quart de finale', 'Viertelfinale', 'Çeyrek final'],
+    'Semi-final': ['Semifinal', 'Semifinal', 'Demi-finale', 'Halbfinale', 'Yarı final'],
+    'Your match': ['Tu partido', 'Sua partida', 'Ton match', 'Dein Spiel', 'Senin maçın'],
+    'Champions!': ['¡Campeones!', 'Campeões!', 'Champions !', 'Meister!', 'Şampiyon!'],
+    'Runners-up': ['Subcampeones', 'Vice-campeões', 'Finalistes', 'Vizemeister', 'İkinci'],
+    'Out in the quarter-finals': ['Eliminados en cuartos', 'Eliminados nas quartas', 'Éliminés en quarts', 'Im Viertelfinale raus', 'Çeyrek finalde elendin'],
+    'Out in the semi-finals': ['Eliminados en semifinales', 'Eliminados na semifinal', 'Éliminés en demi-finale', 'Im Halbfinale raus', 'Yarı finalde elendin'],
+    'Cup': ['Copa', 'Taça', 'Coupe', 'Pokal', 'Kupa'],
+    '{round} · vs {team}': ['{round} · vs {team}', '{round} · x {team}', '{round} · contre {team}', '{round} · gegen {team}', '{round} · {team} ile'],
+    'Win ★ {n}': ['Gana ★ {n}', 'Vença ★ {n}', 'Victoire ★ {n}', 'Sieg ★ {n}', 'Kazan ★ {n}'],
+    'Cup winners': ['Campeones de copa', 'Campeões da taça', 'Vainqueurs de la coupe', 'Pokalsieger', 'Kupa şampiyonu'],
+    'Knocked out': ['Eliminados', 'Eliminados', 'Éliminés', 'Ausgeschieden', 'Elendin'],
+    'You lifted the cup!': ['¡Levantaste la copa!', 'Você levantou a taça!', 'Tu as soulevé la coupe !', 'Du hast den Pokal geholt!', 'Kupayı kaldırdın!'],
+    '{team} beat everyone · ★ +{n} bonus': ['{team} venció a todos · ★ +{n} extra', '{team} venceu todos · ★ +{n} bônus', '{team} a battu tout le monde · ★ +{n} bonus', '{team} hat alle geschlagen · ★ +{n} Bonus', '{team} herkesi yendi · ★ +{n} bonus'],
+    'Better luck next time. Try again?': ['Más suerte la próxima vez. ¿Otra vez?', 'Mais sorte na próxima. Tentar de novo?', 'Plus de chance la prochaine fois. On réessaie ?', 'Nächstes Mal klappt es. Nochmal?', 'Bir dahaki sefere. Tekrar dene?'],
+    'Click again to abandon': ['Pulsa otra vez para abandonar', 'Clique de novo para abandonar', 'Clique encore pour abandonner', 'Zum Abbrechen nochmal klicken', 'Çıkmak için tekrar tıkla']
   };
 
   var lang = 'en', table = {};

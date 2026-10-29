@@ -917,8 +917,8 @@ html:not(.page-home) .home .more-cue { display: none; }
 .cs { flex: none; min-width: 22px; height: 24px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; color: #9fb3d1; }
 .cs:empty { display: none; }
 .cr.win .cs { background: #ffd23f; color: #2a1d00; }
-.tight .cn b { display: none; }
-.tight .cn b.abbr { display: block; font-size: 13px; }
+.tight .cn b, .codes .cn b { display: none; }
+.tight .cn b.abbr, .codes .cn b.abbr { display: block; font-size: 13px; }
 .tight .cn em { display: none; }
 .tight .cr { gap: 5px; padding: 2px 4px 2px 2px; min-height: 32px; }
 .tight .cm { padding: 3px; border-radius: 12px; }
@@ -927,6 +927,8 @@ html:not(.page-home) .home .more-cue { display: none; }
 .tight .cup-colw h3 { font-size: 10.5px; letter-spacing: 0.03em; white-space: nowrap; }
 .tight .cm-tag { right: 50%; transform: translateX(50%); white-space: nowrap; font-size: 9px; }
 .tight .cr.tbd .cn b.abbr { font-size: 12px; }
+.codes .cr.tbd .cn b { display: block; }
+.codes .cr.tbd .cn b.abbr { display: none; }
 
 .crest { flex: none; display: inline-flex; width: 28px; height: 30px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45)); }
 .crest svg { width: 100%; height: 100%; overflow: visible; }
@@ -1014,8 +1016,9 @@ html:not(.page-home) .home .more-cue { display: none; }
   .crest { width: 22px; height: 24px; }
   .cn b { font-size: 12.5px; }
   .cup-bracket.wide { gap: 0 18px; }
-  .cup-trophy { width: 54px; height: 54px; }
-  .cup-prize.won .cup-trophy { width: 60px; height: 60px; }
+  .cup-trophy { width: 44px; height: 44px; }
+  .cup-prize { bottom: calc(100% + 8px); }
+  .cup-prize.won .cup-trophy { display: none; }
   .cup-court { display: none; }
   .cup-next .cpick-thumb { display: none; }
   .cup-next .btn { min-height: 42px; }

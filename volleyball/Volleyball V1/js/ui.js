@@ -322,7 +322,7 @@
   // The bracket: eight crests on a lit arena, lines from each match to the
   // next, your road in gold, and the trophy waiting in the middle.
   var CUP_ROUNDS = ['Quarter-finals', 'Semi-finals', 'Final'], CUP_ONE = ['Quarter-final', 'Semi-final', 'Final'];
-  var TROPHY = '<svg class="cup-trophy" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="cup-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset=".45" stop-color="#ffd23f"/><stop offset="1" stop-color="#e08a00"/></linearGradient></defs>' +
+  var TROPHY = '<svg class="cup-trophy" viewBox="0 0 64 64" aria-hidden="true">' +
     '<path d="M18 6h28v14c0 9-6 16-14 16s-14-7-14-16z" fill="url(#cup-gold)"/><path d="M18 11H9c0 9 4 14 11 15M46 11h9c0 9-4 14-11 15" fill="none" stroke="url(#cup-gold)" stroke-width="4" stroke-linecap="round"/>' +
     '<path d="M29 36h6v9h-6z" fill="#e8a400"/><path d="M21 47h22l3 9H18z" fill="url(#cup-gold)"/><rect x="16" y="55" width="32" height="5" rx="2" fill="#b86e00"/>' +
     '<path d="M24 10c0 7 1 13 5 18" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".55"/><path d="M32 13l1.8 3.7 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#fff8d6" opacity=".9"/></svg>';
@@ -357,7 +357,8 @@
 
   function cupLayout() {
     var w = $('cup-scroll').clientWidth || 800;
-    return w >= 820 ? 'wide' : w >= 520 ? 'mid' : 'tight';
+    // Folded wide but short on room: team codes instead of full names.
+    return w >= 980 ? 'wide' : w >= 820 ? 'wide codes' : w >= 520 ? 'mid' : 'tight';
   }
 
   function openCup() {
@@ -372,7 +373,7 @@
     var T = data().tournament, me = team(T.me), lay = cupLayout(), champ = T.champion && team(T.champion);
     var rnd = T.champion ? 3 : T.round;
     // Columns: wide screens fold the bracket in two around the trophy.
-    var cols = lay === 'wide' ?
+    var cols = lay.indexOf('wide') === 0 ?
       [[0, [0, 1]], [1, [0]], [2, [0]], [1, [1]], [0, [2, 3]]] :
       [[0, [0, 1, 2, 3]], [1, [0, 1]], [2, [0]]];
     var html = '';

@@ -319,36 +319,151 @@
     return out;
   }
 
+  // The bracket: eight crests on a lit arena, lines from each match to the
+  // next, your road in gold, and the trophy waiting in the middle.
+  var CUP_ROUNDS = ['Quarter-finals', 'Semi-finals', 'Final'], CUP_ONE = ['Quarter-final', 'Semi-final', 'Final'];
+  function cupName(r, one) { return SR.t((one ? CUP_ONE : CUP_ROUNDS)[r]); }
+  var TROPHY = '<svg class="cup-trophy" viewBox="0 0 64 64" aria-hidden="true">' +
+    '<path d="M18 6h28v14c0 9-6 16-14 16s-14-7-14-16z" fill="url(#cup-gold)"/><path d="M18 11H9c0 9 4 14 11 15M46 11h9c0 9-4 14-11 15" fill="none" stroke="url(#cup-gold)" stroke-width="4" stroke-linecap="round"/>' +
+    '<path d="M29 36h6v9h-6z" fill="#e8a400"/><path d="M21 47h22l3 9H18z" fill="url(#cup-gold)"/><rect x="16" y="55" width="32" height="5" rx="2" fill="#b86e00"/>' +
+    '<path d="M24 10c0 7 1 13 5 18" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".55"/><path d="M32 13l1.8 3.7 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#fff8d6" opacity=".9"/></svg>';
+
+  // A team crest: a shield in the team colour with its kit pattern and code.
+  function crest(t) {
+    if (!t) return '<span class="crest tbd"><svg viewBox="0 0 32 34" aria-hidden="true"><path d="M16 2l13 4.5V15c0 8.5-5.6 14.5-13 17C8.6 29.5 3 23.5 3 15V6.5z"/><text x="16" y="21">?</text></svg></span>';
+    var pat = t.pattern === 'stripes' ? '<path d="M9.5 0h3v34h-3zM19.5 0h3v34h-3z"/>' : t.pattern === 'hoops' ? '<path d="M0 12h32v5H0z"/>' : '<path d="M16 0h16v34H16z"/>';
+    return '<span class="crest" style="--tc:' + t.color + ';--tt:' + t.trim + '"><svg viewBox="0 0 32 34" aria-hidden="true">' +
+      '<path class="cr-b" d="M16 2l13 4.5V15c0 8.5-5.6 14.5-13 17C8.6 29.5 3 23.5 3 15V6.5z"/>' +
+      '<g class="cr-p" clip-path="url(#cup-shield)">' + pat + '</g>' +
+      '<path class="cr-s" d="M16 2l13 4.5V15c0 8.5-5.6 14.5-13 17C8.6 29.5 3 23.5 3 15V6.5z"/>' +
+      '<text x="16" y="20.5">' + t.short + '</text></svg></span>';
+  }
+
+  function cupRow(T, m, side) {
+    var id = m && m[side];
+    if (!id) return '<div class="cr tbd">' + crest(null) + '<span class="cn"><b>' + SR.t('To be decided') + '</b><b class="abbr">—</b></span><span class="cs"></span></div>';
+    var t = team(id), sc = m.score ? m.score.split('-')[side === 'a' ? 0 : 1] : '';
+    var cls = (m.w ? (m.w === id ? ' win' : ' lose') : '') + (id === T.me ? ' me' : '');
+    return '<div class="cr' + cls + '">' + crest(t) + '<span class="cn"><b>' + t.name + '</b><b class="abbr">' + t.short + '</b></span><span class="cs">' + sc + '</span></div>';
+  }
+
+  function cupCard(T, r, i) {
+    var m = T.rounds[r] && T.rounds[r][i];
+    var mine = m && (m.a === T.me || m.b === T.me);
+    var state = !m ? 'tbd' : m.w ? 'done' : mine && !T.champion ? 'next' : 'wait';
+    return '<div class="cm ' + state + (mine ? ' mine' : '') + '" data-r="' + r + '" data-i="' + i + '">' +
+      (state === 'next' ? '<span class="cm-tag">' + SR.t('Your match') + '</span>' : '') +
+      cupRow(T, m, 'a') + cupRow(T, m, 'b') + '</div>';
+  }
+
+  function cupLayout() {
+    var w = $('cup-scroll').clientWidth || 800;
+    // Folded wide but short on room: team codes instead of full names.
+    return w >= 980 ? 'wide' : w >= 820 ? 'wide codes' : w >= 520 ? 'mid' : 'tight';
+  }
+
   function openCup() {
     var T = data().tournament;
     if (!T) { openTeams('cup'); return; }
     mode = 'cup';
-    var names = ['Quarter-finals', 'Semi-finals', 'Final'].map(function (n) { return SR.t(n); });
-    var html = '';
-    for (var r = 0; r < 3; r++) {
-      html += '<div class="round"><h3>' + names[r] + '</h3>';
-      var ms = T.rounds[r];
-      if (!ms) { html += '<div class="match tbd">' + SR.t('To be decided') + '</div>'; }
-      else ms.forEach(function (m) {
-        var line = function (id) {
-          var t = team(id);
-          var cls = (m.w ? (m.w === id ? 'won' : 'lost') : '') + (id === T.me ? ' me' : '');
-          return '<div class="slot ' + cls + '">' + chip(t) + t.short + '</div>';
-        };
-        html += '<div class="match">' + line(m.a) + line(m.b) + (m.score ? '<div class="score">' + m.score + '</div>' : '') + '</div>';
-      });
-      html += '</div>';
-    }
-    $('cup-bracket').innerHTML = html;
-    var mine = cupMyMatch(T);
-    var msg;
-    if (T.champion) msg = T.champion === T.me ? SR.t('You won the cup!') : SR.t('{team} won the cup.', { team: team(T.champion).name });
-    else msg = SR.t('{round}: {a} vs {b}', { round: names[T.round], a: team(mine.a).name, b: team(mine.b).name });
-    $('cup-next').textContent = msg;
-    venueCard($('cup-venue'), mine ? cupVenue(T, mine) : null, T.me);
-    $('btn-cup-play').classList.toggle('hidden', !!T.champion);
-    $('btn-cup-new').classList.toggle('hidden', !T.champion);
     show('scr-cup');
+    renderCup();
+  }
+
+  function renderCup() {
+    var T = data().tournament, me = team(T.me), lay = cupLayout(), champ = T.champion && team(T.champion);
+    var rnd = T.champion ? 3 : T.round;
+    // Columns: wide screens fold the bracket in two around the trophy.
+    var cols = lay.indexOf('wide') === 0 ?
+      [[0, [0, 1]], [1, [0]], [2, [0]], [1, [1]], [0, [2, 3]]] :
+      [[0, [0, 1, 2, 3]], [1, [0, 1]], [2, [0]]];
+    var html = '';
+    cols.forEach(function (c) {
+      var r = c[0], fin = r === 2;
+      html += '<div class="cup-colw' + (fin ? ' fin' : '') + (r === rnd ? ' now' : r < rnd ? ' past' : '') + '"><h3>' + cupName(r) + '</h3><div class="cup-col">';
+      if (fin) {
+        html += '<div class="cup-final">' +
+          '<div class="cup-prize' + (champ ? ' won' : '') + '">' + TROPHY + (champ ? '<span class="cup-champ">' + crest(champ) + '<b>' + champ.name + '</b></span>' : '<span class="cup-court">' + SR.t('Champions Court') + '</span>') + '</div>' +
+          cupCard(T, 2, 0) + '</div>';
+      } else c[1].forEach(function (i) { html += cupCard(T, r, i); });
+      html += '</div></div>';
+    });
+    var box = $('cup-bracket');
+    box.className = 'cup-bracket ' + lay;
+    box.innerHTML = '<svg class="cup-lines" aria-hidden="true"></svg>' + html;
+
+    // Header: your team, where you are, and the road to the cup.
+    var lost = -1;
+    T.rounds.forEach(function (ms, r) { ms.forEach(function (m) { if (m.w && m.w !== T.me && (m.a === T.me || m.b === T.me)) lost = r; }); });
+    $('cup-sub').innerHTML = chip(me) + me.name + ' · ' + SR.t(T.champion === T.me ? 'Champions!' : lost === 2 ? 'Runners-up' : lost === 1 ? 'Out in the semi-finals' : lost === 0 ? 'Out in the quarter-finals' : CUP_ROUNDS[T.round]);
+    $('cup-steps').innerHTML = CUP_ROUNDS.map(function (n, r) {
+      var st = lost === r ? 'out' : r < rnd && (lost < 0 || r < lost) ? 'done' : r === rnd ? 'now' : '';
+      return '<li class="' + st + '"><span>' + (st === 'done' ? '✓' : st === 'out' ? '✕' : r + 1) + '</span>' + cupName(r, true) + '</li>';
+    }).join('') + '<li class="' + (T.champion === T.me ? 'done gold' : '') + '"><span>🏆</span>' + SR.t('Cup') + '</li>';
+
+    // Bottom: the next match with its venue, or how the cup ended.
+    var nx = $('cup-next'), mine = cupMyMatch(T);
+    $('scr-cup').classList.toggle('cup-won', T.champion === T.me);
+    $('btn-cup-quit').classList.toggle('hidden', !mine);
+    cupConfetti(T.champion === T.me);
+    if (mine) {
+      var opp = team(mine.a === T.me ? mine.b : mine.a), vid = cupVenue(T, mine), a = SR.ARENAS[vid];
+      var host = vid === 'final' ? SR.t('Tournament final') : vid === T.me ? SR.t('Your home court') : SR.t('Home of the {team}', { team: team(vid).name });
+      nx.className = 'cup-next';
+      nx.innerHTML = '<div class="cup-vs"><span class="cv me">' + crest(me) + '<b>' + me.short + '</b></span><span class="cv-x">VS</span><span class="cv">' + crest(opp) + '<b>' + opp.short + '</b></span></div>' +
+        '<span class="cpick-thumb">' + thumbImg(vid) + '</span>' +
+        '<span class="venue-text"><small>' + SR.t('{round} · vs {team}', { round: cupName(T.round, true), team: opp.name }) + '</small><b>' + (a ? SR.t(a.name) : '') + '</b><span>' + host + ' · <i class="cwin">' + SR.t('Win ★ {n}', { n: SR.STARS.cupWin }) + (T.round === 2 ? ' + ' + SR.STARS.cupTitle : '') + '</i></span></span>' +
+        '<button id="btn-cup-play" type="button" class="btn primary">' + SR.t('Play match') + '</button>';
+      on('btn-cup-play', function () { startMatch(me, opp, vid); });
+      thumbQueue.push(vid);
+      setTimeout(pumpThumbs, 0);
+    } else {
+      var won = T.champion === T.me;
+      nx.className = 'cup-next over' + (won ? ' won' : '');
+      nx.innerHTML = '<span class="cup-end-ico">' + (won ? TROPHY : crest(champ)) + '</span>' +
+        '<span class="venue-text"><small>' + SR.t(won ? 'Cup winners' : lost === 2 ? 'Runners-up' : 'Knocked out') + '</small><b>' + (won ? SR.t('You lifted the cup!') : SR.t('{team} won the cup.', { team: champ.name })) + '</b><span>' +
+        (won ? SR.t('{team} beat everyone · ★ +{n} bonus', { team: me.name, n: SR.STARS.cupTitle }) : SR.t('Better luck next time. Try again?')) + '</span></span>' +
+        '<button id="btn-cup-new" type="button" class="btn primary">' + SR.t('New tournament') + '</button>';
+      on('btn-cup-new', function () { data().tournament = null; save(); openTeams('cup'); });
+    }
+    drawCupLines();
+  }
+
+  // Paper confetti falling over the arena when you win the cup.
+  function cupConfetti(on) {
+    var box = document.querySelector('#scr-cup .cup-confetti');
+    if (!on) { if (box) box.remove(); return; }
+    if (box) return;
+    box = document.createElement('div');
+    box.className = 'cup-confetti';
+    box.setAttribute('aria-hidden', 'true');
+    var cols = ['#ffd23f', '#ff9f1c', '#4d8bff', '#ff4f9a', '#3bf0a0', '#ffffff'], html = '';
+    for (var i = 0; i < 46; i++) {
+      html += '<b style="left:' + (Math.random() * 100).toFixed(1) + '%;background:' + cols[i % cols.length] +
+        ';animation-duration:' + (4 + Math.random() * 4).toFixed(2) + 's,' + (1 + Math.random()).toFixed(2) + 's;animation-delay:-' + (Math.random() * 8).toFixed(2) + 's,0s;width:' + (6 + Math.random() * 6).toFixed(0) + 'px"></b>';
+    }
+    box.innerHTML = html;
+    document.querySelector('#scr-cup .cup-arena').appendChild(box);
+  }
+
+  // Elbow lines from each match to the one its winner goes to.
+  function drawCupLines() {
+    var box = $('cup-bracket'), svg = box && box.querySelector('.cup-lines'), T = data().tournament;
+    if (!svg || !T) return;
+    var o = box.getBoundingClientRect(), d = { todo: '', done: '', me: '' };
+    svg.setAttribute('width', box.scrollWidth); svg.setAttribute('height', box.scrollHeight);
+    box.querySelectorAll('.cm').forEach(function (el) {
+      var r = +el.getAttribute('data-r'), i = +el.getAttribute('data-i');
+      if (r === 2) return;
+      var to = box.querySelector('.cm[data-r="' + (r + 1) + '"][data-i="' + (i >> 1) + '"]');
+      if (!to) return;
+      var a = el.getBoundingClientRect(), b = to.getBoundingClientRect(), right = b.left > a.left;
+      var x1 = (right ? a.right : a.left) - o.left, y1 = a.top + a.height / 2 - o.top;
+      var x2 = (right ? b.left : b.right) - o.left, y2 = b.top + b.height / 2 - o.top, mx = (x1 + x2) / 2;
+      var m = T.rounds[r] && T.rounds[r][i], k = !m || !m.w ? 'todo' : m.w === T.me ? 'me' : 'done';
+      d[k] += 'M' + x1 + ' ' + y1 + 'H' + mx + 'V' + y2 + 'H' + x2;
+    });
+    svg.innerHTML = '<path class="todo" d="' + d.todo + '"/><path class="done" d="' + d.done + '"/><path class="me" d="' + d.me + '"/>';
   }
 
   // ---- career -------------------------------------------------------------
@@ -789,9 +904,13 @@
       on('btn-league-play', function () { var L = data().league; startMatch(team(L.me), team(myFixture(L)), leagueVenue(L)); });
       on('btn-league-new', function () { data().league = null; save(); openTeams('league'); });
       on('btn-league-quit', function () { data().league = null; save(); show('scr-menu'); });
-      on('btn-cup-play', function () { var T = data().tournament, m = cupMyMatch(T); startMatch(team(T.me), team(m.a === T.me ? m.b : m.a), cupVenue(T, m)); });
-      on('btn-cup-new', function () { data().tournament = null; save(); openTeams('cup'); });
-      on('btn-cup-quit', function () { data().tournament = null; save(); show('scr-menu'); });
+      var cupArmed = false;
+      on('btn-cup-quit', function () {
+        var b = $('btn-cup-quit');
+        if (!cupArmed) { cupArmed = true; b.textContent = SR.t('Click again to abandon'); setTimeout(function () { cupArmed = false; b.textContent = SR.t('Abandon tournament'); }, 3000); return; }
+        cupArmed = false; b.textContent = SR.t('Abandon tournament');
+        data().tournament = null; save(); show('scr-menu');
+      });
       on('btn-result-ok', function () {
         if (mode === 'league') openLeague(); else if (mode === 'cup') openCup(); else if (mode === 'career') openCareer(); else show('scr-menu');
       });
@@ -812,6 +931,7 @@
       window.addEventListener('resize', function () {
         var w = $('career-map').clientWidth;
         if (current === 'scr-career' && w !== lastW) { lastW = w; renderCareer(); }
+        if (current === 'scr-cup') renderCup();
       });
       $('set-format').addEventListener('change', function (e) { data().settings.format = e.target.value; save(); });
       $('set-diff').addEventListener('change', function (e) { data().settings.difficulty = e.target.value; save(); });
