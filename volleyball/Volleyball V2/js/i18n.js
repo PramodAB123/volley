@@ -805,6 +805,72 @@
     '{team} won with {pts}. Go again?': ['{team} ganó con {pts}. ¿Otra vez?', '{team} venceu com {pts}. De novo?', '{team} a gagné avec {pts}. On recommence ?', '{team} gewinnt mit {pts}. Nochmal?', '{team} {pts} ile kazandı. Tekrar?'],
 
     // ---- 2026-10-31: no shot choices, every spike is a Power hit at the aimed spot ----
+    'Spike': [
+      'Remate',
+      'Cortada',
+      'Smash',
+      'Angriff',
+      'Smaç'],
+    'Spike: one Power hit': [
+      'Remate: un golpe de Potencia',
+      'Cortada: um golpe de Força',
+      'Smash : un coup de Puissance',
+      'Angriff: ein Wucht-Schlag',
+      'Smaç: tek bir Güçlü vuruş'],
+    'Every spike is a Power hit: the fastest, hardest swing, straight at the spot you pick. While the set is in the air, tap open floor on their court, away from the blockers and defenders. Aiming right on the lines is risky, and no spot means your hitter misses.': [
+      'Cada remate es un golpe de Potencia: el más rápido y fuerte, directo al punto que elijas. Con la colocación en el aire, toca suelo libre en su campo, lejos de los bloqueadores y defensores. Apuntar justo a las líneas es arriesgado, y sin punto tu atacante falla.',
+      'Toda cortada é um golpe de Força: o mais rápido e forte, direto no ponto que você escolher. Com o levantamento no ar, toque no chão livre da quadra deles, longe dos bloqueadores e defensores. Mirar bem nas linhas é arriscado, e sem ponto seu atacante erra.',
+      'Chaque smash est un coup de Puissance : le plus rapide et le plus fort, droit sur le point que tu choisis. Pendant que la passe est en l\'air, touche un espace libre sur leur terrain, loin des contreurs et des défenseurs. Viser pile sur les lignes est risqué, et sans point ton attaquant rate.',
+      'Jeder Angriff ist ein Wucht-Schlag: der schnellste, härteste Schlag, genau auf den Punkt, den du wählst. Während das Zuspiel in der Luft ist, tippe auf freie Fläche in ihrem Feld, weg von Blockern und Abwehrspielern. Genau auf die Linien zu zielen ist riskant, und ohne Punkt verfehlt dein Angreifer.',
+      'Her smaç Güçlü bir vuruştur: en hızlı ve en sert vuruş, seçtiğin noktaya doğrudan. Pas havadayken rakip sahada blokçulardan ve savunmacılardan uzak boş bir alana dokun. Tam çizgilere nişan almak risklidir ve nokta seçmezsen smaççın ıskalar.'],
+    'Click a spot on their court while the set is up': [
+      'Haz clic en un punto de su campo mientras la colocación está en el aire',
+      'Clique num ponto da quadra deles enquanto o levantamento está no ar',
+      'Clique sur un point de leur terrain pendant que la passe est en l\'air',
+      'Klicke auf einen Punkt in ihrem Feld, solange das Zuspiel in der Luft ist',
+      'Pas havadayken rakip sahada bir noktaya tıkla'],
+    'Tap a spot on their court while the set is up': [
+      'Toca un punto de su campo mientras la colocación está en el aire',
+      'Toque num ponto da quadra deles enquanto o levantamento está no ar',
+      'Touche un point de leur terrain pendant que la passe est en l\'air',
+      'Tippe auf einen Punkt in ihrem Feld, solange das Zuspiel in der Luft ist',
+      'Pas havadayken rakip sahada bir noktaya dokun'],
+    'Set your right-side hitter (3).': [
+      'Coloca a tu atacante de la derecha (3).',
+      'Levante para o atacante da direita (3).',
+      'Fais la passe à ton attaquant de droite (3).',
+      'Spiel deinem Angreifer rechts zu (3).',
+      'Sağdaki smaççına pas ver (3).'],
+    'Your turn: set your right-side hitter (3). Tap the numbered player, or press the number.': [
+      'Tu turno: coloca a tu atacante de la derecha (3). Toca el jugador con número o pulsa el número.',
+      'Sua vez: levante para o atacante da direita (3). Toque no jogador numerado ou aperte o número.',
+      'À toi : fais la passe à ton attaquant de droite (3). Touche le joueur numéroté ou appuie sur le numéro.',
+      'Du bist dran: Spiel deinem Angreifer rechts zu (3). Tippe auf den Spieler mit Zahl oder drücke die Zahl.',
+      'Sıra sende: sağdaki smaççına pas ver (3). Numaralı oyuncuya dokun ya da numaraya bas.'],
+    'Aim for the open deep corner, away from their blockers.': [
+      'Apunta a la esquina del fondo libre, lejos de sus bloqueadores.',
+      'Mire no canto do fundo livre, longe dos bloqueadores.',
+      'Vise le coin du fond libre, loin de leurs contreurs.',
+      'Ziele auf die freie hintere Ecke, weg von ihren Blockern.',
+      'Blokçulardan uzak, boş arka köşeye nişan al.'],
+    'Your turn: tap the open deep corner of their court, away from their blockers.': [
+      'Tu turno: toca la esquina del fondo libre de su campo, lejos de sus bloqueadores.',
+      'Sua vez: toque no canto do fundo livre da quadra deles, longe dos bloqueadores.',
+      'À toi : touche le coin du fond libre de leur terrain, loin de leurs contreurs.',
+      'Du bist dran: Tippe auf die freie hintere Ecke ihres Feldes, weg von ihren Blockern.',
+      'Sıra sende: rakip sahanın boş arka köşesine, blokçulardan uzağa dokun.'],
+    'The red ring marks the spot. Your hitter swings with full power.': [
+      'El anillo rojo marca el punto. Tu atacante golpea con toda su potencia.',
+      'O anel vermelho marca o ponto. Seu atacante bate com toda a força.',
+      'L\'anneau rouge marque le point. Ton attaquant frappe de toutes ses forces.',
+      'Der rote Ring markiert den Punkt. Dein Angreifer schlägt mit voller Wucht.',
+      'Kırmızı halka noktayı gösterir. Smaççın tüm gücüyle vurur.'],
+    'Power spike into the corner. Kill!': [
+      'Remate de Potencia a la esquina. ¡Punto!',
+      'Cortada de Força no canto. Ponto!',
+      'Smash en Puissance dans le coin. Point !',
+      'Wucht-Angriff in die Ecke. Treffer!',
+      'Köşeye Güçlü smaç. Sayı!'],
     'Tap their court where the spike should land': [
       'Toca su campo donde debe caer el remate',
       'Toque na quadra deles onde a cortada deve cair',

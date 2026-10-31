@@ -82,6 +82,19 @@
       ]
     },
     {
+      name: 'Spike', title: 'Spike: one Power hit',
+      body: 'Every spike is a Power hit: the fastest, hardest swing, straight at the spot you pick. While the set is in the air, tap open floor on their court, away from the blockers and defenders. Aiming right on the lines is risky, and no spot means your hitter misses.',
+      keys: { pc: 'Click a spot on their court while the set is up', touch: 'Tap a spot on their court while the set is up' },
+      server: 1, script: { cpuServe: EASY_SERVE, noDig: 1 },
+      beats: [
+        { wait: prompt('hitter'), fast: 2, slow: 0.08, say: 'Set your right-side hitter (3).', aim: { head: 2 }, dur: 1.5, act: function (r) { r.pickHitterIndex(2); },
+          you: function () { return called('hitter'); }, youSay: 'Your turn: set your right-side hitter (3). Tap the numbered player, or press the number.' },
+        tapSpot(16.2, 7.6, 'Aim for the open deep corner, away from their blockers.', 'Your turn: tap the open deep corner of their court, away from their blockers.'),
+        { slow: 0.25, say: 'The red ring marks the spot. Your hitter swings with full power.', dur: 1.2 },
+        { wait: dead, say: 'Power spike into the corner. Kill!', dur: 2.4, end: true }
+      ]
+    },
+    {
       name: 'Block', title: 'Block: commit to a side',
       body: 'When they pass, call your block before their setter sets. Commit Left, Middle or Right to stack all three blockers there. Guess right and the hitter meets a wall; guess wrong and the net is wide open.',
       keys: { pc: 'Press 1 to 3, or click a button or a B zone', touch: 'Tap Left, Middle or Right' },
