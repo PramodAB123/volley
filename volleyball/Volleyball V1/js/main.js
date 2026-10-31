@@ -198,7 +198,11 @@
   // must not leave the player without a menu.
   function part(name, fn) { try { fn(); } catch (e) { SR.oops('boot ' + name, e); } }
 
-  window.addEventListener('load', function () {
+  // Start once the page is parsed: waiting for 'load' also waited for every
+  // image on the home page below the game, which held the game back.
+  function onReady(fn) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn(); }
+
+  onReady(function () {
     SR.save.load();
     canvas = document.getElementById('game');
     ctx = canvas.getContext('2d');

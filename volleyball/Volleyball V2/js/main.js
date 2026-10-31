@@ -216,12 +216,8 @@
     var q = query();
     if (q.get('speed')) SR.speed = Number(q.get('speed')) || 1;
     part('online', function () { if (SR.net) SR.net.init(q); });
-    part('intro', function () {
-      if (q.get('demo') !== null && SR.demo && !q.get('room')) SR.demo.start('menu', q.get('demo'));
-      // Every visit opens on a choice: watch the demo or skip to the menu (not
-      // when the player arrived through a friend's invite).
-      else if (SR.ui.current() === 'scr-menu' && !(SR.NET_CONFIG && SR.NET_CONFIG.online && (q.get('room') || SR.cg.inviteParam('room') || SR.cg.instantMultiplayer))) SR.ui.intro();
-    });
+    // Every visit opens on the home menu; the demo is under How to play.
+    part('demo', function () { if (q.get('demo') !== null && SR.demo && !q.get('room')) SR.demo.start('menu', q.get('demo')); });
     part('daily', function () { if (SR.daily) SR.daily.init(q); });
     SR.cg.onSettingsChange(function () {
       try { SR.audio.setMuted(SR.cg.muted()); SR.ui.refresh(); } catch (e) { SR.oops('settings change', e); }
@@ -240,8 +236,11 @@
   // the game. The game starts whatever the SDK does. A start-up error is
   // thrown on its own, so it is reported as an error instead of being lost
   // in a rejected promise.
-  window.addEventListener('load', function () {
+  // Start once the page is parsed: waiting for 'load' also waited for the
+  // menu images, which held the game back on slow phones.
+  function begin() {
     function start() { try { boot(); } catch (e) { setTimeout(function () { throw e; }, 0); } }
     SR.cg.init().then(start, start);
-  });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', begin); else begin();
 })();

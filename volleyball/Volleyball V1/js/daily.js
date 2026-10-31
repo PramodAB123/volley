@@ -3,7 +3,7 @@
 // from Day 1. Opens by itself on the home screen when a gift is waiting.
 (function () {
   var $ = function (id) { return document.getElementById(id); };
-  var won = null, timer = 0;
+  var won = null, timer = 0, autoPending = false;
 
   function data() { return SR.save.data; }
   function daily() {
@@ -137,8 +137,30 @@
     $('daily-next').innerHTML = (s.index === 6 ? 'Week complete! A new week' : 'Day ' + (s.index + 2)) + ' opens in <b>' + (h ? h + 'h ' : '') + m + 'm</b>';
   }
 
+  // A one-line reminder of the calendar on the home and result screens:
+  // today's gift while it waits, then tomorrow's, as a reason to come back.
+  function shortPrize(r) {
+    var p = [];
+    if (r.stars) p.push('+' + r.stars + ' ★');
+    if (r.item) p.push(item(r.item.kind, r.item.id).name + (r.item.kind === 'balls' ? ' ball' : ' jersey'));
+    return p.join(' + ');
+  }
+  var GIFT = '<span class="dt-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="9" width="17" height="11.5" rx="2"/><path d="M2.5 9h19v-3h-19zM12 6v14.5"/>' +
+    '<path d="M12 6c-1.6-3.4-6-3.6-5.4-.9C6.9 6.3 9.6 6.1 12 6zM12 6c1.6-3.4 6-3.6 5.4-.9-.3 1.2-3 1-5.4.9z"/></svg></span>';
+  function teaser(el) {
+    if (!el) return;
+    var s = state(), i = s.ready ? s.index : daily().streak % 7;
+    var title = (s.ready ? 'Day ' : 'Tomorrow: Day ') + (i + 1) + (s.ready ? ' gift ready' : ' gift');
+    var sub = (i === 6 ? 'Mega chest · ' : '') + shortPrize(reward(i)) + ' · ' + (s.ready ? 'Tap to claim' : 'Come back to keep your streak');
+    el.innerHTML = GIFT + '<span class="dt-txt"><b>' + title + '</b><small>' + sub + '</small></span><span class="dt-go" aria-hidden="true">›</span>';
+    el.classList.toggle('ready', !!s.ready);
+    el.classList.remove('hidden');
+  }
+
   function refreshDot() {
     var b = $('btn-daily');
+    teaser($('home-daily'));
+    teaser($('result-daily'));
     if (b) b.classList.toggle('ready', state().ready);
   }
 
@@ -177,6 +199,7 @@
   var back = 'scr-menu';
   function open() {
     var cur = SR.ui.current();
+    autoPending = false;
     back = cur && cur !== 'scr-daily' ? cur : 'scr-menu';
     won = null;
     $('daily-won').classList.add('hidden');
@@ -199,8 +222,19 @@
     open: open,
     jersey: jersey,
     state: state,
+    teaser: teaser,
+    // The home menu just opened: show the calendar once if a gift is waiting.
+    // A brand-new player goes straight to their first match; the calendar
+    // waits until they come back to the menu after it.
+    onMenu: function () {
+      if (!autoPending || !state().ready || !data().stats.matches) return;
+      autoPending = false;
+      setTimeout(function () { if (SR.ui.current() === 'scr-menu' && !SR.game) open(); }, 700);
+    },
     init: function (q) {
       on('btn-daily', open);
+      on('home-daily', open);
+      on('result-daily', open);
       on('btn-daily-x', close);
       on('btn-daily-ok', close);
       on('btn-daily-equip', equip);
@@ -210,9 +244,8 @@
       setInterval(refreshDot, 60000);
       // A gift is waiting: show the calendar on the home screen, but not for
       // a friend joining by invite link or the how-to-play demo.
-      if (state().ready && !(q && (q.get('room') || q.get('demo') !== null))) {
-        setTimeout(function () { if (SR.ui.current() === 'scr-menu' && !SR.game) open(); }, 700);
-      }
+      autoPending = !(q && (q.get('room') || q.get('demo') !== null));
+      if (SR.ui.current() === 'scr-menu') SR.daily.onMenu();
     }
   };
 })();

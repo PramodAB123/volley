@@ -65,44 +65,6 @@
       </div>
     </aside>
 
-    <section id="scr-intro" class="screen intro hidden" aria-labelledby="intro-title">
-      <div class="intro-card">
-        <svg class="intro-art" viewBox="0 0 320 130" aria-hidden="true">
-          <defs>
-            <linearGradient id="ia-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16305e"/><stop offset="1" stop-color="#0b1a36"/></linearGradient>
-          </defs>
-          <rect x="0" y="0" width="320" height="130" rx="16" fill="url(#ia-sky)"/>
-          <g class="ia-lights" fill="#fff6d0"><circle cx="40" cy="10" r="16" opacity=".12"/><circle cx="160" cy="6" r="20" opacity=".14"/><circle cx="280" cy="10" r="16" opacity=".12"/></g>
-          <rect x="0" y="108" width="320" height="22" fill="#2e7a4f"/>
-          <rect x="22" y="108" width="276" height="9" fill="#f28a3a"/>
-          <rect x="106" y="108" width="108" height="9" fill="#ec7c2b"/>
-          <line x1="160" y1="117" x2="160" y2="52" stroke="#dfe5ee" stroke-width="3"/>
-          <rect x="157" y="54" width="6" height="26" fill="none" stroke="#e8eef8" stroke-width="1.2" stroke-dasharray="2 2"/>
-          <line x1="157" y1="54" x2="163" y2="54" stroke="#fff" stroke-width="2.5"/>
-          <g class="ia-p1"><circle cx="78" cy="70" r="6" fill="#f1c7a3"/><rect x="71" y="77" width="14" height="20" rx="5" fill="#2f6fe0"/><rect x="72" y="96" width="5" height="12" rx="2" fill="#1b3f86"/><rect x="79" y="96" width="5" height="12" rx="2" fill="#1b3f86"/><path d="M84 79 L95 60" stroke="#f1c7a3" stroke-width="4" stroke-linecap="round"/></g>
-          <g class="ia-p2"><circle cx="242" cy="74" r="6" fill="#d9a37e"/><rect x="235" y="81" width="14" height="19" rx="5" fill="#d9822b"/><rect x="236" y="99" width="5" height="9" rx="2" fill="#7a3f10"/><rect x="243" y="99" width="5" height="9" rx="2" fill="#7a3f10"/><path d="M236 84 L226 74 M248 84 L256 74" stroke="#d9a37e" stroke-width="4" stroke-linecap="round"/></g>
-          <path d="M96 58 Q160 -14 228 74" fill="none" stroke="#ffd23f" stroke-width="2" stroke-dasharray="4 6" opacity=".55"/>
-          <g class="ia-ball">
-            <circle r="8" fill="#f4d03f" stroke="#2453a6" stroke-width="2"/>
-            <path d="M-8 0 Q0 -5 8 0" fill="none" stroke="#2453a6" stroke-width="1.6"/>
-            <animateMotion dur="2.4s" repeatCount="indefinite" path="M96 58 Q160 -14 228 74 Q160 -2 96 58" keyPoints="0;1" keyTimes="0;1" calcMode="linear"/>
-          </g>
-        </svg>
-        <div class="intro-brand" data-i18n-skip>Spike<span>Rally</span></div>
-        <h2 id="intro-title">New here? Learn it in a minute</h2>
-        <p class="intro-sub">Watch a short demo of the calls you make in every rally.</p>
-        <ul class="intro-steps">
-          <li><span>1</span>Serve</li>
-          <li><span>2</span>Set</li>
-          <li><span>3</span>Attack</li>
-          <li><span>4</span>Block</li>
-        </ul>
-        <button id="btn-intro-watch" class="intro-watch" type="button"><span class="intro-play" aria-hidden="true">▶</span> <span>Watch demo</span></button>
-        <button id="btn-intro-skip" class="intro-skip" type="button">Skip</button>
-        <p class="intro-note">You can watch it again any time from How to play.</p>
-      </div>
-    </section>
-
     <section id="scr-menu" class="screen">
       <div class="panel menu home">
         <div class="home-head">
@@ -119,7 +81,7 @@
         <div class="home-hero">
           <button id="btn-quick" class="tile t-quick">
             <span class="t-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3c-2.2 4-2 9 2 13M3.6 9.2c4 1 8.8 0 12-4.2M6 18.6c3-3 8-5 14-4.2"/></svg></span>
-            <b>Quick match</b><small>Jump straight into a game</small>
+            <b>Quick match</b><small>Random or choose your team</small>
           </button>
           <button id="btn-career" class="tile t-career">
             <svg class="t-isle" viewBox="0 0 90 56" aria-hidden="true"><ellipse cx="45" cy="44" rx="42" ry="10" fill="#9bf0f7" opacity=".45"/><ellipse cx="45" cy="42" rx="31" ry="8.5" fill="#f3d9a0"/><ellipse cx="45" cy="39.5" rx="20" ry="5" fill="#5cb85c"/><path d="M47 40 C49 31 46 24 50 15" fill="none" stroke="#8a5a2b" stroke-width="2.6" stroke-linecap="round"/><g fill="#2f9e44"><path d="M50 15 C43 10 36 11 32 17 C38 14 44 14 50 15Z"/><path d="M50 15 C56 8 63 9 66 14 C60 12 55 13 50 15Z"/><path d="M50 15 C46 6 40 4 35 5 C41 7 46 10 50 15Z"/><path d="M50 15 C53 5 59 3 63 5 C58 7 53 10 50 15Z"/></g><rect x="30" y="33" width="13" height="7" rx="1" fill="#f28a3a" stroke="#fff" stroke-width="1"/></svg>
@@ -127,6 +89,7 @@
             <span class="t-bar"><i id="career-prog-bar"></i></span>
           </button>
         </div>
+        <button id="home-daily" class="daily-teaser hidden" type="button"></button>
         <button id="btn-online" class="tile t-online hidden">
           <span class="t-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.6 14.2c3 .3 5.4 2.7 5.4 5.8"/></svg></span>
           <span class="t-txt"><b>Play online</b><small>Invite a friend with a link</small></span>
@@ -140,6 +103,23 @@
           <button id="btn-settings" class="mini"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg><span>Settings</span></button>
           <button id="btn-help" class="mini"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.7.3-1 .9-1 1.7"/><path d="M12 16.8v.4"/></svg><span>How to play</span></button>
         </div>
+      </div>
+    </section>
+
+    <section id="scr-quick" class="screen hidden">
+      <div class="panel quick-pick">
+        <h2>Quick match</h2>
+        <div class="qp-opts">
+          <button id="btn-quick-random" class="tile qp-random" type="button">
+            <span class="t-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r="1.2"/><circle cx="15" cy="15" r="1.2"/><circle cx="15" cy="9" r="1.2"/><circle cx="9" cy="15" r="1.2"/><circle cx="12" cy="12" r="1.2"/></svg></span>
+            <b>Random</b><small>Random teams. The match starts now.</small>
+          </button>
+          <button id="btn-quick-choose" class="tile qp-choose" type="button">
+            <span class="t-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3.5 3.5 6 2 10.5l3 1.3 1-2V20.5h12V9.8l1 2 3-1.3L20.5 6 16 3.5c-.4 1.6-2 2.8-4 2.8s-3.6-1.2-4-2.8z"/></svg></span>
+            <b>Choose team</b><small>Pick your team, court and rules</small>
+          </button>
+        </div>
+        <button class="btn ghost" data-back>Back</button>
       </div>
     </section>
 
@@ -376,7 +356,11 @@
         <p id="result-stats" class="muted"></p>
         <p id="result-stars" class="stars-earned"></p>
         <p id="result-notes"></p>
-        <button id="btn-result-ok" class="btn primary">Continue</button>
+        <button id="result-daily" class="daily-teaser hidden" type="button"></button>
+        <div class="row center result-btns">
+          <button id="btn-result-next" class="btn primary hidden" type="button" data-i18n-skip>Play again</button>
+          <button id="btn-result-ok" class="btn primary" type="button" data-i18n-skip>Continue</button>
+        </div>
       </div>
     </section>
 
@@ -405,8 +389,12 @@
   <script src="js/input.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/daily.js"></script>
-  <script src="js/vendor/peerjs.min.js"></script>
   <script src="js/net-config.js"></script>
+  <script>
+    // PeerJS is only needed for online play, which is off in this build:
+    // skip downloading it so the game starts sooner.
+    if (SR.NET_CONFIG && SR.NET_CONFIG.online) document.write('<script src="js/vendor/peerjs.min.js"><\/script>');
+  </script>
   <script src="js/relay.js"></script>
   <script src="js/net.js"></script>
   <script src="js/demo.js"></script>

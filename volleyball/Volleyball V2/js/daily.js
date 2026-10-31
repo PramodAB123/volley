@@ -145,8 +145,30 @@
     $('daily-next').innerHTML = s.index === 6 ? SR.t('Week complete! A new week opens in {time}', { time: left }) : SR.t('Day {n} opens in {time}', { n: s.index + 2, time: left });
   }
 
+  // A one-line reminder of the calendar on the home and result screens:
+  // today's gift while it waits, then tomorrow's, as a reason to come back.
+  function shortPrize(r) {
+    var p = [];
+    if (r.stars) p.push('+' + r.stars + ' ★');
+    if (r.item) p.push(itemName(r.item));
+    return p.join(' + ');
+  }
+  var GIFT = '<span class="dt-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="9" width="17" height="11.5" rx="2"/><path d="M2.5 9h19v-3h-19zM12 6v14.5"/>' +
+    '<path d="M12 6c-1.6-3.4-6-3.6-5.4-.9C6.9 6.3 9.6 6.1 12 6zM12 6c1.6-3.4 6-3.6 5.4-.9-.3 1.2-3 1-5.4.9z"/></svg></span>';
+  function teaser(el) {
+    if (!el) return;
+    var s = state(), i = s.ready ? s.index : daily().streak % 7;
+    var title = s.ready ? SR.t('Day {n} gift ready', { n: i + 1 }) : SR.t('Tomorrow: Day {n} gift', { n: i + 1 });
+    var sub = (i === 6 ? SR.t('Mega chest') + ' · ' : '') + shortPrize(reward(i)) + ' · ' + SR.t(s.ready ? 'Tap to claim' : 'Come back to keep your streak');
+    el.innerHTML = GIFT + '<span class="dt-txt"><b>' + title + '</b><small>' + sub + '</small></span><span class="dt-go" aria-hidden="true">›</span>';
+    el.classList.toggle('ready', !!s.ready);
+    el.classList.remove('hidden');
+  }
+
   function refreshDot() {
     var b = $('btn-daily');
+    teaser($('home-daily'));
+    teaser($('result-daily'));
     if (!b) return;
     b.classList.toggle('ready', state().ready);
     b.title = SR.t('Daily rewards');
@@ -211,6 +233,7 @@
 
   SR.daily = {
     open: open,
+    teaser: teaser,
     jersey: jersey,
     state: state,
     // Saved data changed (CrazyGames sign-in) or the language did.
@@ -220,12 +243,16 @@
     },
     // The home menu just opened: show the calendar once if a gift is waiting.
     onMenu: function () {
-      if (!autoPending || !state().ready) return;
+      // A brand-new player goes straight to their first match; the calendar
+      // waits until they come back to the menu after it.
+      if (!autoPending || !state().ready || !data().stats.matches) return;
       autoPending = false;
       setTimeout(function () { if (SR.ui.current() === 'scr-menu' && !SR.game) open(); }, 600);
     },
     init: function (q) {
       on('btn-daily', open);
+      on('home-daily', open);
+      on('result-daily', open);
       on('btn-daily-x', close);
       on('btn-daily-ok', close);
       on('btn-daily-equip', equip);
@@ -237,7 +264,7 @@
       // The red dot also lights up when the game stays open past midnight.
       setInterval(refreshDot, 60000);
       // Not for the how-to-play demo link; otherwise the calendar opens the
-      // first time the player reaches the home menu (after the intro choice).
+      // first time a player who has finished a match reaches the home menu.
       autoPending = !(q && q.get('demo') !== null);
       if (SR.ui.current() === 'scr-menu') SR.daily.onMenu();
     }

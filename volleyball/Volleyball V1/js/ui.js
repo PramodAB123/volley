@@ -1,12 +1,13 @@
 // Menus and modes: quick match, career, league, tournament, shop, stats, settings.
 (function () {
   var $ = function (id) { return document.getElementById(id); };
-  var current = null, mode = 'quick', pickStep = 0, pickedHome = null;
+  var current = null, mode = 'quick';
 
   function show(id) {
     document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('hidden', s.id !== id); });
     current = id;
     $('hud').classList.toggle('hidden', id !== null);
+    if (id === 'scr-menu' && SR.daily) SR.daily.onMenu();
   }
 
   function save() { SR.save.write(); refreshStars(); refreshCareer(); }
@@ -36,16 +37,16 @@
   // ---- team select --------------------------------------------------------
 
   function openTeams(m) {
-    mode = m; pickStep = 0; pickedHome = null;
+    mode = m;
     renderTeams();
     show('scr-teams');
   }
 
   function renderTeams() {
-    var title = mode === 'quick' ? (pickStep === 0 ? 'Choose your team' : 'Choose your opponent') :
+    var title = mode === 'quick' ? 'Choose your team' :
       ({ league: 'League', cup: 'Tournament', career: 'Career' })[mode] + ': choose your team';
     $('teams-title').textContent = title;
-    teamCards($('team-grid'), pickStep === 1 && pickedHome ? pickedHome.id : null, pickTeam);
+    teamCards($('team-grid'), null, pickTeam);
     rulesPicker($('team-rules'));
     courtPicker($('team-courts'));
   }
@@ -124,8 +125,10 @@
   function pickTeam(t) {
     SR.audio.play('click');
     if (mode === 'quick') {
-      if (pickStep === 0) { pickedHome = t; pickStep = 1; renderTeams(); return; }
-      startMatch(pickedHome, t);
+      // Your team only: the opponent is picked at random.
+      data().settings.team = t.id;
+      save();
+      startMatch(t, randomTeam(t));
       return;
     }
     data().settings.team = t.id;
@@ -136,12 +139,56 @@
 
   // ---- matches ------------------------------------------------------------
 
-  function startMatch(home, away, venue, difficulty) {
+  function startMatch(home, away, venue, difficulty, format) {
     var s = data().settings;
     show(null);
-    if (mode === 'quick' && SR.ARENAS[s.quickCourt]) venue = s.quickCourt;
+    if (mode === 'quick') { lastQuick = { home: home, away: away }; if (SR.ARENAS[s.quickCourt]) venue = s.quickCourt; }
     home = SR.kitTeam(home, away);
-    SR.game = new SR.Game({ home: home, away: away, format: s.format, difficulty: difficulty || s.difficulty, human: 0, mode: mode, venue: venue || null, onEnd: finishMatch });
+    SR.game = new SR.Game({ home: home, away: away, format: format || s.format, difficulty: difficulty || s.difficulty, human: 0, mode: mode, venue: venue || null, onEnd: finishMatch });
+  }
+
+  // Quick match: Random starts at once with two random teams; Choose team
+  // picks only your team (opponent random). A player's very first match is a
+  // single set, so they reach a result quickly.
+  var lastQuick = null;
+  function randomTeam(not) {
+    var list = SR.TEAMS.filter(function (t) { return !not || t.id !== not.id; });
+    return list[Math.floor(Math.random() * list.length)];
+  }
+  function quickRandom() {
+    var me = randomTeam(null);
+    mode = 'quick';
+    startMatch(me, randomTeam(me), null, null, data().stats.matches ? null : SR.formatId(15, 1));
+  }
+
+  // The result screen's main button: the next match in the same mode.
+  var resultNext = null;
+  function nextAction(won, prevPick) {
+    if (mode === 'quick' && lastQuick) {
+      var q = lastQuick;
+      return { label: 'Play again', go: function () { startMatch(q.home, q.away); } };
+    }
+    if (mode === 'league' && data().league && !data().league.done) {
+      return { label: 'Next match', go: function () { openLeague(); var b = $('btn-league-play'); if (b) b.click(); } };
+    }
+    if (mode === 'cup' && data().tournament && cupMyMatch(data().tournament)) {
+      return { label: 'Next match', go: function () { openCup(); var b = $('btn-cup-play'); if (b) b.click(); } };
+    }
+    if (mode === 'career' && data().career) {
+      return { label: !won ? 'Try again' : careerPick !== prevPick ? 'Next island' : 'Play again',
+        go: function () { openCareer(); var b = $('btn-career-play'); if (b && !b.disabled) b.click(); } };
+    }
+    return null;
+  }
+
+  function resultButtons(next) {
+    resultNext = next;
+    $('btn-result-next').classList.toggle('hidden', !next);
+    if (next) $('btn-result-next').textContent = next.label;
+    $('btn-result-ok').textContent = mode === 'quick' ? 'Menu' : 'Continue';
+    $('btn-result-ok').classList.toggle('primary', !next);
+    $('btn-result-ok').classList.toggle('ghost', !!next);
+    if (SR.daily) SR.daily.teaser($('result-daily'));
   }
 
   // ---- venues -------------------------------------------------------------
@@ -172,7 +219,7 @@
     if (won) st.wins++;
     m.history.forEach(function (s) { st.points += s[0]; });
     st.aces += m.stats[0].aces; st.kills += m.stats[0].kills; st.blocks += m.stats[0].blocks;
-    var notes = [];
+    var notes = [], prevPick = careerPick;
     var result = { winner: m.winner, sets: m.sets.slice(), scores: m.history.slice() };
 
     if (mode === 'quick') { if (won) stars += SR.STARS.quickWin; }
@@ -189,6 +236,7 @@
     $('result-stats').textContent = 'Aces ' + m.stats[0].aces + ' · Kills ' + m.stats[0].kills + ' · Blocks ' + m.stats[0].blocks + ' · Errors ' + m.stats[0].errors;
     $('result-stars').textContent = stars ? '+' + stars + ' star' + (stars > 1 ? 's' : '') : 'No stars this time';
     $('result-notes').textContent = notes.join(' ');
+    resultButtons(nextAction(won, prevPick));
     stopMatch();
     show('scr-result');
   }
@@ -942,6 +990,7 @@
     $('result-stats').textContent = 'Aces ' + r.stats.aces + ' · Kills ' + r.stats.kills + ' · Blocks ' + r.stats.blocks + ' · Errors ' + r.stats.errors;
     $('result-stars').textContent = stars ? '+' + stars + ' star' : 'No stars this time';
     $('result-notes').textContent = '';
+    resultButtons(null);
     stopMatch();
     show('scr-result');
   }
@@ -966,7 +1015,9 @@
     init: function () {
       refreshStars();
       refreshCareer();
-      on('btn-quick', function () { openTeams('quick'); });
+      on('btn-quick', function () { show('scr-quick'); });
+      on('btn-quick-random', quickRandom);
+      on('btn-quick-choose', function () { openTeams('quick'); });
       on('btn-career', openCareer);
       on('btn-career-team', function () { openTeams('career'); });
       var careerArmed = false;
@@ -1000,6 +1051,7 @@
         cupArmed = false; b.textContent = 'Abandon tournament';
         data().tournament = null; save(); show('scr-menu');
       });
+      on('btn-result-next', function () { if (resultNext) resultNext.go(); });
       on('btn-result-ok', function () {
         if (mode === 'league') openLeague(); else if (mode === 'cup') openCup(); else if (mode === 'career') openCareer(); else show('scr-menu');
       });

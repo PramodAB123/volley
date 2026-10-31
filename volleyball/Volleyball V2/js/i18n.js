@@ -918,7 +918,22 @@
       'Sua vez: o levantador escolheu o atacante, mas você mira a cortada. Toque no chão livre da quadra deles.',
       'À toi : le passeur a choisi l\'attaquant, mais c\'est toi qui vises le smash. Touche un espace libre sur leur terrain.',
       'Du bist dran: Der Zuspieler hat den Angreifer gewählt, aber du zielst den Angriff. Tippe auf freie Fläche in ihrem Feld.',
-      'Sıra sende: smaççıyı pasör seçti ama smaça sen nişan alırsın. Rakip sahada boş bir alana dokun.']
+      'Sıra sende: smaççıyı pasör seçti ama smaça sen nişan alırsın. Rakip sahada boş bir alana dokun.'],
+
+    // ---- 2026-10-31: Quick match Random / Choose team, Play again, daily gift reminder ----
+    'Random or choose your team': ['Al azar o elige tu equipo', 'Aleatório ou escolha seu time', 'Au hasard ou choisis ton équipe', 'Zufällig oder Team wählen', 'Rastgele ya da takımını seç'],
+    'Random': ['Al azar', 'Aleatório', 'Au hasard', 'Zufällig', 'Rastgele'],
+    'Random teams. The match starts now.': ['Equipos al azar. El partido empieza ya.', 'Times aleatórios. A partida começa agora.', 'Équipes au hasard. Le match commence tout de suite.', 'Zufällige Teams. Das Spiel startet sofort.', 'Rastgele takımlar. Maç hemen başlıyor.'],
+    'Choose team': ['Elegir equipo', 'Escolher time', 'Choisir l\'équipe', 'Team wählen', 'Takım seç'],
+    'Pick your team, court and rules': ['Elige tu equipo, cancha y reglas', 'Escolha seu time, quadra e regras', 'Choisis ton équipe, le terrain et les règles', 'Wähle Team, Feld und Regeln', 'Takımını, sahanı ve kuralları seç'],
+    'Play again': ['Jugar otra vez', 'Jogar de novo', 'Rejouer', 'Nochmal spielen', 'Tekrar oyna'],
+    'Next match': ['Siguiente partido', 'Próxima partida', 'Match suivant', 'Nächstes Spiel', 'Sonraki maç'],
+    'Next island': ['Siguiente isla', 'Próxima ilha', 'Île suivante', 'Nächste Insel', 'Sonraki ada'],
+    'Try again': ['Intentar otra vez', 'Tentar de novo', 'Réessayer', 'Nochmal versuchen', 'Tekrar dene'],
+    'Day {n} gift ready': ['Regalo del día {n} listo', 'Presente do dia {n} pronto', 'Cadeau du jour {n} prêt', 'Geschenk für Tag {n} bereit', '{n}. gün hediyesi hazır'],
+    'Tomorrow: Day {n} gift': ['Mañana: regalo del día {n}', 'Amanhã: presente do dia {n}', 'Demain : cadeau du jour {n}', 'Morgen: Geschenk für Tag {n}', 'Yarın: {n}. gün hediyesi'],
+    'Tap to claim': ['Toca para reclamar', 'Toque para resgatar', 'Touche pour récupérer', 'Tippen zum Abholen', 'Almak için dokun'],
+    'Come back to keep your streak': ['Vuelve para mantener tu racha', 'Volte para manter sua sequência', 'Reviens pour garder ta série', 'Komm wieder, um deine Serie zu halten', 'Serini korumak için geri gel']
   };
 
   var lang = 'en', table = {};
