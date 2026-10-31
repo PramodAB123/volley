@@ -1023,9 +1023,9 @@
       drawFx(ctx, 'ground');
       if (ui.prompt === 'block') drawBlockZones(ctx, ui.blockCall === 'read' ? null : ui.blockCall, now);
       if (ui.prompt === 'serve') reticle(ctx, ui.aim.x, ui.aim.y, '#ff4d3d', SR.t('SERVE'), now);
-      var shotName = SR.upper(SR.t(SR.SHOTS[ui.tip ? 'tip' : ui.shot].label));
-      if (ui.attackTarget && rally.state === 'rally') reticle(ctx, ui.attackTarget.x, ui.attackTarget.y, ui.tip || ui.shot === 'tip' ? '#36c5ff' : '#ff4d3d', shotName, now);
-      if (ui.prompt === 'target' && game.hover && !ui.attackTarget && !SR.SHOTS[ui.shot].auto) reticle(ctx, game.hover.x, game.hover.y, game.shift ? '#36c5ff' : '#ff4d3d', null, now);
+      var shotName = SR.upper(SR.t(SR.SHOTS.power.label));
+      if (ui.attackTarget && rally.state === 'rally') reticle(ctx, ui.attackTarget.x, ui.attackTarget.y, '#ff4d3d', shotName, now);
+      if (ui.prompt === 'target' && game.hover && !ui.attackTarget) reticle(ctx, game.hover.x, game.hover.y, '#ff4d3d', null, now);
 
       if (SR.sprites.shadows) SR.sprites.shadows(ctx, rally.all(), rally, proj);
       var hitterSet = {};
@@ -1066,10 +1066,8 @@
       drawScoreboard(ctx, game);
       if (ui.prompt === 'serve') { drawPower(ctx, ui.power); hint(ctx, SR.t(SR.touch ? 'Tap their court to aim and serve' : 'Aim on their court, click or tap to serve (Space)')); }
       else if (ui.prompt === 'hitter') hint(ctx, ui.hitterChoice ? SR.t('Hitter chosen') : SR.touch ? SR.t('Tap a numbered player to set them') : SR.t('Pick your hitter: click a player or press 1-{n}', { n: ui.hitters.length }));
-      else if (ui.prompt === 'target') {
-        hint(ctx, ui.attackTarget ? SR.t('{shot} locked in', { shot: shotName }) : SR.t(SR.touch ? 'Pick a shot, then tap where it goes. Line, Cross and Tool aim themselves' : 'Pick a shot (1-6), then click where it goes. Line, Cross and Tool aim themselves'));
-        this.buttons = buttonRow(ctx, SR.SHOT_ORDER.map(function (id) { return { id: id, label: SR.t(SR.SHOTS[id].label) }; }), ui.tip ? 'tip' : ui.shot, 'shot');
-      } else if (ui.prompt === 'block') {
+      else if (ui.prompt === 'target') hint(ctx, ui.attackTarget ? SR.t('{shot} locked in', { shot: shotName }) : SR.t(SR.touch ? 'Tap their court where the spike should land' : 'Click their court where the spike should land'));
+      else if (ui.prompt === 'block') {
         hint(ctx, SR.t(SR.touch ? 'Call the block: commit to a side, or Read the set' : 'Call the block (1-4 or tap a B zone): commit to a side, or Read the set'));
         this.buttons = buttonRow(ctx, [{ id: 'left', label: SR.t('Left') }, { id: 'middle', label: SR.t('Middle') }, { id: 'right', label: SR.t('Right') }, { id: 'read', label: SR.t('Read') }], ui.blockCall, 'block');
       }

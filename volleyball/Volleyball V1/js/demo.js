@@ -35,25 +35,8 @@
   // Your serve straight at their passer, so they can set up an attack.
   var SERVE_TO_PASSER = [[13.5, 4.5], [15.0, 3.6], [15.6, 4.6]];
 
-  // A receive-and-attack scene: set hitter `h` (0 left, 1 middle, 2 right),
-  // then the shot beats.
-  function attackBeats(hSay, h, shotBeats, endSay) {
-    return [
-      { wait: prompt('hitter'), fast: 2, slow: 0.08, say: hSay, aim: { head: h }, dur: 1.5, act: function (r) { r.pickHitterIndex(h); },
-        you: function () { return called('hitter'); }, youSay: 'Your turn: ' + hSay.charAt(0).toLowerCase() + hSay.slice(1) + ' Tap the numbered player, or press the number.' }
-    ].concat(shotBeats, [{ wait: dead, say: endSay, dur: 2.4, end: true }]);
-  }
-
-  function pickShot(id, say, youSay) {
-    var n = SR.SHOT_ORDER.indexOf(id) + 1, label = SR.SHOTS[id].label;
-    return { wait: prompt('target'), slow: 0.05, say: say, aim: { btn: id }, dur: 2.4, act: function (r) { r.pickShot(id); },
-      you: function (r) { return called('shot', id) || (id === 'tip' && r.ui.tip) || (id === 'power' && called('target')); },
-      youSay: youSay || 'Your turn: pick ' + label + '. Tap the ' + label + ' button or press ' + n + '.',
-      youWrong: 'Not that one: this step is about ' + label + '. Tap ' + label + ' or press ' + n + '.' };
-  }
-
   function tapSpot(x, y, say, youSay) {
-    return { slow: 0.05, say: say, aim: { w: [x, y] }, dur: 2.2, act: function (r) { r.pickTarget({ x: x, y: y }, false); },
+    return { wait: prompt('target'), slow: 0.05, say: say, aim: { w: [x, y] }, dur: 2.2, act: function (r) { r.pickTarget({ x: x, y: y }, false); },
       you: function (r) { return called('target') || !!r.ui.attackTarget; }, youSay: youSay };
   }
 
@@ -87,73 +70,22 @@
     },
     {
       name: 'Set', title: 'Set: pick your hitter',
-      body: 'When your team passes, numbers appear over your front-row hitters. Pick one before your setter touches the ball, or the setter decides for you. Then, while the set is in the air, pick a shot and where it lands. Pick no spot and your hitter misses the ball.',
-      keys: { pc: 'Click a player or press 1 to 3', touch: 'Tap a numbered player' },
+      body: 'When your team passes, numbers appear over your front-row hitters. Pick one before your setter touches the ball, or the setter decides for you. Then, while the set is in the air, tap where the spike should land: every spike is a Power hit straight at that spot. Pick no spot and your hitter misses the ball.',
+      keys: { pc: 'Click a player or press 1 to 3, then click a spot', touch: 'Tap a numbered player, then a spot' },
       server: 1, script: { cpuServe: EASY_SERVE, noDig: 1 },
       beats: [
         { wait: inPlay, slow: 0.6, say: 'They serve. Your players pass on their own, up to your setter.', dur: 1.4 },
         { wait: prompt('hitter'), slow: 0.05, say: 'Numbers pop up over your hitters. Pick number 1, your left-side hitter.', aim: { head: 0 }, dur: 3, act: function (r) { r.pickHitterIndex(0); },
           you: function () { return called('hitter'); }, youSay: 'Your turn: numbers pop up over your hitters. Tap any of them (or press 1, 2 or 3) to choose who gets the set.' },
-        pickShot('power', 'The set is up. Now pick a shot: Power is the fastest, hardest hit.', 'Your turn: the set is up. Pick Power, the fastest, hardest hit (tap Power or press 1).'),
-        tapSpot(13.4, 4.5, 'Tap where it should land: open floor, away from their defenders and off the lines.', 'Now tap where it should land on their court: open floor, away from their defenders.'),
+        tapSpot(13.4, 4.5, 'The set is up. Tap where the spike should land: open floor, away from their defenders and off the lines.', 'Your turn: the set is up. Tap where the spike should land on their court: open floor, away from their defenders.'),
         { wait: dead, say: 'Kill! A Power spike into open court.', dur: 2.4, end: true }
       ]
-    },
-    {
-      name: 'Line', title: 'Shot: Line',
-      body: 'Line aims itself straight down the sideline, past the outside edge of the block. Use it when the blockers leave the line open.',
-      keys: { pc: 'Press 2 or click Line while the set is up', touch: 'Tap Line while the set is up' },
-      server: 1, script: { cpuServe: EASY_SERVE, noDig: 1 },
-      beats: attackBeats('Set your left-side hitter (1).', 0, [
-        pickShot('line', 'Pick Line. No spot to tap: it aims itself down the sideline.'),
-        { slow: 0.15, say: 'The ring shows where the shot is going.', dur: 1.2 }
-      ], 'Straight down the line for the point.')
-    },
-    {
-      name: 'Cross', title: 'Shot: Cross',
-      body: 'Cross aims itself on a sharp diagonal across the court, away from a block that is guarding the line.',
-      keys: { pc: 'Press 3 or click Cross while the set is up', touch: 'Tap Cross while the set is up' },
-      server: 1, script: { cpuServe: EASY_SERVE, noDig: 1 },
-      beats: attackBeats('Set your right-side hitter (3).', 2, [
-        pickShot('cross', 'Pick Cross. It angles the ball across the court by itself.'),
-        { slow: 0.15, say: 'Watch it cut back across the block.', dur: 1.2 }
-      ], 'Cross-court kill.')
-    },
-    {
-      name: 'Roll', title: 'Shot: Roll',
-      body: 'Roll is a slow, high shot that floats over the block and drops into open space. Great when their defenders are playing deep.',
-      keys: { pc: 'Press 4 or click Roll, then click a spot', touch: 'Tap Roll, then tap a spot' },
-      server: 1, script: { cpuServe: EASY_SERVE, noDig: 1 },
-      beats: attackBeats('Set your middle hitter (2) for a quick attack.', 1, [
-        pickShot('roll', 'Pick Roll.'),
-        tapSpot(13.2, 6.0, 'Tap the open space between their front and back rows.', 'Now tap open space on their court, between their front and back rows.')
-      ], 'It floats over the block and drops in.')
-    },
-    {
-      name: 'Tip', title: 'Shot: Tip',
-      body: 'Tip drops the ball just over the net while their defenders are back, waiting for a big spike. Shortcut: hold Shift while you click a spot (or long-press it on a phone) to tip there.',
-      keys: { pc: 'Press 5, or Shift + click a spot', touch: 'Tap Tip then a spot, or long-press a spot' },
-      server: 1, script: { cpuServe: EASY_SERVE, noDig: 1 },
-      beats: attackBeats('Set your left-side hitter (1).', 0, [
-        pickShot('tip', 'Pick Tip.', 'Your turn: pick Tip (tap Tip or press 5). Or hold Shift and click a spot, or long-press it on a phone.'),
-        tapSpot(11.1, 6.6, 'Tap just behind their blockers. The blue ring marks a tip.', 'Now tap a spot just behind their blockers.')
-      ], 'A soft tip behind the block. Nobody home.')
-    },
-    {
-      name: 'Tool', title: 'Shot: Tool',
-      body: 'Tool hits hard off the blockers\' hands so the ball flies out of bounds. They touched it last, so the point is yours. Use it against a big block.',
-      keys: { pc: 'Press 6 or click Tool while the set is up', touch: 'Tap Tool while the set is up' },
-      server: 1, script: { cpuServe: EASY_SERVE, noDig: 1, block: 'out' },
-      beats: attackBeats('Set your left-side hitter (1).', 0, [
-        pickShot('tool', 'Pick Tool. It aims at the edge of the block by itself.'),
-        { slow: 0.15, say: 'Aiming at their hands, not the floor.', dur: 1.2 }
-      ], 'Off the block and out: your point.')
     },
     {
       name: 'Block', title: 'Block: commit to a side',
       body: 'When they pass, call your block before their setter sets. Commit Left, Middle or Right to stack all three blockers there. Guess right and the hitter meets a wall; guess wrong and the net is wide open.',
       keys: { pc: 'Press 1 to 3, or click a button or a B zone', touch: 'Tap Left, Middle or Right' },
-      server: 0, script: { cpuHitter: 'right', cpuShot: 'power', block: 'stuff' },
+      server: 0, script: { cpuHitter: 'right', block: 'stuff' },
       beats: [
         { wait: prompt('serve'), say: 'This time you serve and they attack.', aim: aimAt, dur: 1.6, during: sweep(SERVE_TO_PASSER), act: function (r) { r.humanServe(); } },
         { wait: prompt('block'), slow: 0.05, say: 'Their hitters glow orange. You expect the set to go to the hitter on your left: commit Left.', aim: { btn: 'left' }, dur: 3.2, act: function (r) { r.pickBlock('left'); },
@@ -167,7 +99,7 @@
       name: 'Read', title: 'Read and dig',
       body: 'Not sure where the set is going? Read keeps your blockers home: two of them watch the set and jump with the hitter. If the spike gets past, your back row digs it. Make no hitter call and your setter chooses for you, but where the spike goes is always your call.',
       keys: { pc: 'Press 4 or click Read', touch: 'Tap Read' },
-      server: 0, script: { cpuHitter: 'left', cpuShot: 'power', cpuAim: [2.2, 4.3] },
+      server: 0, script: { cpuHitter: 'left', cpuAim: [2.2, 4.3] },
       beats: [
         { wait: prompt('serve'), say: 'You serve again.', aim: aimAt, dur: 1.4, during: sweep(SERVE_TO_PASSER), act: function (r) { r.humanServe(); } },
         { wait: prompt('block'), slow: 0.05, say: 'This time, pick Read to react to the set instead of guessing.', aim: { btn: 'read' }, dur: 2.8, act: function (r) { r.pickBlock('read'); },
@@ -177,8 +109,8 @@
         { wait: prompt('hitter'), enter: function (r) { r.script.noDig = 1; }, slow: 0.5, say: 'No hitter call this time: your setter picks who gets the set.', dur: 1.2 },
         { wait: prompt('target'), slow: 0.05, say: 'The spike is still yours to aim: tap open floor on their court.', aim: { w: [13.4, 4.5] }, dur: 2.2,
           act: function (r) { r.pickTarget({ x: 13.4, y: 4.5 }, false); },
-          you: function (r) { return called('target') || called('shot') && !!r.ui.attackTarget; },
-          youSay: 'Your turn: the setter chose the hitter, but you aim the spike. Tap open floor on their court (or pick Line, Cross or Tool).' },
+          you: function (r) { return called('target') || !!r.ui.attackTarget; },
+          youSay: 'Your turn: the setter chose the hitter, but you aim the spike. Tap open floor on their court.' },
         { wait: dead, say: 'Point! Dug, set and put away.', dur: 2.8, end: true }
       ]
     },
@@ -422,7 +354,7 @@
     game = SR.game = new SR.Game({ home: SR.TEAMS[0], away: away, format: SR.formatId(15, 1), difficulty: 'normal', human: 0, demo: true, mode: 'demo' });
     rally = game.rally;
     // Note the calls you make so Try it mode knows when a step is done.
-    [['pickHitter', 'hitter'], ['pickShot', 'shot'], ['pickTarget', 'target'], ['pickBlock', 'block']].forEach(function (f) {
+    [['pickHitter', 'hitter'], ['pickTarget', 'target'], ['pickBlock', 'block']].forEach(function (f) {
       var orig = rally[f[0]];
       rally[f[0]] = function (a) { if (rally.ui.prompt) calls.push([f[1], typeof a === 'object' && a && a.idx === undefined ? 'spot' : a]); return orig.apply(this, arguments); };
     });

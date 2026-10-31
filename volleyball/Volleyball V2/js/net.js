@@ -522,9 +522,8 @@
       case 'aim': if (pt) r.setAim(pt, 1); break;
       case 'serve': if (pt) r.setAim(pt, 1); r.humanServe(1, num(msg.pw) ? msg.pw : undefined); break;
       case 'hitter': if (num(msg.i) && r.players[1][msg.i]) r.pickHitter(r.players[1][msg.i], 1); break;
-      case 'shot': if (typeof msg.id === 'string') r.pickShot(msg.id, 1); break;
       case 'block': if (typeof msg.id === 'string') r.pickBlock(msg.id, 1); break;
-      case 'target': if (pt) r.pickTarget(pt, !!msg.tip, 1); break;
+      case 'target': if (pt) r.pickTarget(pt, false, 1); break;
     }
   }
 
@@ -834,8 +833,7 @@
     u.power = Math.max(0, Math.min(1, lerp(U[3], s1.u[3], Math.min(1, k))));
     u.hitters = U[4].map(function (i) { return { p: self.players[0][i] }; });
     if (!this.held('hitterChoice')) u.hitterChoice = U[5] >= 0 ? this.players[0][U[5]] : null;
-    if (!this.held('attackTarget')) { u.attackTarget = U[6] ? { x: mx(U[6][0]), y: my(U[6][1]) } : null; u.tip = !!U[7]; }
-    if (!this.held('shot')) u.shot = U[8] || 'power';
+    if (!this.held('attackTarget')) u.attackTarget = U[6] ? { x: mx(U[6][0]), y: my(U[6][1]) } : null;
     if (!this.held('blockCall')) u.blockCall = U[9] || 'read';
     u.blockThreats = (U[10] || []).map(function (i) { return self.players[1][i]; });
   };
@@ -860,24 +858,17 @@
     send({ t: 'cmd', c: 'hitter', i: p.idx });
   };
   G.pickHitterIndex = function (i) { var h = this.ui.hitters[i]; if (h) this.pickHitter(h.p); };
-  G.pickShot = function (id) {
-    if (this.ui.prompt !== 'target' || !SR.SHOTS[id]) return;
-    this.hold('shot', id);
-    SR.audio.play('click');
-    send({ t: 'cmd', c: 'shot', id: id });
-  };
   G.pickBlock = function (id) {
     if (this.ui.prompt !== 'block') return;
     this.hold('blockCall', id);
     SR.audio.play('click');
     send({ t: 'cmd', c: 'block', id: id });
   };
-  G.pickTarget = function (pt, tip) {
+  G.pickTarget = function (pt) {
     if (this.ui.prompt !== 'target') return;
     this.hold('attackTarget', { x: pt.x, y: pt.y });
-    this.ui.tip = !!tip;
     SR.audio.play('click');
-    send({ t: 'cmd', c: 'target', x: mx(pt.x), y: my(pt.y), tip: !!tip });
+    send({ t: 'cmd', c: 'target', x: mx(pt.x), y: my(pt.y) });
   };
 
   // ---- lobby screen --------------------------------------------------------

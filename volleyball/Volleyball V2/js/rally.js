@@ -480,17 +480,11 @@
     this.at(T, function () { self.attack(h); });
   };
 
-  // Shot types. speed scales spike pace, block scales the chance of a block
-  // touch, scatter scales aim error, err adds risk; auto shots aim themselves.
+  // Every spike is a Power hit straight at the spot that was aimed: there are
+  // no shot types to pick any more (Line, Cross, Roll, Tip and Tool are gone).
   SR.SHOTS = {
-    power: { label: 'Power', speed: 1.0,  block: 1.0,  scatter: 1.0, err: 0 },
-    line:  { label: 'Line',  speed: 0.95, block: 0.85, scatter: 0.8, err: 0.03, auto: true },
-    cross: { label: 'Cross', speed: 0.95, block: 0.9,  scatter: 0.8, err: 0.01, auto: true },
-    roll:  { label: 'Roll',  speed: 0.55, block: 0.6,  scatter: 0.6, err: -0.02, dig: 0.12 },
-    tip:   { label: 'Tip',   speed: 0,    block: 0,    scatter: 0.4, err: -0.01, dig: 0.1 },
-    tool:  { label: 'Tool',  speed: 0.9,  block: 1.3,  scatter: 0.7, err: 0.02, auto: true }
+    power: { label: 'Power', speed: 1.0, block: 1.0, scatter: 1.0, err: 0 }
   };
-  SR.SHOT_ORDER = ['power', 'line', 'cross', 'roll', 'tip', 'tool'];
 
   // Open spot on the defending court, farthest from defenders.
   R.openSpot = function (team) {
@@ -505,25 +499,6 @@
     return best;
   };
 
-  // Where a shot type goes when nobody clicked a spot.
-  R.shotTarget = function (team, shot, from) {
-    var def = 1 - team, l = local(def, from.x, from.y), lowSide = l.y < C.W / 2;
-    if (Math.abs(l.y - C.W / 2) < 1.2) lowSide = Math.random() < 0.5;
-    var w;
-    if (shot === 'line') w = world(def, rnd(0.8, 2.2), lowSide ? rnd(0.6, 1.1) : rnd(7.9, 8.4));
-    else if (shot === 'cross') w = world(def, rnd(1.2, 3.8), lowSide ? rnd(7.4, 8.3) : rnd(0.7, 1.6));
-    else if (shot === 'tool') w = world(def, rnd(1.5, 4), lowSide ? rnd(0.7, 1.0) : rnd(8.0, 8.3));
-    else if (shot === 'tip') w = world(def, rnd(6.3, 7.6), rnd(1.5, 7.5));
-    else if (shot === 'roll') w = world(def, rnd(2.5, 4.5), rnd(2.5, 6.5));
-    else w = this.openSpot(team);
-    return w;
-  };
-
-  R.aiShot = function () {
-    var r = Math.random();
-    return r < 0.45 ? 'power' : r < 0.6 ? 'line' : r < 0.75 ? 'cross' : r < 0.85 ? 'roll' : r < 0.93 ? 'tip' : 'tool';
-  };
-
   R.attack = function (h) {
     if (this.state !== 'rally') return;
     var team = h.team, def = 1 - team, rt = this.m.ratings[team], self = this;
@@ -532,19 +507,13 @@
     var ua = this.uis[team];
     ua.prompt = null;
     var cp = { x: this.ball.x, y: this.ball.y, z: this.ball.z };
-    // You must pick a spot (or Line, Cross or Tool): no aim, no swing at the ball.
+    // You must pick a spot: no aim, no swing at the ball.
     if (this.isHuman(team) && !ua.attackTarget) { this.whiff(h, cp); return; }
-    var shot, aim;
-    if (this.isHuman(team)) {
-      shot = ua.tip ? 'tip' : (ua.shot || 'power');
-      aim = ua.attackTarget || this.shotTarget(team, shot, cp);
-    } else {
-      var sca = this.script;
-      shot = sca && sca.cpuShot ? sca.cpuShot : this.aiShot();
-      aim = sca && sca.cpuAim ? world(def, sca.cpuAim[0], sca.cpuAim[1]) : this.shotTarget(team, shot, cp);
-    }
-    var S = SR.SHOTS[shot], tip = shot === 'tip', qs = this.setQ;
-    this.lastShot = shot;
+    // Always a Power spike at the aimed spot; the CPU aims at open floor.
+    var shot = 'power', aim, sca = this.script;
+    if (this.isHuman(team)) aim = ua.attackTarget;
+    else aim = sca && sca.cpuAim ? world(def, sca.cpuAim[0], sca.cpuAim[1]) : this.openSpot(team);
+    var S = SR.SHOTS[shot], qs = this.setQ;
     h.shotKind = shot;
     var tgt = { x: aim.x, y: aim.y, z: 0 };
 
@@ -560,35 +529,32 @@
     }
     var vs = (16 + rt.attack * 0.09) * (0.78 + 0.22 * qs) * (S.speed || 1);
     var d3 = Math.sqrt(Math.pow(tgt.x - cp.x, 2) + Math.pow(tgt.y - cp.y, 2) + Math.pow(tgt.z - cp.z, 2));
-    var T = tip ? 0.95 : d3 / vs;
-    if (!netErr) T = P.clearNet(cp, tgt, T, shot === 'roll' ? 0.5 : 0.12);
+    var T = d3 / vs;
+    if (!netErr) T = P.clearNet(cp, tgt, T, 0.12);
     this.launch(cp, tgt, T);
     this.lastTouch = team;
     this.lastOffense = { team: team, type: 'attack' };
     this.touches[def] = 0;
     this.formation(team, 'defense');
-    SR.audio.play(tip || shot === 'roll' ? 'set' : 'spike');
+    SR.audio.play('spike');
     this.fx('spike', { pos: cp, shot: shot });
     if (netErr) return;
 
-    if (!tip) {
-      var f = this.flight, tn = P.crossX(f.p0, f.v, C.NET_X);
-      if (tn !== null && tn < f.landT) {
-        var cross = P.at(f.p0, f.v, tn), nb = 0;
-        this.players[def].forEach(function (b) {
-          if (self.isFront(b) && Math.abs(b.y - cross.y) < 0.9 && Math.abs(b.x - C.NET_X) < 1.2) nb++;
-        });
-        var rd = this.m.ratings[def];
-        var pTouch = cross.z < 3.45 ? Math.min(0.85, nb * 0.22 * (rd.block / 75) * (1.15 - rt.attack / 200) * S.block * (this.blockBonus || 1)) : 0;
-        if (sc) pTouch = sc.block ? 1 : 0;
-        if (Math.random() < pTouch) {
-          var r = Math.random(), outcome;
-          if (shot === 'tool') outcome = r < 0.75 ? 'out' : r < 0.88 ? 'soft' : 'stuff';
-          else outcome = r < 0.28 ? 'stuff' : r < 0.78 ? 'soft' : 'out';
-          if (sc) outcome = sc.block;
-          this.at(tn, function () { self.blockResult(outcome, def, cross); });
-          return;
-        }
+    var f = this.flight, tn = P.crossX(f.p0, f.v, C.NET_X);
+    if (tn !== null && tn < f.landT) {
+      var cross = P.at(f.p0, f.v, tn), nb = 0;
+      this.players[def].forEach(function (b) {
+        if (self.isFront(b) && Math.abs(b.y - cross.y) < 0.9 && Math.abs(b.x - C.NET_X) < 1.2) nb++;
+      });
+      var rd = this.m.ratings[def];
+      var pTouch = cross.z < 3.45 ? Math.min(0.85, nb * 0.22 * (rd.block / 75) * (1.15 - rt.attack / 200) * S.block * (this.blockBonus || 1)) : 0;
+      if (sc) pTouch = sc.block ? 1 : 0;
+      if (Math.random() < pTouch) {
+        var r = Math.random(), outcome;
+        outcome = r < 0.28 ? 'stuff' : r < 0.78 ? 'soft' : 'out';
+        if (sc) outcome = sc.block;
+        this.at(tn, function () { self.blockResult(outcome, def, cross); });
+        return;
       }
     }
     this.planReception(def, S.dig || 0);
@@ -721,18 +687,6 @@
     if (h) this.pickHitter(h.p, team);
   };
 
-  R.pickShot = function (id, team) {
-    var u = this.uiOf(team);
-    if (u.prompt !== 'target' || !SR.SHOTS[id]) return;
-    u.shot = id;
-    u.tip = false;
-    if (!team) SR.audio.play('click');
-    if (SR.SHOTS[id].auto && this.hitter) {
-      u.attackTarget = this.shotTarget(this.hitter.team, id, this.hitter);
-      this.slowTo = 1;
-    }
-  };
-
   // Block call, named by screen side as seen from the caller's own end:
   // Left / Middle / Right / Read.
   R.pickBlock = function (id, team) {
@@ -748,14 +702,12 @@
     if (!team) SR.audio.play('click');
   };
 
+  // The second argument (an old tip flag) is ignored: every spike is Power.
   R.pickTarget = function (pt, tip, team) {
     var u = this.uiOf(team);
     if (u.prompt !== 'target' || !okPt(pt)) return;
     // A tap up in the stands still means "long", but no further than the serve aim reaches.
     u.attackTarget = { x: clamp(pt.x, -1, C.L + 1), y: clamp(pt.y, -1, C.W + 1) };
-    u.tip = !!tip;
-    if (tip) u.shot = 'tip';
-    if (SR.SHOTS[u.shot].auto) u.shot = 'power';
     this.slowTo = 1;
     if (!team) SR.audio.play('click');
   };
