@@ -97,7 +97,10 @@
   function resize() {
     // A collapsed or hidden game frame can report 0x0; a 0-pixel canvas makes
     // drawImage throw, so everything is sized at least 1 pixel.
-    var vw = Math.max(1, window.innerWidth || 0), vh = Math.max(1, window.innerHeight || 0);
+    // Measure the game area (#app), not the window: on wide screens the side
+    // ad rails take a strip on each side (js/ads-rails.js).
+    var appEl = document.getElementById('app');
+    var vw = Math.max(1, appEl.clientWidth || window.innerWidth || 0), vh = Math.max(1, appEl.clientHeight || window.innerHeight || 0);
     // The How to play demo keeps a strip (right or bottom) for its captions;
     // the court fits in what is left.
     var dm = SR.demo && SR.demo.active ? SR.demo.layout(vw, vh) : null, bw = dm ? dm.w : vw, bh = dm ? dm.h : vh;
