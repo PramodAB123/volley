@@ -25,14 +25,14 @@ jobs:
       run:
         working-directory: 'volleyball/Volleyball V4'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
 
@@ -78,14 +78,14 @@ jobs:
         if: always()
         run: rm -f android/keystore.properties "$RUNNER_TEMP/upload.jks"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: spike-rally-aab
           path: 'volleyball/Volleyball V4/android/app/build/outputs/bundle/release/app-release.aab'
           if-no-files-found: error
           retention-days: 30
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: spike-rally-apk
           path: 'volleyball/Volleyball V4/android/app/build/outputs/apk/release/app-release.apk'
