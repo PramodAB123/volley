@@ -15,6 +15,11 @@
       league: null,
       tournament: null,
       career: null,
+      // League and Tournament maps: unlocked = highest open tier (index);
+      // best[i] = best league finish (1 = champions) / furthest cup stage
+      // (1 out in QF, 2 SF, 3 runner-up, 4 won).
+      leagueMap: { unlocked: 0, best: [] },
+      cupMap: { unlocked: 0, best: [] },
       daily: { streak: 0, last: null, week: 0 }
     };
   }
@@ -81,7 +86,7 @@
   function clean(d) {
     var def = defaults();
     d.stars = num(d.stars);
-    ['owned', 'equipped', 'settings', 'stats', 'trophies', 'daily'].forEach(function (k) { if (!obj(d[k])) d[k] = def[k]; });
+    ['owned', 'equipped', 'settings', 'stats', 'trophies', 'daily', 'leagueMap', 'cupMap'].forEach(function (k) { if (!obj(d[k])) d[k] = def[k]; });
     Object.keys(def.owned).forEach(function (kind) {
       var list = Array.isArray(d.owned[kind]) ? d.owned[kind].filter(function (id) { return typeof id === 'string'; }) : [];
       def.owned[kind].forEach(function (id) { if (list.indexOf(id) < 0) list.unshift(id); });
@@ -103,6 +108,17 @@
     if (!Array.isArray(d.trophies.seasons)) d.trophies.seasons = [];
     d.trophies.seasons = d.trophies.seasons.filter(function (x) { return obj(x) && isTeam(x.team); }).slice(0, 8);
     if (d.league != null && !okLeague(d.league)) d.league = null;
+    if (d.league && !(SR.LEAGUES && SR.LEAGUES[d.league.lid])) d.league.lid = 0;
+    if (d.tournament && !(SR.CUPS && SR.CUPS[d.tournament.cid])) d.tournament.cid = 0;
+    [['leagueMap', SR.LEAGUES], ['cupMap', SR.CUPS]].forEach(function (e) {
+      var m = d[e[0]], n = e[1] ? e[1].length : 1;
+      if (!obj(m)) m = d[e[0]] = { unlocked: 0, best: [] };
+      m.unlocked = Math.min(num(m.unlocked), n - 1);
+      m.best = Array.isArray(m.best) ? m.best.slice(0, n).map(function (v) { return num(v); }) : [];
+    });
+    // Saves from before the maps: a league or cup already won opens tier 2.
+    if (d.trophies.league + d.trophies.silver > 0) d.leagueMap.unlocked = Math.max(d.leagueMap.unlocked, 1);
+    if (d.trophies.cup > 0) d.cupMap.unlocked = Math.max(d.cupMap.unlocked, 1);
     if (d.tournament != null && !okCup(d.tournament)) d.tournament = null;
     if (d.career != null && !(obj(d.career) && isTeam(d.career.team))) d.career = null;
     if (d.career) d.career.unlocked = Math.min(num(d.career.unlocked), SR.CAREER ? SR.CAREER.length : 1e9);

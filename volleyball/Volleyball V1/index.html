@@ -260,13 +260,51 @@
       </div>
     </section>
 
+    <section id="scr-lmap" class="screen hidden wmap-scr lmap">
+      <div class="wmap-bg" aria-hidden="true"></div>
+      <div class="career-ui">
+        <header class="career-top wmap-top">
+          <button class="career-back" type="button" data-back aria-label="Back to menu">‹</button>
+          <div class="career-title">
+            <h2>Leagues</h2>
+            <p id="lmap-sub"></p>
+          </div>
+          <div class="stars-badge">★ <span data-stars>0</span></div>
+          <div class="career-bar"><span id="lmap-bar"></span></div>
+        </header>
+        <div id="lmap-scroll" class="career-scroll"><div id="lmap-map" class="career-map wmap-map"></div></div>
+        <div class="career-bottom wmap-bottom">
+          <div id="lmap-pick" class="career-pick wmap-pick"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="scr-cmap" class="screen hidden wmap-scr cmap">
+      <div class="wmap-bg" aria-hidden="true"></div>
+      <div class="career-ui">
+        <header class="career-top wmap-top">
+          <button class="career-back" type="button" data-back aria-label="Back to menu">‹</button>
+          <div class="career-title">
+            <h2>Tournaments</h2>
+            <p id="cmap-sub"></p>
+          </div>
+          <div class="stars-badge">★ <span data-stars>0</span></div>
+          <div class="career-bar"><span id="cmap-bar"></span></div>
+        </header>
+        <div id="cmap-scroll" class="career-scroll"><div id="cmap-map" class="career-map wmap-map"></div></div>
+        <div class="career-bottom wmap-bottom">
+          <div id="cmap-pick" class="career-pick wmap-pick"></div>
+        </div>
+      </div>
+    </section>
+
     <section id="scr-league" class="screen hidden">
       <div class="lg-hall" aria-hidden="true"><i></i><i></i><svg width="0" height="0"><linearGradient id="lg-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset=".45" stop-color="#ffd23f"/><stop offset="1" stop-color="#e08a00"/></linearGradient><linearGradient id="lg-silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#c9d3e0"/><stop offset="1" stop-color="#7d8aa0"/></linearGradient><linearGradient id="lg-bronze" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd2a6"/><stop offset=".5" stop-color="#d68a4a"/><stop offset="1" stop-color="#8a4b1c"/></linearGradient><linearGradient id="lg-wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a3a24"/><stop offset="1" stop-color="#2e1c10"/></linearGradient><clipPath id="lg-shield" clipPathUnits="userSpaceOnUse"><path d="M16 2l13 4.5V15c0 8.5-5.6 14.5-13 17C8.6 29.5 3 23.5 3 15V6.5z"/></clipPath></svg></div>
       <div class="cup-ui">
         <header class="cup-top">
-          <button class="cup-back" type="button" data-back aria-label="Back to menu">‹</button>
+          <button id="btn-league-back" class="cup-back" type="button" aria-label="Back to the League map">‹</button>
           <div class="cup-title">
-            <h2>League</h2>
+            <h2 id="league-title">League</h2>
             <p id="league-sub"></p>
           </div>
           <div class="stars-badge">★ <span data-stars>0</span></div>
@@ -287,9 +325,9 @@
       <div class="cup-arena" aria-hidden="true"><i></i><i></i><svg width="0" height="0"><linearGradient id="cup-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset=".45" stop-color="#ffd23f"/><stop offset="1" stop-color="#e08a00"/></linearGradient><clipPath id="cup-shield" clipPathUnits="userSpaceOnUse"><path d="M16 2l13 4.5V15c0 8.5-5.6 14.5-13 17C8.6 29.5 3 23.5 3 15V6.5z"/></clipPath></svg></div>
       <div class="cup-ui">
         <header class="cup-top">
-          <button class="cup-back" type="button" data-back aria-label="Back to menu">‹</button>
+          <button id="btn-cup-back" class="cup-back" type="button" aria-label="Back to the Tournament map">‹</button>
           <div class="cup-title">
-            <h2>Tournament</h2>
+            <h2 id="cup-title">Tournament</h2>
             <p id="cup-sub"></p>
           </div>
           <div class="stars-badge">★ <span data-stars>0</span></div>
@@ -550,7 +588,7 @@
             <img src="img/home/league.webp" alt="League table with six teams, played over five rounds" width="800" height="500" loading="lazy" decoding="async">
             <div>
               <h3>League</h3>
-              <p>A five-round season against the other teams. Finish top of the table to win the title.</p>
+              <p>Five leagues up a mountain, from the Rookie League to the Legends League. Finish in the top two to go up a league, top of the table to win its Shield.</p>
               <button class="btn" type="button" data-go="btn-league">Start a league</button>
             </div>
           </article>
@@ -558,7 +596,7 @@
             <img src="img/home/tournament.webp" alt="Tournament bracket with quarter-finals, semi-finals and the final" width="800" height="500" loading="lazy" decoding="async">
             <div>
               <h3>Tournament</h3>
-              <p>Eight teams, knockout rounds. Win the quarter-final, the semi-final and the final to lift the cup.</p>
+              <p>Six cups on a world tour, from the Beach Cup to the Champions Cup. Eight teams, knockout rounds. Reach a final to unlock the next cup.</p>
               <button class="btn" type="button" data-go="btn-cup">Enter the cup</button>
             </div>
           </article>

@@ -837,6 +837,105 @@ html:not(.page-home) .home .more-cue { display: none; }
   .career-sea::before, .career-sea::after, .cdecor, .cboat, .cfoam, .t-isle, .cnode.open .cthumb, .cnode.unlocking .cthumb { animation: none; }
 }
 
+/* ---- League and Tournament maps: one stop per league / cup --------------------- */
+.wmap-scr, #app.menu-bg .wmap-scr { padding: 0; overflow: hidden; display: block; }
+.wmap-scr.hidden { display: none; }
+.wmap-bg { position: absolute; inset: 0; overflow: hidden; }
+.lmap { background: #4f9fd6; }
+.lmap .wmap-bg { background: linear-gradient(180deg, #8fd0f5, #bfe6f7 40%, #9dd58a 75%, #5fae4f); }
+.cmap { background: #0a1430; }
+.cmap .wmap-bg { background: radial-gradient(ellipse at 20% 0%, rgba(120, 80, 255, 0.35), transparent 55%), radial-gradient(ellipse at 90% 100%, rgba(0, 200, 255, 0.22), transparent 55%), linear-gradient(180deg, #0b1636, #0a1a3e 50%, #071230); }
+.cmap .wmap-bg::before { content: ''; position: absolute; inset: 0; opacity: 0.5;
+  background: repeating-linear-gradient(0deg, transparent 0 79px, rgba(120, 180, 255, 0.12) 79px 80px), repeating-linear-gradient(90deg, transparent 0 79px, rgba(120, 180, 255, 0.08) 79px 80px); }
+.lmap .wmap-top { background: linear-gradient(180deg, rgba(18, 52, 40, 0.88), rgba(18, 52, 40, 0.6)); }
+.lmap .wmap-bottom { background: linear-gradient(0deg, rgba(18, 52, 40, 0.92), rgba(18, 52, 40, 0.65)); }
+.cmap .wmap-top { background: linear-gradient(180deg, rgba(10, 14, 40, 0.9), rgba(10, 14, 40, 0.6)); }
+.cmap .wmap-bottom { background: linear-gradient(0deg, rgba(10, 14, 40, 0.94), rgba(10, 14, 40, 0.66)); }
+.cmap .career-title p, .cmap .wmap-pick .venue-text small, .cmap .wmap-pick .venue-text span { color: #b4c2e6; }
+.lmap .career-title p, .lmap .wmap-pick .venue-text small, .lmap .wmap-pick .venue-text span { color: #d3ecd9; }
+.wmap-pick .venue-text .cwhat { color: #ffd23f; }
+.wmap-pick.locked .venue-text .cwhat { color: inherit; opacity: 0.85; }
+.wmap-pick .wwarn { font-size: 12px; font-weight: 800; color: #ffb38a !important; }
+.wpick-badge { flex: none; width: 58px; height: 68px; display: flex; }
+.wpick-badge svg { width: 100%; height: 100%; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35)); }
+.wmap-pick.locked .wpick-badge svg { filter: grayscale(1) brightness(0.7); }
+/* The mountain gets snowy and pale towards the summit at the top. */
+.lmap .career-scroll { background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 40%); }
+.wpeaks { position: absolute; left: 50%; width: 100vw; margin-left: -50vw; top: 0; bottom: 0; pointer-events: none; opacity: 0.55;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 160' preserveAspectRatio='none'%3E%3Cpath d='M0 160 L60 60 L95 95 L160 20 L215 85 L260 45 L320 100 L370 55 L400 80 V160Z' fill='%23d7e6f2'/%3E%3Cpath d='M160 20 L178 42 L168 40 L160 50 L150 40 L142 42Z M260 45 L272 58 L262 57 L255 62 Z' fill='%23ffffff'/%3E%3C/svg%3E") top / 100% 260px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 160' preserveAspectRatio='none'%3E%3Cpath d='M0 160 L40 90 L90 120 L150 60 L210 110 L280 50 L340 105 L400 70 V160Z' fill='%23a9c9a0'/%3E%3C/svg%3E") 0 38% / 100% 300px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 160' preserveAspectRatio='none'%3E%3Cpath d='M0 160 L70 80 L130 120 L200 70 L270 115 L330 75 L400 110 V160Z' fill='%2389bf73'/%3E%3C/svg%3E") 0 78% / 100% 300px no-repeat; }
+.wpath .road { stroke: #9a7b52; stroke-width: 22; stroke-dasharray: none; filter: drop-shadow(0 3px 0 rgba(70, 50, 25, 0.5)); }
+.lmap .wpath .todo { stroke: rgba(255, 255, 255, 0.9); stroke-width: 3; stroke-dasharray: 10 10; }
+.lmap .wpath .done { stroke: #ffd23f; stroke-width: 6; stroke-dasharray: 14 8; }
+.cmap .wpath .todo { stroke: rgba(180, 210, 255, 0.55); stroke-width: 2.5; stroke-dasharray: 2 9; }
+.cmap .wpath .done { stroke: #ffd23f; stroke-width: 3.5; stroke-dasharray: 12 8; filter: drop-shadow(0 0 4px rgba(255, 210, 63, 0.7)); animation: w-fly 1.4s linear infinite; }
+@keyframes w-fly { to { stroke-dashoffset: -40; } }
+.wpines { width: 64px; height: 38px; }
+.wcloud { width: var(--w, 90px); height: calc(var(--w, 90px) * 0.36); border-radius: 999px; background: rgba(255, 255, 255, 0.85);
+  box-shadow: calc(var(--w, 90px) * 0.22) calc(var(--w, 90px) * -0.12) 0 calc(var(--w, 90px) * 0.02) rgba(255, 255, 255, 0.85), calc(var(--w, 90px) * -0.2) calc(var(--w, 90px) * -0.06) 0 rgba(255, 255, 255, 0.8);
+  animation: w-cloud 14s ease-in-out infinite alternate; }
+@keyframes w-cloud { to { transform: translate(-38%, -50%); } }
+.wcoast { overflow: visible; fill: rgba(60, 140, 170, 0.16); stroke: rgba(120, 210, 255, 0.25); stroke-width: 1.5; }
+.wstar { width: 3px; height: 3px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px #bcd6ff; animation: w-twinkle 3s ease-in-out infinite; }
+@keyframes w-twinkle { 50% { opacity: 0.25; } }
+.wjet { width: 18px; height: 18px; opacity: 0.55; }
+.wnode {
+  position: absolute; width: 260px; height: 210px; margin: -118px 0 0 -130px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; color: #fff; z-index: 1; transform: scale(var(--s, 1));
+}
+.wground { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.wring { transform-origin: 130px 150px; animation: w-ring 2.4s ease-out infinite; }
+@keyframes w-ring { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+.wbadge { position: absolute; left: 50%; top: 14px; z-index: 2; width: 86px; height: 100px; transform: translateX(-50%); transition: transform 0.15s, filter 0.4s; }
+.cmap .wbadge { top: 24px; width: 92px; height: 92px; }
+.wbadge .wb-svg { width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35)); }
+.cmap .wbadge .wb-svg { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--wc) 60%, transparent)) drop-shadow(0 6px 8px rgba(0, 0, 0, 0.4)); }
+.wbadge .clock { border-radius: 50%; inset: 14px; }
+.wnode:hover .wbadge { transform: translateX(-50%) scale(1.07); }
+.wname {
+  position: absolute; left: 50%; top: 168px; z-index: 3; transform: translateX(-50%); max-width: 250px; padding: 3px 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 14px; font-weight: 900; color: #fff7e6; border-radius: 6px;
+  background: linear-gradient(180deg, #a86a37, #7d4a22); border: 2px solid #5c3416; box-shadow: 0 3px 0 #4a2a10, 0 5px 10px rgba(0, 0, 0, 0.3); text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+.cmap .wname { top: 170px; border-radius: 999px; background: rgba(8, 12, 36, 0.85); border: 2px solid var(--wc); box-shadow: 0 0 12px color-mix(in srgb, var(--wc) 55%, transparent); color: #fff; }
+.wtag { position: absolute; left: 50%; top: 200px; z-index: 3; transform: translateX(-50%); padding: 2px 10px; border-radius: 999px; white-space: nowrap;
+  font-size: 12px; font-weight: 900; letter-spacing: 0.03em; background: rgba(10, 20, 40, 0.75); color: #e6eefc; }
+.wnode.open .wtag { background: #ffd23f; color: #241a00; }
+.wnode.active .wtag { background: #3bd16f; color: #062a12; }
+.wnode.done .wtag { background: #1f9d55; color: #fff; }
+.wnode.open .wbadge, .wnode.active .wbadge { animation: w-pulse 1.8s ease-in-out infinite; }
+@keyframes w-pulse { 50% { transform: translateX(-50%) scale(1.06); } }
+.wnode.sel .wbadge::after { content: ''; position: absolute; left: 50%; bottom: -10px; width: 90px; height: 16px; margin-left: -45px; border-radius: 50%; border: 3px solid #fff; opacity: 0.9; }
+.cmap .wnode.sel .wbadge::after { bottom: -14px; }
+.wnode.locked { cursor: not-allowed; }
+.wnode.locked .wbadge .wb-svg { filter: grayscale(1) brightness(0.65); }
+.wnode.locked .wground { filter: grayscale(0.7) brightness(0.9); }
+.wnode.locked .wbadge .clock { display: flex; z-index: 5; }
+.wnode.locked .cfog { display: block; }
+.wnode.locked .wname { filter: grayscale(0.7); }
+.wnode .cfog { inset: 0 -10px 30px; }
+.cmap .wnode .cfog { background: radial-gradient(ellipse at 50% 55%, rgba(8, 14, 40, 0.85) 0 38%, transparent 70%); }
+.wnode.final .wname { background: linear-gradient(180deg, #ffd75e, #e0a800); color: #3a2a00; border-color: #a77b00; box-shadow: 0 3px 0 #7a5a00, 0 5px 10px rgba(0, 0, 0, 0.3); text-shadow: none; }
+.cmap .wnode.final .wname { box-shadow: 0 0 14px rgba(255, 210, 63, 0.6); }
+.wnode.shake { animation: node-shake 0.35s; }
+.wnode.unlocking .cfog { display: block; animation: fog-clear 1.4s ease-out 0.3s forwards; }
+.wnode.unlocking .wbadge .clock { display: flex; z-index: 5; animation: career-unlock 1.1s ease-in 0.35s forwards; }
+.wnode.unlocking .wbadge .wb-svg { animation: career-reveal 1.4s ease-out; }
+/* You are here: your team's flag on the mountain, a plane on the world tour. */
+.wflag { position: absolute; left: calc(50% + 40px); top: 70px; z-index: 3; width: 4px; height: 52px; background: #5a3a1a; border-radius: 2px; }
+.wflag::after { content: ''; position: absolute; left: 4px; top: 2px; width: 30px; height: 20px; background: var(--fc); clip-path: polygon(0 0, 100% 15%, 80% 50%, 100% 85%, 0 100%); animation: w-wave 1.6s ease-in-out infinite; transform-origin: 0 50%; }
+@keyframes w-wave { 50% { transform: scaleX(0.82) skewY(4deg); } }
+.wplane { position: absolute; left: calc(50% + 44px); top: 16px; z-index: 3; width: 38px; height: 38px; transform: rotate(135deg); filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.5)); animation: w-plane 2.6s ease-in-out infinite; }
+@keyframes w-plane { 50% { transform: rotate(135deg) translate(0, -5px); } }
+@media (max-height: 520px) {
+  .wpick-badge { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wcloud, .wstar, .wring, .wflag::after, .wplane, .wnode.open .wbadge, .wnode.active .wbadge, .cmap .wpath .done { animation: none; }
+}
+
 /* ---- Tournament: a lit arena, the bracket, and the trophy in the middle ---- */
 #scr-cup, #app.menu-bg #scr-cup { padding: 0; overflow: hidden; display: block; background: #070c1a; color: #e8eef8; }
 .cup-arena { position: absolute; inset: 0; overflow: hidden; pointer-events: none;
