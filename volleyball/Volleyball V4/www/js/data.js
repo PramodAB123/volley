@@ -79,7 +79,10 @@ SR.strideFor = function (speed) { return Math.max(0.12, Math.min(0.42, 0.1 + 0.0
 SR.DIFFICULTY = {
   easy:   { label: 'Easy',   boost: -14 },
   normal: { label: 'Normal', boost: 0 },
-  hard:   { label: 'Hard',   boost: 10 }
+  hard:   { label: 'Hard',   boost: 10 },
+  // League and Tournament tiers only (not offered in Settings).
+  pro:    { label: 'Pro',    boost: 5,  hidden: true },
+  legend: { label: 'Legend', boost: 15, hidden: true }
 };
 
 SR.SHOP = {
@@ -213,3 +216,27 @@ SR.ISLE_NAMES = {
   second: ['Isle', 'Island', 'Cay', 'Key', 'Atoll', 'Reef', 'Cove', 'Bay', 'Point', 'Rock', 'Shores', 'Lagoon', 'Peak', 'Harbor', 'Sands'],
   final: ['Golden Crown Atoll', 'Champions Isle', 'Royal Trophy Island', 'Grand Spike Atoll', 'Victory Peak Isle']
 };
+
+// Leagues: five tiers on a mountain climb (League map). Finish in the top two
+// (promotion) to unlock the next league. teams = clubs in the table (one
+// round per opponent); win / title = stars for a match win and the title;
+// finale = court for the last round (null: your home court).
+SR.LEAGUE_PROMOTE = 2;
+SR.LEAGUES = [
+  { id: 'rookie',   name: 'Rookie League',   place: 'Green Valley',        diff: 'easy',   teams: 6, win: 1, title: 3,  color: '#3fb950', finale: null },
+  { id: 'city',     name: 'City League',     place: 'Metro Heights',       diff: 'normal', teams: 6, win: 1, title: 4,  color: '#2f8fe0', finale: null },
+  { id: 'national', name: 'National League', place: 'Stone Ridge',         diff: 'normal', teams: 8, win: 2, title: 6,  color: '#e07a2e', finale: null },
+  { id: 'pro',      name: 'Pro League',      place: 'Thunder Peaks',       diff: 'pro',    teams: 8, win: 2, title: 8,  color: '#8a5cf0', finale: null },
+  { id: 'legends',  name: 'Legends League',  place: 'Summit of Champions', diff: 'hard',   teams: 8, win: 3, title: 12, color: '#e0a800', finale: 'final' }
+];
+
+// Tournaments: six cups on a world tour (Tournament map), eight teams each,
+// the final on the cup's own court. Reach the final to unlock the next cup.
+SR.CUPS = [
+  { id: 'beach',     name: 'Beach Cup',      place: 'Sunset Coast',   diff: 'easy',   final: 'rays',    win: 1, title: 5,  color: '#ff8a3d' },
+  { id: 'blossom',   name: 'Blossom Cup',    place: 'Sakura Gardens', diff: 'normal', final: 'blossom', win: 1, title: 6,  color: '#ff6fa3' },
+  { id: 'desert',    name: 'Desert Cup',     place: 'Golden Dunes',   diff: 'normal', final: 'dunes',   win: 2, title: 7,  color: '#d99a3e' },
+  { id: 'frost',     name: 'Frost Cup',      place: 'Polar North',    diff: 'pro',    final: 'wolves',  win: 2, title: 8,  color: '#4fb6ff' },
+  { id: 'neon',      name: 'Neon Night Cup', place: 'Neon City',      diff: 'pro',    final: 'neon',    win: 2, title: 10, color: '#e040fb' },
+  { id: 'champions', name: 'Champions Cup',  place: 'Champions Court', diff: 'hard',  final: 'final',   win: 3, title: 15, color: '#ffc400' }
+];
