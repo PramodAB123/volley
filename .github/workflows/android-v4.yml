@@ -69,8 +69,7 @@ jobs:
             # Show Gradle's reason on the run summary page, not only in the step log.
             msg=$(grep -A20 -m1 'What went wrong' "$RUNNER_TEMP/gradle.log" | cut -c1-300 || true)
             [ -n "$msg" ] || msg=$(tail -25 "$RUNNER_TEMP/gradle.log" | cut -c1-300)
-            msg=${msg//'%'/'%25'}; msg=${msg//$''/'%0D'}; msg=${msg//$'
-'/'%0A'}
+            msg=$(printf '%s' "$msg" | sed 's/%/%25/g' | awk 'NR>1{printf "%%0A"}{printf "%s",$0}')
             echo "::error title=Gradle build failed::$msg"
             exit 1
           fi
