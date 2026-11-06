@@ -64,7 +64,16 @@ jobs:
         working-directory: 'volleyball/Volleyball V4/android'
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon bundleRelease
+          set -o pipefail
+          if ! ./gradlew --no-daemon bundleRelease 2>&1 | tee "$RUNNER_TEMP/gradle.log"; then
+            # Show Gradle's reason on the run summary page, not only in the step log.
+            msg=$(grep -A20 -m1 'What went wrong' "$RUNNER_TEMP/gradle.log" | cut -c1-300 || true)
+            [ -n "$msg" ] || msg=$(tail -25 "$RUNNER_TEMP/gradle.log" | cut -c1-300)
+            msg=${msg//'%'/'%25'}; msg=${msg//$''/'%0D'}; msg=${msg//$'
+'/'%0A'}
+            echo "::error title=Gradle build failed::$msg"
+            exit 1
+          fi
 
       - name: Remove the key from the build machine
         if: always()
