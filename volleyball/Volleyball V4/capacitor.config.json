@@ -1,0 +1,26 @@
+{
+  "appId": "buzz.spikerally.game",
+  "appName": "Spike Rally",
+  "webDir": "www",
+  "backgroundColor": "#0b1220",
+  "loggingBehavior": "debug",
+  "android": {
+    "backgroundColor": "#0b1220",
+    "allowMixedContent": false,
+    "captureInput": false,
+    "webContentsDebuggingEnabled": false,
+    "initialFocus": true
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover",
+      "style": "DARK",
+      "hidden": true
+    },
+    "CapacitorHttp": { "enabled": false }
+  }
+}

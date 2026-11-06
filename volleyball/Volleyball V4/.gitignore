@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+# signing secrets
+*.jks
+*.keystore
+android/keystore.properties
+signing-key-PRIVATE/

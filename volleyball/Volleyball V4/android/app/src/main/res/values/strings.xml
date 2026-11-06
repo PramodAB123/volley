@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Spike Rally</string>
+    <string name="title_activity_main">Spike Rally</string>
+    <string name="package_name">buzz.spikerally.game</string>
+    <string name="custom_url_scheme">buzz.spikerally.game</string>
+</resources>

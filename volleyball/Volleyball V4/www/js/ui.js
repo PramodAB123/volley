@@ -1,0 +1,1085 @@
+// Menus and modes: quick match, career, league, tournament, shop, stats, settings.
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var current = null, mode = 'quick';
+
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('hidden', s.id !== id); });
+    current = id;
+    $('hud').classList.toggle('hidden', id !== null);
+    if (id === 'scr-menu' && SR.daily) SR.daily.onMenu();
+  }
+
+  function save() { SR.save.write(); refreshStars(); refreshCareer(); }
+  function data() { return SR.save.data; }
+  function team(id) { return SR.teamById(id); }
+
+  function refreshStars() {
+    document.querySelectorAll('[data-stars]').forEach(function (el) { el.textContent = data().stars; });
+  }
+
+  function chip(t) {
+    return '<span class="chip" style="background:' + t.color + '"></span>';
+  }
+
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), x = a[i]; a[i] = a[j]; a[j] = x; }
+    return a;
+  }
+
+  // ---- no match behind the menus ------------------------------------------
+
+  // Menus sit on the cover art (see #app.menu-bg in style.css), not a match.
+  function stopMatch() {
+    SR.game = null;
+  }
+
+  // ---- team select --------------------------------------------------------
+
+  function openTeams(m) {
+    mode = m;
+    renderTeams();
+    show('scr-teams');
+  }
+
+  function renderTeams() {
+    var title = mode === 'quick' ? 'Choose your team' :
+      ({ league: 'League', cup: 'Tournament', career: 'Career' })[mode] + ': choose your team';
+    $('teams-title').textContent = title;
+    teamCards($('team-grid'), null, pickTeam);
+    rulesPicker($('team-rules'));
+    courtPicker($('team-courts'));
+  }
+
+  // Quick match: play on your Shop court or one of the free themed courts.
+  // Online (key 'onlineCourt'), the host also gets every Shop court they own.
+  function courtPicker(box, key) {
+    key = key || 'quickCourt';
+    if (key === 'quickCourt' && mode !== 'quick') { box.classList.add('hidden'); return; }
+    box.classList.remove('hidden');
+    var cur = data().settings[key] || 'mine', mine = SR.render.courtStyle();
+    var opts = [{ id: 'mine', a: mine, name: 'My court' }].concat(SR.QUICK_COURTS.map(function (id) { return { id: id, a: SR.ARENAS[id], name: SR.ARENAS[id].name }; }));
+    if (key === 'onlineCourt') {
+      SR.SHOP.courts.forEach(function (c) { if (c.id !== mine.id && data().owned.courts.indexOf(c.id) >= 0) opts.push({ id: c.id, a: c, name: c.name }); });
+      if (!opts.some(function (o) { return o.id === cur; })) cur = 'mine';
+    }
+    box.innerHTML = '<span class="rule-name">Court</span><div class="court-pick" role="radiogroup" aria-label="Court">' +
+      opts.map(function (o) {
+        return '<button type="button" role="radio" aria-checked="' + (o.id === cur) + '" class="' + (o.id === cur ? 'on' : '') + '" data-v="' + o.id + '">' + courtSwatch(o.a) + '<span>' + o.name + '</span></button>';
+      }).join('') + '</div>';
+    box.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        data().settings[key] = b.getAttribute('data-v');
+        save();
+        SR.audio.play('click');
+        courtPicker(box, key);
+      });
+    });
+  }
+
+  // A small picture of a court: floor, court, net, and its floor art if it has one.
+  function courtSwatch(a) {
+    return '<span class="venue-swatch' + (a.motif ? ' v-' + a.motif : '') + '" style="--vc:' + a.court + ';--vf:' + a.floor + ';--va:' + (a.accent || a.line) + ';--vl:' + a.line + '" aria-hidden="true"><i></i></span>';
+  }
+
+  // Points-per-set and number-of-sets choices, saved as the match format.
+  function rulesPicker(box) {
+    var s = data().settings, f0 = SR.formatOf(s.format), f = SR.formatOf(SR.formatId(f0.points, f0.sets));
+    function group(name, opts, cur, fmt) {
+      return '<div class="rule"><span class="rule-name">' + name + '</span><div class="seg" role="radiogroup" aria-label="' + name + '">' +
+        opts.map(function (o) { return '<button type="button" role="radio" aria-checked="' + (o === cur) + '" class="' + (o === cur ? 'on' : '') + '" data-v="' + o + '">' + fmt(o) + '</button>'; }).join('') + '</div></div>';
+    }
+    box.innerHTML = group('Points per set', SR.POINT_OPTIONS, f.points, String) +
+      group('Sets', SR.SET_OPTIONS, f.sets, function (n) { return n === 1 ? '1' : 'Best of ' + n; }) +
+      '<p class="rule-sum muted small">' + f.label + '</p>';
+    box.querySelectorAll('.rule').forEach(function (r, gi) {
+      r.querySelectorAll('button').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var v = +b.getAttribute('data-v'), cur = SR.formatOf(data().settings.format);
+          data().settings.format = gi === 0 ? SR.formatId(v, cur.sets) : SR.formatId(cur.points, v);
+          save();
+          SR.audio.play('click');
+          rulesPicker(box);
+        });
+      });
+    });
+  }
+
+  // Fill `grid` with a card per team (skipping `skipId`); onPick(team) on click.
+  function teamCards(grid, skipId, onPick) {
+    grid.innerHTML = '';
+    SR.TEAMS.forEach(function (t) {
+      if (t.id === skipId) return;
+      var b = document.createElement('button');
+      b.className = 'team-card';
+      var pw = SR.teamPower(t);
+      b.innerHTML = '<span class="jersey" style="background:' + t.color + ';color:' + t.trim + '">' + t.short + '</span>' +
+        '<span class="tname">' + t.name + '</span>' +
+        '<span class="tstats">ATK ' + t.r.attack + ' · BLK ' + t.r.block + ' · PASS ' + t.r.pass + ' · SRV ' + t.r.serve + '</span>' +
+        '<span class="meter"><span style="width:' + Math.round((pw - 60) / 30 * 100) + '%"></span></span>';
+      b.addEventListener('click', function () { onPick(t); });
+      grid.appendChild(b);
+    });
+  }
+
+  function pickTeam(t) {
+    SR.audio.play('click');
+    if (mode === 'quick') {
+      // Your team only: the opponent is picked at random.
+      data().settings.team = t.id;
+      save();
+      startMatch(t, randomTeam(t));
+      return;
+    }
+    data().settings.team = t.id;
+    if (mode === 'career') careerTeam(t.id);
+    else if (mode === 'league') newLeague(t.id);
+    else newCup(t.id);
+  }
+
+  // ---- matches ------------------------------------------------------------
+
+  function startMatch(home, away, venue, difficulty, format) {
+    var s = data().settings;
+    show(null);
+    if (mode === 'quick') { lastQuick = { home: home, away: away }; if (SR.ARENAS[s.quickCourt]) venue = s.quickCourt; }
+    home = SR.kitTeam(home, away);
+    SR.game = new SR.Game({ home: home, away: away, format: format || s.format, difficulty: difficulty || s.difficulty, human: 0, mode: mode, venue: venue || null, onEnd: finishMatch });
+  }
+
+  // Quick match: Random starts at once with two random teams; Choose team
+  // picks only your team (opponent random). A player's very first match is a
+  // single set, so they reach a result quickly.
+  var lastQuick = null;
+  function randomTeam(not) {
+    var list = SR.TEAMS.filter(function (t) { return !not || t.id !== not.id; });
+    return list[Math.floor(Math.random() * list.length)];
+  }
+  function quickRandom() {
+    var me = randomTeam(null);
+    mode = 'quick';
+    startMatch(me, randomTeam(me), null, null, data().stats.matches ? null : SR.formatId(15, 1));
+  }
+
+  // The result screen's main button: the next match in the same mode.
+  var resultNext = null;
+  function nextAction(won, prevPick) {
+    if (mode === 'quick' && lastQuick) {
+      var q = lastQuick;
+      return { label: 'Play again', go: function () { startMatch(q.home, q.away); } };
+    }
+    if (mode === 'league' && data().league && !data().league.done) {
+      return { label: 'Next match', go: function () { openLeague(); var b = $('btn-league-play'); if (b) b.click(); } };
+    }
+    if (mode === 'cup' && data().tournament && cupMyMatch(data().tournament)) {
+      return { label: 'Next match', go: function () { openCup(); var b = $('btn-cup-play'); if (b) b.click(); } };
+    }
+    if (mode === 'career' && data().career) {
+      return { label: !won ? 'Try again' : careerPick !== prevPick ? 'Next island' : 'Play again',
+        go: function () { openCareer(); var b = $('btn-career-play'); if (b && !b.disabled) b.click(); } };
+    }
+    return null;
+  }
+
+  function resultButtons(next) {
+    resultNext = next;
+    $('btn-result-next').classList.toggle('hidden', !next);
+    if (next) $('btn-result-next').textContent = next.label;
+    $('btn-result-ok').textContent = mode === 'quick' ? 'Menu' : 'Continue';
+    $('btn-result-ok').classList.toggle('primary', !next);
+    $('btn-result-ok').classList.toggle('ghost', !!next);
+    if (SR.daily) SR.daily.teaser($('result-daily'));
+  }
+
+  // ---- venues -------------------------------------------------------------
+
+  // League rounds are played at the opponent's arena, the last round at yours.
+  function leagueVenue(L) {
+    return L.round === L.rounds.length - 1 ? L.me : myFixture(L);
+  }
+
+  // Tournament: the opponent's arena, and Champions Court for the final.
+  function cupVenue(T, m) {
+    return T.round === 2 ? 'final' : (m.a === T.me ? m.b : m.a);
+  }
+
+  // A small card naming the next venue, with a swatch of its court.
+  function venueCard(el, id, me) {
+    var a = id && SR.ARENAS[id];
+    if (!a) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    var host = id === 'final' ? 'Tournament final' : id === me ? 'Your home court' : 'Home of the ' + team(id).name;
+    el.innerHTML = courtSwatch(a) +
+      '<span class="venue-text"><small>Venue</small><b>' + a.name + '</b><span>' + host + '</span></span>';
+  }
+
+  function finishMatch(game) {
+    var m = game.match, won = m.winner === 0, st = data().stats, stars = 0;
+    st.matches++;
+    if (won) st.wins++;
+    m.history.forEach(function (s) { st.points += s[0]; });
+    st.aces += m.stats[0].aces; st.kills += m.stats[0].kills; st.blocks += m.stats[0].blocks;
+    var notes = [], prevPick = careerPick;
+    var result = { winner: m.winner, sets: m.sets.slice(), scores: m.history.slice() };
+
+    if (mode === 'quick') { if (won) stars += SR.STARS.quickWin; }
+    else if (mode === 'league') { var r = leagueRecord(result); stars += r.stars; notes = r.notes; }
+    else if (mode === 'cup') { var c = cupRecord(result); stars += c.stars; notes = c.notes; }
+    else if (mode === 'career') { var k = careerRecord(won); stars += k.stars; notes = k.notes; }
+    data().stars += stars;
+    save();
+
+    $('result-title').textContent = won ? 'Victory!' : 'Defeat';
+    $('result-title').className = won ? 'win' : 'loss';
+    $('result-sub').textContent = m.teams[0].name + ' ' + m.sets[0] + ' - ' + m.sets[1] + ' ' + m.teams[1].name;
+    $('result-sets').textContent = m.history.map(function (s) { return s[0] + '-' + s[1]; }).join('   ');
+    $('result-stats').textContent = 'Aces ' + m.stats[0].aces + ' · Kills ' + m.stats[0].kills + ' · Blocks ' + m.stats[0].blocks + ' · Errors ' + m.stats[0].errors;
+    $('result-stars').textContent = stars ? '+' + stars + ' star' + (stars > 1 ? 's' : '') : 'No stars this time';
+    $('result-notes').textContent = notes.join(' ');
+    resultButtons(nextAction(won, prevPick));
+    stopMatch();
+    show('scr-result');
+  }
+
+  // ---- league -------------------------------------------------------------
+
+  function newLeague(myId) {
+    var others = shuffle(SR.TEAMS.map(function (t) { return t.id; }).filter(function (id) { return id !== myId; })).slice(0, 5);
+    var ids = [myId].concat(others), rounds = [];
+    var rot = ids.slice(1);
+    for (var r = 0; r < 5; r++) {
+      var arr = [ids[0]].concat(rot), pairs = [];
+      for (var i = 0; i < 3; i++) pairs.push([arr[i], arr[5 - i]]);
+      rounds.push(pairs);
+      rot.unshift(rot.pop());
+    }
+    var table = {};
+    ids.forEach(function (id) { table[id] = { p: 0, w: 0, l: 0, sw: 0, sl: 0, pts: 0 }; });
+    data().league = { me: myId, teams: ids, rounds: rounds, round: 0, table: table, log: [], done: false };
+    save();
+    openLeague();
+  }
+
+  function addResult(table, a, b, res) {
+    var ta = table[a], tb = table[b];
+    ta.p++; tb.p++;
+    ta.sw += res.sets[0]; ta.sl += res.sets[1]; tb.sw += res.sets[1]; tb.sl += res.sets[0];
+    if (res.winner === 0) { ta.w++; tb.l++; ta.pts += 3; } else { tb.w++; ta.l++; tb.pts += 3; }
+  }
+
+  function standings(L) {
+    return L.teams.slice().sort(function (a, b) {
+      var x = L.table[a], y = L.table[b];
+      return (y.pts - x.pts) || ((y.sw - y.sl) - (x.sw - x.sl)) || (y.sw - x.sw);
+    });
+  }
+
+  function myFixture(L) {
+    if (L.done) return null;
+    var pair = L.rounds[L.round].find(function (p) { return p[0] === L.me || p[1] === L.me; });
+    return pair[0] === L.me ? pair[1] : pair[0];
+  }
+
+  function leagueRecord(res) {
+    var L = data().league, out = { stars: 0, notes: [] };
+    if (!L) return out;
+    var opp = myFixture(L);
+    addResult(L.table, L.me, opp, res);
+    var rd = [{ a: L.me, b: opp, w: res.winner === 0 ? L.me : opp, sa: res.sets[0], sb: res.sets[1] }];
+    L.log.unshift(team(L.me).short + ' ' + res.sets[0] + '-' + res.sets[1] + ' ' + team(opp).short);
+    if (res.winner === 0) out.stars += SR.STARS.leagueWin;
+    L.rounds[L.round].forEach(function (p) {
+      if (p[0] === L.me || p[1] === L.me) return;
+      var r = SR.simMatch(team(p[0]), team(p[1]), data().settings.format);
+      addResult(L.table, p[0], p[1], r);
+      rd.push({ a: p[0], b: p[1], w: r.winner === 0 ? p[0] : p[1], sa: r.sets[0], sb: r.sets[1] });
+      L.log.unshift(team(p[0]).short + ' ' + r.sets[0] + '-' + r.sets[1] + ' ' + team(p[1]).short);
+    });
+    (L.results = L.results || [])[L.round] = rd;
+    L.round++;
+    if (L.round >= L.rounds.length) {
+      L.done = true;
+      var order = standings(L), top = order[0], pos = order.indexOf(L.me) + 1, T = trophies();
+      if (pos === 1) T.league++;
+      if (pos === 1 && L.table[L.me].w === L.rounds.length) T.unbeaten++;
+      if (pos === 2) T.silver++;
+      if (pos === 3) T.bronze++;
+      T.seasons.unshift({ team: L.me, pos: pos, pts: L.table[L.me].pts });
+      T.seasons.length = Math.min(T.seasons.length, 8);
+      if (top === L.me) { out.stars += SR.STARS.leagueTitle; out.notes.push('League champions! +' + SR.STARS.leagueTitle + ' bonus stars.'); }
+      else out.notes.push('League finished. ' + team(top).name + ' took the title.');
+    }
+    return out;
+  }
+
+  // The League screen: a trophy hall. The table on the left with crests,
+  // medals and form; on the right the Shield on its plinth (a podium once
+  // the season ends), this round's fixtures and your trophy cabinet.
+  var LG_GOLD = '#ffd23f';
+  function lgTrophy(kind, cls) {
+    var c = '<svg class="lg-t ' + (cls || '') + '" viewBox="0 0 64 72" aria-hidden="true">', ball =
+      '<circle cx="32" cy="27" r="9" fill="#fff8e1"/><path d="M23.5 24c5 1 10 5 12 11M28 18.6c3 3 4.5 8 3.5 13M40.8 25c-5 0-10.5 2.5-13.5 8" fill="none" stroke="#c98a00" stroke-width="1.6" stroke-linecap="round"/>';
+    if (kind === 'shield') return c +
+      '<rect x="12" y="62" width="40" height="8" rx="2" fill="url(#lg-wood)"/><rect x="16" y="58" width="32" height="5" rx="1.5" fill="#3a2414"/><path d="M27 46h10l2 12H25z" fill="url(#lg-gold)"/>' +
+      '<circle cx="32" cy="27" r="23" fill="url(#lg-gold)"/><circle cx="32" cy="27" r="23" fill="none" stroke="#b86e00" stroke-width="1.5"/><circle cx="32" cy="27" r="17" fill="none" stroke="#fff3b0" stroke-width="1.4" stroke-dasharray="2 3"/>' + ball +
+      '<path d="M15 14a20 20 0 0 1 10-8" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".6"/></svg>';
+    if (kind === 'cup') return c +
+      '<g transform="translate(0 6)"><path d="M18 6h28v14c0 9-6 16-14 16s-14-7-14-16z" fill="url(#lg-gold)"/><path d="M18 11H9c0 9 4 14 11 15M46 11h9c0 9-4 14-11 15" fill="none" stroke="url(#lg-gold)" stroke-width="4" stroke-linecap="round"/>' +
+      '<path d="M29 36h6v9h-6z" fill="#e8a400"/><path d="M21 47h22l3 9H18z" fill="url(#lg-gold)"/><rect x="16" y="55" width="32" height="5" rx="2" fill="#b86e00"/><path d="M24 10c0 7 1 13 5 18" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".55"/></g></svg>';
+    if (kind === 'crown') return c +
+      '<path d="M10 52 L8 22 L21 34 L32 14 L43 34 L56 22 L54 52 Z" fill="url(#lg-gold)" stroke="#b86e00" stroke-width="1.5" stroke-linejoin="round"/><rect x="10" y="52" width="44" height="9" rx="2" fill="#e8a400"/>' +
+      '<circle cx="32" cy="56.5" r="3" fill="#e5484d"/><circle cx="20" cy="56.5" r="2.4" fill="#4d8bff"/><circle cx="44" cy="56.5" r="2.4" fill="#3bd16f"/><circle cx="8" cy="22" r="3" fill="#fff3b0"/><circle cx="32" cy="14" r="3" fill="#fff3b0"/><circle cx="56" cy="22" r="3" fill="#fff3b0"/></svg>';
+    // Medals on a ribbon: unbeaten (gold star), runner-up (silver), third (bronze).
+    var g = kind === 'silver' ? 'lg-silver' : kind === 'bronze' ? 'lg-bronze' : 'lg-gold', mark = kind === 'unbeaten' ?
+      '<path d="M32 33l3.5 7.2 7.9 1.1-5.7 5.6 1.3 7.9-7-3.7-7 3.7 1.3-7.9-5.7-5.6 7.9-1.1z" fill="#fff8e1"/>' :
+      '<text x="32" y="52" text-anchor="middle" font-size="16" font-weight="900" font-family="system-ui,sans-serif" fill="rgba(0,0,0,.45)">' + (kind === 'silver' ? '2' : '3') + '</text>';
+    return c + '<path d="M20 2h10l6 24h-10zM44 2H34l-6 24h10z" fill="' + (kind === 'unbeaten' ? '#e5484d' : kind === 'silver' ? '#4d8bff' : '#2f9e44') + '"/><path d="M30 2h4l-2 8z" fill="rgba(255,255,255,.35)"/>' +
+      '<circle cx="32" cy="45" r="19" fill="url(#' + g + ')"/><circle cx="32" cy="45" r="14" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/>' + mark + '</svg>';
+  }
+
+  function trophies() { return data().trophies; }
+
+  function leagueOrdinal(n) { return n + (n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'); }
+
+  // Last results of a team, oldest first (W / L), from the saved rounds.
+  function leagueForm(L, id) {
+    var out = [];
+    (L.results || []).forEach(function (rd) {
+      rd.forEach(function (m) { if (m.a === id || m.b === id) out.push(m.w === id ? 'w' : 'l'); });
+    });
+    return out;
+  }
+
+  function openLeague() {
+    var L = data().league;
+    if (!L) { openTeams('league'); return; }
+    mode = 'league';
+    show('scr-league');
+    $('league-scroll').scrollTop = 0;
+    renderLeague();
+  }
+
+  function renderLeague() {
+    var L = data().league, me = team(L.me), order = standings(L), pos = order.indexOf(L.me) + 1, top = order[0];
+    var n = L.rounds.length, champ = L.done && top === L.me, wide = ($('league-scroll').clientWidth || 800) >= 860;
+    var maxPts = n * 3, played = L.round, results = L.results || [];
+
+    // Header: your team, your place, and the five rounds as pills.
+    var lead = L.table[top].pts - L.table[L.me].pts;
+    $('league-sub').innerHTML = chip(me) + me.name + ' · ' + (L.done ? (champ ? 'League champions!' : 'Finished ' + leagueOrdinal(pos)) :
+      leagueOrdinal(pos) + ' place' + (pos === 1 ? (played ? ', top of the table' : '') : lead ? ', ' + lead + ' pt' + (lead === 1 ? '' : 's') + ' behind' : ', level on points'));
+    var mine = leagueForm(L, L.me);
+    $('league-steps').innerHTML = L.rounds.map(function (r, i) {
+      var f = mine[i], st = i < played ? (f === 'w' ? 'done' : f === 'l' ? 'out' : 'done') : i === played && !L.done ? 'now' : '';
+      return '<li class="' + st + '"><span>' + (st === 'done' ? '✓' : st === 'out' ? '✕' : i + 1) + '</span>Round ' + (i + 1) + '</li>';
+    }).join('') + '<li class="' + (champ ? 'done gold' : '') + '"><span>🛡</span>Shield</li>';
+
+    // The table.
+    var rows = order.map(function (id, i) {
+      var t = L.table[id], tm = team(id), form = leagueForm(L, id).slice(-5), dots = '';
+      for (var k = 0; k < 5; k++) dots += '<i class="' + (form[k] || '') + '"></i>';
+      var medal = i < 3 && played ? ' m' + (i + 1) : '';
+      return '<div class="lr' + (id === L.me ? ' me' : '') + medal + '" style="--pp:' + Math.round(t.pts / maxPts * 100) + '%">' +
+        '<span class="lp">' + (i === 0 && played ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18L2 7l5.5 4.5L12 4l4.5 7.5L22 7l-1 11z" fill="currentColor"/></svg>' : '') + '<b>' + (i + 1) + '</b></span>' +
+        crest(tm, 'lg-shield') + '<span class="ln"><b>' + tm.name + '</b><b class="abbr">' + tm.short + '</b>' + (id === L.me ? '<em>You</em>' : '') + '</span>' +
+        '<span class="lf">' + dots + '</span><span class="lc">' + t.p + '</span><span class="lc">' + t.w + '</span><span class="lc">' + t.l + '</span>' +
+        '<span class="lc ls">' + t.sw + ':' + t.sl + '</span><span class="lpts">' + t.pts + '</span></div>';
+    }).join('');
+    var table = '<div class="lg-card lg-table"><h3>Standings <small>Win = 3 pts</small></h3>' +
+      '<div class="lr lh"><span class="lp">#</span><span class="ln">Team</span><span class="lf">Form</span><span class="lc">P</span><span class="lc">W</span><span class="lc">L</span><span class="lc ls">Sets</span><span class="lpts">Pts</span></div>' +
+      rows + '</div>';
+
+    // The prize: the Shield under a spotlight, or the final podium.
+    var stage;
+    if (L.done) {
+      var pod = [order[1], order[0], order[2]].map(function (id, k) {
+        var place = [2, 1, 3][k], tm = team(id);
+        return '<div class="lg-pod p' + place + (id === L.me ? ' me' : '') + '">' + (place === 1 ? lgTrophy('shield', 'lg-pod-t') : lgTrophy(place === 2 ? 'silver' : 'bronze', 'lg-pod-m')) +
+          crest(tm, 'lg-shield') + '<b>' + tm.short + '</b><span class="lg-block"><i>' + place + '</i><small>' + L.table[id].pts + ' pts</small></span></div>';
+      }).join('');
+      stage = '<div class="lg-card lg-stage over' + (champ ? ' won' : '') + '"><h3>' + (champ ? 'Champions!' : 'Final podium') + '</h3><div class="lg-podium">' + pod + '</div>' +
+        '<p class="lg-cap">' + (champ ? me.name + ' lift the Spike League Shield · ★ +' + SR.STARS.leagueTitle : team(top).name + ' took the Shield. You finished ' + leagueOrdinal(pos) + '.') + '</p></div>';
+    } else {
+      var left = n - played, gap = lead, can = gap <= left * 3;
+      stage = '<div class="lg-card lg-stage"><h3>Season prize</h3><div class="lg-plinth">' + lgTrophy('shield', 'lg-big') + '</div>' +
+        '<b class="lg-prize">Spike League Shield</b><p class="lg-cap">Finish top after ' + n + ' rounds · ★ +' + SR.STARS.leagueTitle + ' bonus</p>' +
+        '<p class="lg-race ' + (pos === 1 ? 'up' : can ? 'on' : 'off') + '">' + (pos === 1 ? (played ? 'You hold the Shield. Keep it!' : 'Every team starts on 0 pts.') : can ? (lead ? lead + ' pt' + (lead === 1 ? '' : 's') + ' to catch ' : 'Level on points with ') + team(top).name : 'The Shield is out of reach this season') + '</p></div>';
+    }
+
+    // This round's three matches, or the last round's results.
+    var fx = '', fr = L.done ? n - 1 : played, res = results[fr] || [];
+    L.rounds[fr].forEach(function (p) {
+      var r = res.find(function (m) { return m.a === p[0] || m.b === p[0]; }), A = team(p[0]), B = team(p[1]);
+      var mineM = p[0] === L.me || p[1] === L.me;
+      fx += '<div class="lfx' + (mineM ? ' me' : '') + (r ? ' played' : '') + '">' + crest(A, 'lg-shield') + '<b class="' + (r && r.w === p[0] ? 'w' : '') + '">' + A.short + '</b>' +
+        '<span class="lfx-s">' + (r ? r.sa + ' – ' + r.sb : mineM ? 'You' : 'vs') + '</span><b class="' + (r && r.w === p[1] ? 'w' : '') + '">' + B.short + '</b>' + crest(B, 'lg-shield') + '</div>';
+    });
+    var round = '<div class="lg-card lg-round"><h3>Round ' + (fr + 1) + ' <small>' + (L.done ? 'Final results' : 'Fixtures') + '</small></h3>' + fx +
+      (played && !L.done ? '<p class="lg-last">Last round: ' + (results[played - 1] || []).map(function (m) { return team(m.a).short + ' ' + m.sa + '-' + m.sb + ' ' + team(m.b).short; }).join(' · ') + '</p>' : '') + '</div>';
+
+    // The trophy cabinet: everything you have won, empty plinths for the rest.
+    var T = trophies(), C = data().career, crown = C && C.unlocked >= SR.CAREER.length ? 1 : 0;
+    var items = [['shield', 'League Shield', T.league, 'Win a league'], ['unbeaten', 'Unbeaten', T.unbeaten, 'Win all ' + n + ' rounds'],
+      ['silver', 'Runner-up', T.silver, 'Finish 2nd'], ['bronze', 'Third place', T.bronze, 'Finish 3rd'],
+      ['cup', 'Tournament Cup', T.cup, 'Win a tournament'], ['crown', 'Career Crown', crown, 'Win all Career islands']];
+    var shelf = items.map(function (it) {
+      return '<div class="lg-item' + (it[2] ? ' got' : '') + '" title="' + it[1] + (it[2] ? '' : ': ' + it[3]) + '">' + lgTrophy(it[0]) +
+        (it[2] > 1 ? '<em>×' + it[2] + '</em>' : '') + '<b>' + it[1] + '</b><small>' + (it[2] ? (it[2] > 1 ? it[2] + ' won' : 'Won') : it[3]) + '</small></div>';
+    }).join('');
+    var hist = T.seasons.slice(0, 5).map(function (s) {
+      return '<span class="lg-hs p' + Math.min(s.pos, 4) + '">' + chip(team(s.team)) + leagueOrdinal(s.pos) + ' · ' + s.pts + ' pts</span>';
+    }).join('');
+    var cab = '<div class="lg-card lg-cab"><h3>Trophy cabinet <small>' + items.filter(function (it) { return it[2]; }).length + ' / ' + items.length + '</small></h3>' +
+      '<div class="lg-shelf">' + shelf + '</div>' + (hist ? '<div class="lg-hist"><small>Past seasons</small>' + hist + '</div>' : '') + '</div>';
+
+    var box = $('league-board');
+    box.className = 'lg-board ' + (wide ? 'wide' : 'narrow');
+    box.innerHTML = wide ? '<div class="lg-col">' + table + round + '</div><div class="lg-col">' + stage + cab + '</div>' : stage + table + round + cab;
+
+    // Bottom: the next match and its venue, or the season's end.
+    var nx = $('league-next'), opp = myFixture(L);
+    $('scr-league').classList.toggle('lg-won', champ);
+    $('btn-league-quit').classList.toggle('hidden', L.done);
+    hallConfetti('#scr-league .lg-hall', champ);
+    if (!L.done) {
+      var o = team(opp), vid = leagueVenue(L), a = SR.ARENAS[vid];
+      var host = vid === L.me ? 'Your home court' : 'Home of the ' + team(vid).name;
+      nx.className = 'cup-next';
+      nx.innerHTML = '<div class="cup-vs"><span class="cv me">' + crest(me, 'lg-shield') + '<b>' + me.short + '</b></span><span class="cv-x">VS</span><span class="cv">' + crest(o, 'lg-shield') + '<b>' + o.short + '</b></span></div>' +
+        '<span class="cpick-thumb">' + thumbImg(vid) + '</span>' +
+        '<span class="venue-text"><small>Round ' + (played + 1) + ' of ' + n + ' · vs ' + o.name + '</small><b>' + (a ? a.name : '') + '</b><span>' + host + ' · <i class="cwin">Win ★ ' + SR.STARS.leagueWin + '</i></span></span>' +
+        '<button id="btn-league-play" type="button" class="btn primary">Play</button>';
+      on('btn-league-play', function () { startMatch(me, o, vid); });
+      thumbQueue.push(vid);
+      setTimeout(pumpThumbs, 0);
+    } else {
+      nx.className = 'cup-next over' + (champ ? ' won' : '');
+      nx.innerHTML = '<span class="cup-end-ico">' + (champ ? lgTrophy('shield', 'cup-trophy') : pos <= 3 ? lgTrophy(pos === 2 ? 'silver' : 'bronze', 'cup-trophy') : crest(team(top), 'lg-shield')) + '</span>' +
+        '<span class="venue-text"><small>Season complete</small><b>' + (champ ? 'You won the league!' : 'You finished ' + leagueOrdinal(pos)) + '</b><span>' +
+        (champ ? me.name + ' · ' + L.table[L.me].pts + ' pts · ★ +' + SR.STARS.leagueTitle + ' bonus' : team(top).name + ' won with ' + L.table[top].pts + ' pts. Go again?') + '</span></span>' +
+        '<button id="btn-league-new" type="button" class="btn primary">New season</button>';
+      on('btn-league-new', function () { data().league = null; save(); openTeams('league'); });
+    }
+  }
+
+  // ---- tournament ---------------------------------------------------------
+
+  function newCup(myId) {
+    var others = shuffle(SR.TEAMS.map(function (t) { return t.id; }).filter(function (id) { return id !== myId; }));
+    var ids = shuffle([myId].concat(others.slice(0, 7))), qf = [];
+    for (var i = 0; i < 8; i += 2) qf.push({ a: ids[i], b: ids[i + 1], w: null, score: '' });
+    data().tournament = { me: myId, rounds: [qf], round: 0, out: false, champion: null };
+    save();
+    openCup();
+  }
+
+  function cupMyMatch(T) {
+    if (T.champion) return null;
+    return T.rounds[T.round].find(function (m) { return m.a === T.me || m.b === T.me; }) || null;
+  }
+
+  function advanceCup(T) {
+    var cur = T.rounds[T.round];
+    cur.forEach(function (m) {
+      if (m.w) return;
+      var r = SR.simMatch(team(m.a), team(m.b), data().settings.format);
+      m.w = r.winner === 0 ? m.a : m.b;
+      m.score = r.sets[0] + '-' + r.sets[1];
+    });
+    if (cur.length === 1) { T.champion = cur[0].w; return; }
+    var next = [];
+    for (var i = 0; i < cur.length; i += 2) next.push({ a: cur[i].w, b: cur[i + 1].w, w: null, score: '' });
+    T.rounds.push(next);
+    T.round++;
+  }
+
+  function cupRecord(res) {
+    var T = data().tournament, out = { stars: 0, notes: [] };
+    if (!T) return out;
+    var m = cupMyMatch(T);
+    var meA = m.a === T.me, opp = meA ? m.b : m.a;
+    m.w = res.winner === 0 ? T.me : opp;
+    m.score = meA ? res.sets[0] + '-' + res.sets[1] : res.sets[1] + '-' + res.sets[0];
+    if (res.winner === 0) out.stars += SR.STARS.cupWin;
+    else T.out = true;
+    advanceCup(T);
+    while (T.out && !T.champion) advanceCup(T);
+    if (T.champion === T.me) { trophies().cup++; out.stars += SR.STARS.cupTitle; out.notes.push('Cup winners! +' + SR.STARS.cupTitle + ' bonus stars.'); }
+    else if (T.out) out.notes.push((T.rounds.length === 3 && T.rounds[2][0].w && (T.rounds[2][0].a === T.me || T.rounds[2][0].b === T.me) ? 'Runners-up. ' : 'Knocked out. ') + team(T.champion).name + ' won the cup.');
+    return out;
+  }
+
+  // The bracket: eight crests on a lit arena, lines from each match to the
+  // next, your road in gold, and the trophy waiting in the middle.
+  var CUP_ROUNDS = ['Quarter-finals', 'Semi-finals', 'Final'], CUP_ONE = ['Quarter-final', 'Semi-final', 'Final'];
+  var TROPHY = '<svg class="cup-trophy" viewBox="0 0 64 64" aria-hidden="true">' +
+    '<path d="M18 6h28v14c0 9-6 16-14 16s-14-7-14-16z" fill="url(#cup-gold)"/><path d="M18 11H9c0 9 4 14 11 15M46 11h9c0 9-4 14-11 15" fill="none" stroke="url(#cup-gold)" stroke-width="4" stroke-linecap="round"/>' +
+    '<path d="M29 36h6v9h-6z" fill="#e8a400"/><path d="M21 47h22l3 9H18z" fill="url(#cup-gold)"/><rect x="16" y="55" width="32" height="5" rx="2" fill="#b86e00"/>' +
+    '<path d="M24 10c0 7 1 13 5 18" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".55"/><path d="M32 13l1.8 3.7 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#fff8d6" opacity=".9"/></svg>';
+
+  // A team crest: a shield in the team colour with its kit pattern and code.
+  function crest(t, clip) {
+    if (!t) return '<span class="crest tbd"><svg viewBox="0 0 32 34" aria-hidden="true"><path d="M16 2l13 4.5V15c0 8.5-5.6 14.5-13 17C8.6 29.5 3 23.5 3 15V6.5z"/><text x="16" y="21">?</text></svg></span>';
+    var pat = t.pattern === 'stripes' ? '<path d="M9.5 0h3v34h-3zM19.5 0h3v34h-3z"/>' : t.pattern === 'hoops' ? '<path d="M0 12h32v5H0z"/>' : '<path d="M16 0h16v34H16z"/>';
+    return '<span class="crest" style="--tc:' + t.color + ';--tt:' + t.trim + '"><svg viewBox="0 0 32 34" aria-hidden="true">' +
+      '<path class="cr-b" d="M16 2l13 4.5V15c0 8.5-5.6 14.5-13 17C8.6 29.5 3 23.5 3 15V6.5z"/>' +
+      '<g class="cr-p" clip-path="url(#' + (clip || 'cup-shield') + ')">' + pat + '</g>' +
+      '<path class="cr-s" d="M16 2l13 4.5V15c0 8.5-5.6 14.5-13 17C8.6 29.5 3 23.5 3 15V6.5z"/>' +
+      '<text x="16" y="20.5">' + t.short + '</text></svg></span>';
+  }
+
+  function cupRow(T, m, side) {
+    var id = m && m[side];
+    if (!id) return '<div class="cr tbd">' + crest(null) + '<span class="cn"><b>To be decided</b><b class="abbr">TBD</b></span><span class="cs"></span></div>';
+    var t = team(id), sc = m.score ? m.score.split('-')[side === 'a' ? 0 : 1] : '';
+    var cls = (m.w ? (m.w === id ? ' win' : ' lose') : '') + (id === T.me ? ' me' : '');
+    return '<div class="cr' + cls + '">' + crest(t) + '<span class="cn"><b>' + t.name + '</b><b class="abbr">' + t.short + '</b></span><span class="cs">' + sc + '</span></div>';
+  }
+
+  function cupCard(T, r, i) {
+    var m = T.rounds[r] && T.rounds[r][i];
+    var mine = m && (m.a === T.me || m.b === T.me);
+    var state = !m ? 'tbd' : m.w ? 'done' : mine && !T.champion ? 'next' : 'wait';
+    return '<div class="cm ' + state + (mine ? ' mine' : '') + '" data-r="' + r + '" data-i="' + i + '">' +
+      (state === 'next' ? '<span class="cm-tag">Your match</span>' : '') +
+      cupRow(T, m, 'a') + cupRow(T, m, 'b') + '</div>';
+  }
+
+  function cupLayout() {
+    var w = $('cup-scroll').clientWidth || 800;
+    // Folded wide but short on room: team codes instead of full names.
+    return w >= 980 ? 'wide' : w >= 820 ? 'wide codes' : w >= 520 ? 'mid' : 'tight';
+  }
+
+  function openCup() {
+    var T = data().tournament;
+    if (!T) { openTeams('cup'); return; }
+    mode = 'cup';
+    show('scr-cup');
+    renderCup();
+  }
+
+  function renderCup() {
+    var T = data().tournament, me = team(T.me), lay = cupLayout(), champ = T.champion && team(T.champion);
+    var rnd = T.champion ? 3 : T.round;
+    // Columns: wide screens fold the bracket in two around the trophy.
+    var cols = lay.indexOf('wide') === 0 ?
+      [[0, [0, 1]], [1, [0]], [2, [0]], [1, [1]], [0, [2, 3]]] :
+      [[0, [0, 1, 2, 3]], [1, [0, 1]], [2, [0]]];
+    var html = '';
+    cols.forEach(function (c) {
+      var r = c[0], fin = r === 2;
+      html += '<div class="cup-colw' + (fin ? ' fin' : '') + (r === rnd ? ' now' : r < rnd ? ' past' : '') + '"><h3>' + CUP_ROUNDS[r] + '</h3><div class="cup-col">';
+      if (fin) {
+        html += '<div class="cup-final">' +
+          '<div class="cup-prize' + (champ ? ' won' : '') + '">' + TROPHY + (champ ? '<span class="cup-champ">' + crest(champ) + '<b>' + champ.name + '</b></span>' : '<span class="cup-court">Champions Court</span>') + '</div>' +
+          cupCard(T, 2, 0) + '</div>';
+      } else c[1].forEach(function (i) { html += cupCard(T, r, i); });
+      html += '</div></div>';
+    });
+    var box = $('cup-bracket');
+    box.className = 'cup-bracket ' + lay;
+    box.innerHTML = '<svg class="cup-lines" aria-hidden="true"></svg>' + html;
+
+    // Header: your team, where you are, and the road to the cup.
+    var lost = -1;
+    T.rounds.forEach(function (ms, r) { ms.forEach(function (m) { if (m.w && m.w !== T.me && (m.a === T.me || m.b === T.me)) lost = r; }); });
+    $('cup-sub').innerHTML = chip(me) + me.name + ' · ' + (T.champion === T.me ? 'Champions!' : lost >= 0 ? (lost === 2 ? 'Runners-up' : 'Out in the ' + CUP_ROUNDS[lost].toLowerCase()) : CUP_ROUNDS[T.round]);
+    $('cup-steps').innerHTML = CUP_ROUNDS.map(function (n, r) {
+      var st = lost === r ? 'out' : r < rnd && (lost < 0 || r < lost) ? 'done' : r === rnd ? 'now' : '';
+      return '<li class="' + st + '"><span>' + (st === 'done' ? '✓' : st === 'out' ? '✕' : r + 1) + '</span>' + CUP_ONE[r] + '</li>';
+    }).join('') + '<li class="' + (T.champion === T.me ? 'done gold' : '') + '"><span>🏆</span>Cup</li>';
+
+    // Bottom: the next match with its venue, or how the cup ended.
+    var nx = $('cup-next'), mine = cupMyMatch(T);
+    $('scr-cup').classList.toggle('cup-won', T.champion === T.me);
+    $('btn-cup-quit').classList.toggle('hidden', !mine);
+    hallConfetti('#scr-cup .cup-arena', T.champion === T.me);
+    if (mine) {
+      var opp = team(mine.a === T.me ? mine.b : mine.a), vid = cupVenue(T, mine), a = SR.ARENAS[vid];
+      var host = vid === 'final' ? 'Tournament final' : vid === T.me ? 'Your home court' : 'Home of the ' + team(vid).name;
+      nx.className = 'cup-next';
+      nx.innerHTML = '<div class="cup-vs"><span class="cv me">' + crest(me) + '<b>' + me.short + '</b></span><span class="cv-x">VS</span><span class="cv">' + crest(opp) + '<b>' + opp.short + '</b></span></div>' +
+        '<span class="cpick-thumb">' + thumbImg(vid) + '</span>' +
+        '<span class="venue-text"><small>' + CUP_ONE[T.round] + ' · vs ' + opp.name + '</small><b>' + (a ? a.name : '') + '</b><span>' + host + ' · <i class="cwin">Win ★ ' + SR.STARS.cupWin + (T.round === 2 ? ' + ' + SR.STARS.cupTitle : '') + '</i></span></span>' +
+        '<button id="btn-cup-play" type="button" class="btn primary">Play</button>';
+      on('btn-cup-play', function () { startMatch(me, opp, vid); });
+      thumbQueue.push(vid);
+      setTimeout(pumpThumbs, 0);
+    } else {
+      var won = T.champion === T.me;
+      nx.className = 'cup-next over' + (won ? ' won' : '');
+      nx.innerHTML = '<span class="cup-end-ico">' + (won ? TROPHY : crest(champ)) + '</span>' +
+        '<span class="venue-text"><small>' + (won ? 'Cup winners' : lost === 2 ? 'Runners-up' : 'Knocked out') + '</small><b>' + (won ? 'You lifted the cup!' : champ.name + ' won the cup') + '</b><span>' +
+        (won ? me.name + ' beat everyone · ★ +' + SR.STARS.cupTitle + ' bonus' : 'Better luck next time. Try again?') + '</span></span>' +
+        '<button id="btn-cup-new" type="button" class="btn primary">New tournament</button>';
+      on('btn-cup-new', function () { data().tournament = null; save(); openTeams('cup'); });
+    }
+    drawCupLines();
+  }
+
+  // Paper confetti falling over the arena when you win the cup or the league.
+  function hallConfetti(sel, on) {
+    var host = document.querySelector(sel), box = host.querySelector('.cup-confetti');
+    if (!on) { if (box) box.remove(); return; }
+    if (box) return;
+    box = document.createElement('div');
+    box.className = 'cup-confetti';
+    box.setAttribute('aria-hidden', 'true');
+    var cols = ['#ffd23f', '#ff9f1c', '#4d8bff', '#ff4f9a', '#3bf0a0', '#ffffff'], html = '';
+    for (var i = 0; i < 46; i++) {
+      html += '<b style="left:' + (Math.random() * 100).toFixed(1) + '%;background:' + cols[i % cols.length] +
+        ';animation-duration:' + (4 + Math.random() * 4).toFixed(2) + 's,' + (1 + Math.random()).toFixed(2) + 's;animation-delay:-' + (Math.random() * 8).toFixed(2) + 's,0s;width:' + (6 + Math.random() * 6).toFixed(0) + 'px"></b>';
+    }
+    box.innerHTML = html;
+    host.appendChild(box);
+  }
+
+  // Elbow lines from each match to the one its winner goes to.
+  function drawCupLines() {
+    var box = $('cup-bracket'), svg = box && box.querySelector('.cup-lines'), T = data().tournament;
+    if (!svg || !T) return;
+    var o = box.getBoundingClientRect(), d = { todo: '', done: '', me: '' };
+    svg.setAttribute('width', box.scrollWidth); svg.setAttribute('height', box.scrollHeight);
+    box.querySelectorAll('.cm').forEach(function (el) {
+      var r = +el.getAttribute('data-r'), i = +el.getAttribute('data-i');
+      if (r === 2) return;
+      var to = box.querySelector('.cm[data-r="' + (r + 1) + '"][data-i="' + (i >> 1) + '"]');
+      if (!to) return;
+      var a = el.getBoundingClientRect(), b = to.getBoundingClientRect(), right = b.left > a.left;
+      var x1 = (right ? a.right : a.left) - o.left, y1 = a.top + a.height / 2 - o.top;
+      var x2 = (right ? b.left : b.right) - o.left, y2 = b.top + b.height / 2 - o.top, mx = (x1 + x2) / 2;
+      var m = T.rounds[r] && T.rounds[r][i], k = !m || !m.w ? 'todo' : m.w === T.me ? 'me' : 'done';
+      d[k] += 'M' + x1 + ' ' + y1 + 'H' + mx + 'V' + y2 + 'H' + x2;
+    });
+    svg.innerHTML = '<path class="todo" d="' + d.todo + '"/><path class="done" d="' + d.done + '"/><path class="me" d="' + d.me + '"/>';
+  }
+
+  // ---- career -------------------------------------------------------------
+
+  // One court after another (SR.CAREER), each on an island in a sea map.
+  // data().career.unlocked is the stage you are on: every stage before it is
+  // beaten, every stage after it locked (and hidden in fog).
+  var careerPick = -1, justUnlocked = -1, thumbs = {}, thumbQueue = [];
+  var LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><rect x="4" y="10" width="16" height="11" rx="2.5" fill="currentColor"/><circle cx="12" cy="15.5" r="1.8" fill="#0b1220"/></svg>';
+  // Shapes the islands and the sea around them reuse.
+  var SEA_DEFS = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
+    '<symbol id="sr-palm" viewBox="0 0 40 50" overflow="visible"><path d="M20 48 C22 36 19 26 23 15" fill="none" stroke="#8a5a2b" stroke-width="3.6" stroke-linecap="round"/>' +
+    '<g fill="#2f9e44"><path d="M23 15 C14 8 6 10 1 17 C9 13 16 14 23 15Z"/><path d="M23 15 C30 6 38 7 42 13 C35 10 29 12 23 15Z"/><path d="M23 15 C18 4 11 1 5 3 C12 5 18 9 23 15Z"/><path d="M23 15 C27 3 34 0 39 2 C33 5 27 9 23 15Z"/><path d="M23 15 C22 7 25 1 30 -2 C27 5 25 9 23 15Z"/></g>' +
+    '<circle cx="22" cy="16.5" r="1.8" fill="#6b3f1d"/><circle cx="25" cy="16" r="1.7" fill="#6b3f1d"/></symbol>' +
+    '<symbol id="sr-boat" viewBox="0 0 40 36" overflow="visible"><path d="M4 26 H36 L31 33 H9 Z" fill="#b5542e"/><path d="M4 26 H36" stroke="#7a3518" stroke-width="1.5"/><path d="M20 4 V26" stroke="#5a3a1a" stroke-width="2"/>' +
+    '<path d="M21 5 L34 23 H21 Z" fill="#fff"/><path d="M19 8 L9 23 H19 Z" fill="#ffd23f"/><path d="M20 4 L27 6 L20 8 Z" fill="#e5484d"/></symbol>' +
+    '<symbol id="sr-gull" viewBox="0 0 20 8" overflow="visible"><path d="M1 6 Q5 0 10 5 Q15 0 19 6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></symbol>' +
+    '<symbol id="sr-wave" viewBox="0 0 30 8" overflow="visible"><path d="M1 5 Q5 1 9 5 T17 5 T25 5" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round"/></symbol>' +
+    '<symbol id="sr-whale" viewBox="0 0 40 24" overflow="visible"><path d="M20 22 C18 14 20 9 24 6 C22 3 17 2 13 3 C17 0 23 0 26 4 C29 0 35 0 39 3 C35 2 30 3 28 6 C32 9 33 14 30 22" fill="#2a4e7a"/></symbol>' +
+    '</defs></svg>';
+
+  function careerCourt(i) { return SR.courtById(SR.CAREER[i].court); }
+
+  // The team you face at a stage; if that's your own team, the closest match.
+  function careerOpp(i) {
+    var me = data().career.team, id = SR.CAREER[i].opp;
+    if (id !== me) return team(id);
+    var p = SR.teamPower(team(id));
+    return SR.TEAMS.filter(function (t) { return t.id !== me; })
+      .sort(function (a, b) { return Math.abs(SR.teamPower(a) - p) - Math.abs(SR.teamPower(b) - p); })[0];
+  }
+
+  function careerReward(i) { return i === SR.CAREER.length - 1 ? SR.STARS.careerFinal : SR.STARS.careerStage; }
+
+  // Island names are dealt out at random once per career and then kept.
+  function careerIsles(C) {
+    var n = SR.CAREER.length, N = SR.ISLE_NAMES;
+    if (C.isles && C.isles.length === n) return C.isles;
+    var first = shuffle(N.first.slice()), names = [];
+    for (var i = 0; i < n - 1; i++) {
+      var a = first[i % first.length], b;
+      do { b = N.second[Math.floor(Math.random() * N.second.length)]; } while (a === 'Sunset' && b === 'Sands');
+      names.push(a + ' ' + b);
+    }
+    names.push(N.final[Math.floor(Math.random() * N.final.length)]);
+    C.isles = names;
+    SR.save.write();
+    return names;
+  }
+
+  // Repeatable random numbers, so each island keeps its shape.
+  function seeded(seed) {
+    return function () {
+      seed = (seed + 0x6d2b79f5) | 0;
+      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // A smooth closed outline through `radii` (one per direction) around cx, cy.
+  function blob(radii, cx, cy, rx, ry) {
+    var n = radii.length, p = radii.map(function (r, i) {
+      var a = i / n * Math.PI * 2;
+      return [cx + Math.cos(a) * rx * r, cy + Math.sin(a) * ry * r];
+    });
+    var d = 'M' + p[0][0].toFixed(1) + ' ' + p[0][1].toFixed(1);
+    for (var i = 0; i < n; i++) {
+      var p0 = p[(i - 1 + n) % n], p1 = p[i], p2 = p[(i + 1) % n], p3 = p[(i + 2) % n];
+      d += ' C' + (p1[0] + (p2[0] - p0[0]) / 6).toFixed(1) + ' ' + (p1[1] + (p2[1] - p0[1]) / 6).toFixed(1) + ' ' +
+        (p2[0] - (p3[0] - p1[0]) / 6).toFixed(1) + ' ' + (p2[1] - (p3[1] - p1[1]) / 6).toFixed(1) + ' ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1);
+    }
+    return d + 'Z';
+  }
+
+  // An island 300 x 200: shallows, foam, sand, grass, palms and rocks.
+  function islandSvg(i, final, w, h) {
+    w = w || 300; h = h || 200;
+    var rnd = seeded(i * 7919 + 17), radii = [];
+    for (var k = 0; k < 9; k++) radii.push(0.86 + rnd() * 0.24);
+    var cx = w / 2, cy = h / 2 + 4, sx = w / 300, sy = h / 200;
+    var sand = final ? '#ffe39a' : '#f3d9a0', grass = final ? '#7cc45a' : '#5cb85c';
+    var out = '<svg class="cisland" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true">' +
+      '<path d="' + blob(radii, cx, cy, 148 * sx, 96 * sy) + '" fill="#8fe6f0" opacity="0.55"/>' +
+      '<path d="' + blob(radii, cx, cy, 134 * sx, 86 * sy) + '" fill="none" stroke="#fff" stroke-opacity="0.7" stroke-width="2.5" stroke-dasharray="7 9" class="cfoam"/>' +
+      '<path d="' + blob(radii, cx, cy + 5, 126 * sx, 80 * sy) + '" fill="#c9a86a"/>' +
+      '<path d="' + blob(radii, cx, cy, 126 * sx, 80 * sy) + '" fill="' + sand + '"/>' +
+      '<path d="' + blob(radii.slice().reverse(), cx, cy - 2, 104 * sx, 62 * sy) + '" fill="#3e8e41"/>' +
+      '<path d="' + blob(radii.slice().reverse(), cx, cy - 6, 102 * sx, 58 * sy) + '" fill="' + grass + '"/>';
+    // Palms and rocks round the edge, clear of the court picture in the middle.
+    var spots = [[0.1, 0.45], [0.14, 0.7], [0.86, 0.42], [0.9, 0.68], [0.2, 0.2], [0.8, 0.2]];
+    spots.forEach(function (sp, k) {
+      if (rnd() < (k < 4 ? 0.3 : 0.55)) return;
+      var x = sp[0] * w + (rnd() - 0.5) * 10, y = sp[1] * h + (rnd() - 0.5) * 8, sc = 0.75 + rnd() * 0.4;
+      out += '<use href="#sr-palm" x="' + (x - 20 * sc).toFixed(1) + '" y="' + (y - 46 * sc).toFixed(1) + '" width="' + (40 * sc).toFixed(1) + '" height="' + (50 * sc).toFixed(1) + '"/>';
+    });
+    for (var r = 0; r < 3; r++) {
+      var rx = (rnd() < 0.5 ? 0.16 + rnd() * 0.1 : 0.74 + rnd() * 0.1) * w, ry = (0.78 + rnd() * 0.08) * h;
+      out += '<ellipse cx="' + rx.toFixed(1) + '" cy="' + ry.toFixed(1) + '" rx="' + (4 + rnd() * 4).toFixed(1) + '" ry="3" fill="#8d8f98"/>';
+    }
+    if (final) out += '<path d="M' + (w * 0.88) + ' ' + (h * 0.62) + ' V' + (h * 0.3) + '" stroke="#5a3a1a" stroke-width="2.5"/><path d="M' + (w * 0.88) + ' ' + (h * 0.3) + ' l18 6 l-18 6 Z" fill="#ffd23f"/>';
+    return out + '</svg>';
+  }
+
+  // Little things in the open sea beside the islands.
+  function seaDecor(i, x, y, amp) {
+    var rnd = seeded(i * 104729 + 3), side = x > 50 ? -1 : 1, out = '';
+    var dx = 50 + side * (amp + 12 + rnd() * 8), dy = y + (rnd() - 0.5) * 60;
+    var pick = rnd();
+    if (pick < 0.32) out += '<div class="cdecor islet" style="left:' + dx + '%;top:' + dy + 'px">' + islandSvg(i + 50, false, 110, 74) + '</div>';
+    else if (pick < 0.5) out += '<svg class="cdecor boat" style="left:' + dx + '%;top:' + dy + 'px" viewBox="0 0 40 36"><use href="#sr-boat"/></svg>';
+    else if (pick < 0.64) out += '<svg class="cdecor whale" style="left:' + dx + '%;top:' + dy + 'px" viewBox="0 0 40 24"><use href="#sr-whale"/></svg>';
+    else out += '<div class="cdecor rocks" style="left:' + dx + '%;top:' + dy + 'px"><i></i><i></i><i></i></div>';
+    for (var k = 0; k < 2; k++) out += '<svg class="cdecor wave" style="left:' + (8 + rnd() * 84) + '%;top:' + (y + (rnd() - 0.5) * 160) + 'px" viewBox="0 0 30 8"><use href="#sr-wave"/></svg>';
+    if (rnd() < 0.35) out += '<svg class="cdecor gull" style="left:' + (15 + rnd() * 70) + '%;top:' + (y - 70 + rnd() * 40) + 'px" viewBox="0 0 20 8"><use href="#sr-gull"/></svg>';
+    return out;
+  }
+
+  // Menu button: how far you are.
+  function refreshCareer() {
+    var el = $('career-prog'), C = data().career, n = SR.CAREER.length, done = C ? Math.min(C.unlocked, n) : 0;
+    if (el) el.textContent = C ? (done >= n ? 'All ' + n + ' islands won' : 'Island ' + (done + 1) + ' of ' + n) : 'New: ' + n + ' islands to win';
+    var bar = $('career-prog-bar');
+    if (bar) bar.style.width = Math.round(done / n * 100) + '%';
+    // The League, Tournament and Shop tiles show where you are too.
+    var L = data().league, T = data().tournament, tr = data().trophies;
+    if ($('league-prog')) $('league-prog').textContent = L ? (L.done ? 'Season over' : 'Round ' + (L.round + 1) + ' of ' + L.rounds.length) : tr.league ? '🛡 ' + tr.league + ' won' : 'Win the Shield';
+    if ($('cup-prog')) $('cup-prog').textContent = T ? (T.champion ? 'Cup over' : CUP_ONE[T.round]) : tr.cup ? '🏆 ' + tr.cup + ' won' : 'Win the Cup';
+    if ($('shop-prog')) $('shop-prog').textContent = '★ ' + data().stars + ' to spend';
+  }
+
+  function openCareer() {
+    var C = data().career;
+    if (!C) { openTeams('career'); return; }
+    mode = 'career';
+    if (careerPick < 0) careerPick = C.unlocked;
+    careerPick = Math.min(careerPick, C.unlocked, SR.CAREER.length - 1);
+    show('scr-career');
+    renderCareer();
+    // Bring the island you are on (or the one you just unlocked) into view.
+    var node = $('career-map').querySelector('[data-i="' + careerPick + '"]'), sc = $('career-scroll');
+    if (node) sc.scrollTop = parseFloat(node.style.top) - sc.clientHeight / 2;
+  }
+
+  function careerTeam(id) {
+    var C = data().career;
+    if (C) C.team = id; else data().career = { team: id, unlocked: 0 };
+    careerPick = data().career.unlocked;
+    save();
+    openCareer();
+  }
+
+  // Court pictures are drawn a few at a time so the screen opens at once.
+  function thumbImg(id) {
+    return thumbs[id] ? '<img alt="" src="' + thumbs[id] + '">' : '<img alt="" data-court="' + id + '">';
+  }
+  function pumpThumbs() {
+    var id = thumbQueue.shift();
+    if (!id) return;
+    if (!thumbs[id]) {
+      try { thumbs[id] = SR.render.courtThumb(SR.courtById(id), 320).toDataURL('image/jpeg', 0.82); } catch (e) { thumbs[id] = ''; }
+    }
+    document.querySelectorAll('img[data-court="' + id + '"]').forEach(function (im) { if (thumbs[id]) im.src = thumbs[id]; im.removeAttribute('data-court'); });
+    if (thumbQueue.length) setTimeout(pumpThumbs, 0);
+  }
+
+  function renderCareer() {
+    var C = data().career, n = SR.CAREER.length, me = team(C.team), done = Math.min(C.unlocked, n), isles = careerIsles(C);
+    $('career-sub').innerHTML = chip(me) + me.name + ' · ' + (done >= n ? 'Every island won! Replay any court.' : 'Island ' + (done + 1) + ' of ' + n);
+    $('career-bar').style.width = Math.round(done / n * 100) + '%';
+
+    // A winding sea route, island 1 at the top and the final island at the bottom.
+    var map = $('career-map'), mw = map.clientWidth || 600, s = mw < 560 || window.innerHeight < 520 ? 0.7 : 1;
+    var ROW = Math.round(205 * s), TOP = Math.round(130 * s), pts = [], html = '', decor = '';
+    var amp = Math.max(6, Math.min(27, (mw / 2 - 150 * s) / mw * 100));
+    SR.CAREER.forEach(function (st, i) {
+      var x = 50 + amp * Math.sin(i * 1.26), y = TOP + i * ROW, a = careerCourt(i), fin = i === n - 1;
+      var state = i < C.unlocked ? 'done' : i === C.unlocked ? 'open' : 'locked';
+      pts.push([x, y]);
+      decor += seaDecor(i, x, y, amp);
+      html += '<button type="button" class="cnode ' + state + (i === careerPick ? ' sel' : '') + (i === justUnlocked ? ' unlocking' : '') + (fin ? ' final' : '') +
+        '" data-i="' + i + '" style="left:' + x + '%;top:' + y + 'px;--s:' + s + '" aria-label="' + isles[i] + ', ' + a.name + (state === 'locked' ? ', locked' : state === 'done' ? ', won' : '') + '">' +
+        islandSvg(i, fin) + '<span class="cfog"></span>' +
+        '<span class="csign">' + (fin ? '🏆 ' : '') + isles[i] + '</span>' +
+        '<span class="cthumb">' + thumbImg(st.court) + '<span class="clock">' + LOCK + '</span>' +
+        (state === 'done' ? '<span class="ccheck">✓</span>' : '') + (state === 'open' ? '<span class="cplay">PLAY</span>' : '') + '</span>' +
+        '<span class="cnum">' + (i + 1) + '</span>' +
+        '<span class="cname">' + a.name + '</span>' +
+        (state === 'open' ? '<svg class="cboat" viewBox="0 0 40 36" aria-hidden="true"><use href="#sr-boat"/></svg>' : '') + '</button>';
+    });
+    var h = TOP + (n - 1) * ROW + Math.round(150 * s);
+    function seg(from, to) {
+      var d = '';
+      for (var i = from; i < to; i++) {
+        var p = pts[i], q = pts[i + 1];
+        d += (i === from ? 'M' + p[0] + ' ' + p[1] : '') + ' C' + p[0] + ' ' + (p[1] + ROW / 2) + ' ' + q[0] + ' ' + (q[1] - ROW / 2) + ' ' + q[0] + ' ' + q[1];
+      }
+      return d;
+    }
+    var reach = Math.min(C.unlocked, n - 1);
+    map.style.height = h + 'px';
+    map.innerHTML = SEA_DEFS + decor + '<svg class="cpath" viewBox="0 0 100 ' + h + '" preserveAspectRatio="none" aria-hidden="true">' +
+      '<path class="todo" d="' + seg(0, n - 1) + '"/>' + (reach > 0 ? '<path class="done" d="' + seg(0, reach) + '"/>' : '') + '</svg>' + html;
+    map.querySelectorAll('.cnode').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var i = +b.getAttribute('data-i');
+        SR.audio.play('click');
+        if (i > C.unlocked) {
+          b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+        } else {
+          careerPick = i;
+          map.querySelectorAll('.cnode').forEach(function (o) { o.classList.toggle('sel', o === b); });
+        }
+        careerInfo(i);
+      });
+    });
+    careerInfo(careerPick);
+    justUnlocked = -1;
+    thumbQueue = SR.CAREER.map(function (st) { return st.court; }).filter(function (id) { return !thumbs[id]; });
+    if (thumbQueue.length) setTimeout(pumpThumbs, 0);
+  }
+
+  // The card under the map: the selected island, who plays there, and Play.
+  function careerInfo(i) {
+    var C = data().career, a = careerCourt(i), st = SR.CAREER[i], opp = careerOpp(i), locked = i > C.unlocked, isles = careerIsles(C);
+    var what = locked ? 'Locked · win on ' + isles[i - 1] + ' to sail here' :
+      i < C.unlocked ? 'Won · replay for ★ ' + SR.STARS.quickWin : (i < SR.CAREER.length - 1 ? 'Win to unlock ' + isles[i + 1] : 'Win the final island') + ' · ★ ' + careerReward(i);
+    $('career-pick').innerHTML = '<span class="cpick-thumb">' + thumbImg(st.court) + '</span>' +
+      '<span class="venue-text"><small>Island ' + (i + 1) + ' · ' + isles[i] + '</small><b>' + a.name + '</b>' +
+      '<span>vs ' + chip(opp) + opp.name + ' · ' + SR.DIFFICULTY[st.diff].label + '</span><span class="cwhat">' + what + '</span></span>' +
+      '<button id="btn-career-play" type="button" class="btn primary"' + (locked ? ' disabled' : '') + '>' + (locked ? 'Locked' : 'Play') + '</button>';
+    $('career-pick').classList.toggle('locked', locked);
+    if (!locked) on('btn-career-play', function () { startMatch(team(C.team), opp, st.court, st.diff); });
+  }
+
+  function careerRecord(won) {
+    var C = data().career, out = { stars: 0, notes: [] }, i = careerPick, n = SR.CAREER.length;
+    if (!C) return out;
+    var first = i === C.unlocked, isles = careerIsles(C);
+    if (won && first) {
+      out.stars += careerReward(i);
+      C.unlocked = i + 1;
+      if (i + 1 < n) { justUnlocked = careerPick = i + 1; out.notes.push('New island unlocked: ' + isles[i + 1] + ' (' + careerCourt(i + 1).name + ')!'); }
+      else out.notes.push('Career complete! You won every island.');
+    } else if (won) out.stars += SR.STARS.quickWin;
+    else if (first && i + 1 < n) out.notes.push('Win on ' + isles[i] + ' to unlock ' + isles[i + 1] + '.');
+    return out;
+  }
+
+  // ---- shop, stats, settings ----------------------------------------------
+
+  function renderShop() {
+    ['balls', 'courts', 'kits'].forEach(function (kind) {
+      var box = $('shop-' + kind), key = { balls: 'ball', courts: 'court', kits: 'kit' }[kind];
+      if (!box) return;
+      box.innerHTML = '';
+      SR.SHOP[kind].forEach(function (it) {
+        var owned = data().owned[kind].indexOf(it.id) >= 0, eq = data().equipped[key] === it.id;
+        var b = document.createElement('button');
+        b.className = 'shop-item' + (eq ? ' equipped' : '') + (it.daily && !owned ? ' gift' : '');
+        var sw = kind === 'balls'
+          ? '<span class="swatch ball" style="background:radial-gradient(circle at 35% 35%,' + it.main + ' 55%,' + it.stripe + ' 56%)"></span>'
+          : kind === 'kits' ? SR.daily.jersey(it.color ? it : team(data().settings.team), 'swatch kit')
+          : it.motif ? courtSwatch(it) : '<span class="swatch" style="background:linear-gradient(135deg,' + it.court + ' 50%,' + it.floor + ' 50%);border-color:' + it.line + '"></span>';
+        b.innerHTML = sw + '<span class="iname">' + it.name + '</span><span class="iprice">' +
+          (eq ? 'Equipped' : owned ? 'Equip' : it.daily ? 'Daily reward' : '★ ' + it.price) + '</span>';
+        b.addEventListener('click', function () {
+          if (!owned && it.daily) { SR.audio.play('click'); SR.daily.open(); return; }
+          if (!owned) {
+            if (data().stars < it.price) { b.classList.add('shake'); setTimeout(function () { b.classList.remove('shake'); }, 400); return; }
+            data().stars -= it.price;
+            data().owned[kind].push(it.id);
+          }
+          data().equipped[key] = it.id;
+          SR.audio.play('click');
+          save();
+          renderShop();
+        });
+        box.appendChild(b);
+      });
+    });
+  }
+
+  function renderStats() {
+    var s = data().stats, pct = s.matches ? Math.round(s.wins / s.matches * 100) : 0;
+    var rows = [['Matches', s.matches], ['Wins', s.wins + ' (' + pct + '%)'], ['Points won', s.points], ['Aces', s.aces], ['Kills', s.kills], ['Blocks', s.blocks], ['Stars', data().stars]];
+    $('stats-list').innerHTML = rows.map(function (r) { return '<div class="stat"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('');
+  }
+
+  function fillSettings() {
+    var s = data().settings;
+    var ids = [];
+    SR.SET_OPTIONS.forEach(function (n) { SR.POINT_OPTIONS.forEach(function (pt) { ids.push(SR.formatId(pt, n)); }); });
+    // Older saves used named formats; map them onto the same choices.
+    var cf = SR.formatOf(s.format);
+    s.format = SR.formatId(cf.points, cf.sets);
+    $('set-format').innerHTML = ids.map(function (k) { return '<option value="' + k + '">' + SR.formatOf(k).label + '</option>'; }).join('');
+    $('set-diff').innerHTML = Object.keys(SR.DIFFICULTY).map(function (k) { return '<option value="' + k + '">' + SR.DIFFICULTY[k].label + '</option>'; }).join('');
+    $('set-format').value = s.format;
+    $('set-diff').value = s.difficulty;
+    $('set-sound').checked = !!s.sound;
+  }
+
+  // ---- pause --------------------------------------------------------------
+
+  function togglePause() {
+    var g = SR.game;
+    if (!g || g.cfg.human === -1) return;
+    // Online the match keeps running for your friend; the menu just opens on top.
+    if (g.cfg.online) { show(current === 'scr-pause' ? null : 'scr-pause'); return; }
+    g.paused = !g.paused;
+    if (g.paused) show('scr-pause'); else show(null);
+  }
+
+  function quitMatch() {
+    if (SR.game && SR.game.cfg.online && SR.net) { SR.net.leave(); return; }
+    stopMatch();
+    show('scr-menu');
+  }
+
+  // Result screen for an online match, from this player's side.
+  function onlineResult(r) {
+    var won = r.mySets > r.oppSets, st = data().stats, stars = won ? SR.STARS.quickWin : 0;
+    mode = 'online';
+    st.matches++;
+    if (won) st.wins++;
+    r.history.forEach(function (x) { st.points += x[0]; });
+    st.aces += r.stats.aces; st.kills += r.stats.kills; st.blocks += r.stats.blocks;
+    data().stars += stars;
+    save();
+    $('result-title').textContent = won ? 'Victory!' : 'Defeat';
+    $('result-title').className = won ? 'win' : 'loss';
+    $('result-sub').textContent = r.me.name + ' ' + r.mySets + ' - ' + r.oppSets + ' ' + r.opp.name + ' (online)';
+    $('result-sets').textContent = r.history.map(function (x) { return x[0] + '-' + x[1]; }).join('   ');
+    $('result-stats').textContent = 'Aces ' + r.stats.aces + ' · Kills ' + r.stats.kills + ' · Blocks ' + r.stats.blocks + ' · Errors ' + r.stats.errors;
+    $('result-stars').textContent = stars ? '+' + stars + ' star' : 'No stars this time';
+    $('result-notes').textContent = '';
+    resultButtons(null);
+    stopMatch();
+    show('scr-result');
+  }
+
+  // ---- wiring -------------------------------------------------------------
+
+  function on(id, fn) { $(id).addEventListener('click', function () { SR.audio.play('click'); fn(); }); }
+
+  SR.ui = {
+    togglePause: togglePause,
+    show: show,
+    current: function () { return current; },
+    stopMatch: stopMatch,
+    quit: quitMatch,
+    teamCards: teamCards,
+    rulesPicker: rulesPicker,
+    courtPicker: courtPicker,
+    courtSwatch: courtSwatch,
+    onlineResult: onlineResult,
+    save: save,
+    renderShop: renderShop,
+    init: function () {
+      refreshStars();
+      refreshCareer();
+      on('btn-quick', function () { show('scr-quick'); });
+      on('btn-quick-random', quickRandom);
+      on('btn-quick-choose', function () { openTeams('quick'); });
+      on('btn-career', openCareer);
+      on('btn-career-team', function () { openTeams('career'); });
+      var careerArmed = false;
+      on('btn-career-reset', function () {
+        var b = $('btn-career-reset');
+        if (!careerArmed) { careerArmed = true; b.textContent = 'Click again to restart'; setTimeout(function () { careerArmed = false; b.textContent = 'Restart career'; }, 3000); return; }
+        careerArmed = false; b.textContent = 'Restart career';
+        data().career = null; careerPick = 0; save(); openTeams('career');
+      });
+      on('btn-league', openLeague);
+      on('btn-cup', openCup);
+      on('btn-shop', function () { renderShop(); show('scr-shop'); });
+      on('btn-stats', function () { renderStats(); show('scr-stats'); });
+      on('btn-settings', function () { fillSettings(); show('scr-settings'); });
+      on('btn-help', function () { show('scr-help'); });
+      on('btn-privacy', function () { show('scr-privacy'); var p = document.querySelector('#scr-privacy .panel'); if (p) p.scrollTop = 0; });
+      on('btn-privacy-back', function () { show('scr-settings'); });
+      document.querySelectorAll('[data-back]').forEach(function (b) {
+        b.addEventListener('click', function () { SR.audio.play('click'); show('scr-menu'); });
+      });
+      var leagueArmed = false;
+      on('btn-league-quit', function () {
+        var b = $('btn-league-quit');
+        if (!leagueArmed) { leagueArmed = true; b.textContent = 'Click again to abandon'; setTimeout(function () { leagueArmed = false; b.textContent = 'Abandon league'; }, 3000); return; }
+        leagueArmed = false; b.textContent = 'Abandon league';
+        data().league = null; save(); show('scr-menu');
+      });
+      var cupArmed = false;
+      on('btn-cup-quit', function () {
+        var b = $('btn-cup-quit');
+        if (!cupArmed) { cupArmed = true; b.textContent = 'Click again to abandon'; setTimeout(function () { cupArmed = false; b.textContent = 'Abandon tournament'; }, 3000); return; }
+        cupArmed = false; b.textContent = 'Abandon tournament';
+        data().tournament = null; save(); show('scr-menu');
+      });
+      on('btn-result-next', function () { if (resultNext) resultNext.go(); });
+      on('btn-result-ok', function () {
+        if (mode === 'league') openLeague(); else if (mode === 'cup') openCup(); else if (mode === 'career') openCareer(); else show('scr-menu');
+      });
+      on('btn-pause', togglePause);
+      on('btn-resume', togglePause);
+      on('btn-quit', function () { quitMatch(); });
+      // Two-step reset: the first click arms the button, the second resets.
+      var armed = false;
+      on('btn-reset', function () {
+        var b = $('btn-reset');
+        if (!armed) { armed = true; b.textContent = 'Click again to erase everything'; setTimeout(function () { armed = false; b.textContent = 'Reset progress'; }, 3000); return; }
+        armed = false; b.textContent = 'Reset progress';
+        SR.save.reset(); renderStats(); refreshStars(); refreshCareer();
+      });
+      // The map's curve depends on its width.
+      var lastW = 0;
+      window.addEventListener('resize', function () {
+        var w = $('career-map').clientWidth;
+        if (current === 'scr-career' && w !== lastW) { lastW = w; renderCareer(); }
+        if (current === 'scr-cup') renderCup();
+        if (current === 'scr-league') renderLeague();
+      });
+      $('set-format').addEventListener('change', function (e) { data().settings.format = e.target.value; save(); });
+      $('set-diff').addEventListener('change', function (e) { data().settings.difficulty = e.target.value; save(); });
+      $('set-sound').addEventListener('change', function (e) { data().settings.sound = e.target.checked; save(); });
+      stopMatch();
+      show('scr-menu');
+    }
+  };
+})();
