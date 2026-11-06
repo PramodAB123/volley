@@ -65,7 +65,7 @@ jobs:
         run: |
           chmod +x gradlew
           set -o pipefail
-          if ! ./gradlew --no-daemon bundleRelease 2>&1 | tee "$RUNNER_TEMP/gradle.log"; then
+          if ! ./gradlew --no-daemon bundleRelease assembleRelease 2>&1 | tee "$RUNNER_TEMP/gradle.log"; then
             # Show Gradle's reason on the run summary page, not only in the step log.
             msg=$(grep -A20 -m1 'What went wrong' "$RUNNER_TEMP/gradle.log" | cut -c1-300 || true)
             [ -n "$msg" ] || msg=$(tail -25 "$RUNNER_TEMP/gradle.log" | cut -c1-300)
@@ -82,5 +82,12 @@ jobs:
         with:
           name: spike-rally-aab
           path: 'volleyball/Volleyball V4/android/app/build/outputs/bundle/release/app-release.aab'
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spike-rally-apk
+          path: 'volleyball/Volleyball V4/android/app/build/outputs/apk/release/app-release.apk'
           if-no-files-found: error
           retention-days: 30
