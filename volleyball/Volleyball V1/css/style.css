@@ -42,14 +42,16 @@ body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; co
 
 #app { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
 #game { display: block; touch-action: none; user-select: none; }
-/* Left and right ad rails (js/ads-rails.js): desktop only; the game area shrinks to the space between them. */
+/* Desktop ads (js/ads-rails.js) sit only beside the written content under the
+   game (#landing), which is hidden during matches, the demo and other menus.
+   The game screen itself never has an ad beside or over it. */
 :root { --rail: 176px; }
 .ad-rail { display: none; }
-html.ad-rails .ad-rail { display: flex; position: absolute; top: 0; z-index: 1; width: var(--rail); height: 100vh; height: 100dvh; align-items: center; justify-content: center; background: #070c17; overflow: hidden; }
+html.ad-rails .landing { position: relative; padding-left: var(--rail); padding-right: var(--rail); }
+html.ad-rails .ad-rail { display: block; position: absolute; top: 0; bottom: 0; z-index: 1; width: var(--rail); }
 html.ad-rails .ad-rail-l { left: 0; }
 html.ad-rails .ad-rail-r { right: 0; }
-html.ad-rails #app { left: var(--rail); right: var(--rail); }
-html.ad-rails.page-home #app { left: 0; right: 0; margin: 0 var(--rail); }
+.ad-stick { position: sticky; top: calc(50vh - 300px); display: flex; justify-content: center; padding: 0 8px; }
 
 .hidden { display: none !important; }
 
@@ -1545,3 +1547,8 @@ html:not(.page-home) .home .more-cue { display: none; }
   #scr-result .daily-teaser { margin-top: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .daily-teaser.ready .dt-ico { animation: none; } }
+
+/* Home page: list of volleyball guides. */
+.ld-guides a { text-decoration: none; }
+.ld-guides a b { color: #8fb6ff; }
+.ld-guides a:hover b { text-decoration: underline; }

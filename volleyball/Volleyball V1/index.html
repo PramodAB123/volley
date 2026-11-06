@@ -78,9 +78,6 @@
      crossorigin="anonymous"></script>
 </head>
 <body>
-  <!-- Ads left and right of the game, desktop only (js/ads-rails.js). -->
-  <aside id="ad-rail-l" class="ad-rail ad-rail-l" aria-label="Advertisement"></aside>
-  <aside id="ad-rail-r" class="ad-rail ad-rail-r" aria-label="Advertisement"></aside>
   <div id="app">
     <div class="menu-slides" aria-hidden="true"><div class="slash"><i data-name="Champions Court" style="background-image:url(img/menu/bg-1-tall.webp)"></i><i data-name="Sunset Beach" style="background-image:url(img/menu/bg-2-tall.webp)"></i></div><div class="slash"><i data-name="Lava Pit" style="background-image:url(img/menu/bg-7-tall.webp)"></i><i data-name="Galaxy" style="background-image:url(img/menu/bg-6-tall.webp)"></i></div><div class="slash"><i data-name="Neon Grid" style="background-image:url(img/menu/bg-3-tall.webp)"></i><i data-name="Cherry Blossom" style="background-image:url(img/menu/bg-4-tall.webp)"></i></div><div class="slash"><i data-name="Candy Land" style="background-image:url(img/menu/bg-5-tall.webp)"></i><i data-name="Frost Arena" style="background-image:url(img/menu/bg-8-tall.webp)"></i></div></div>
     <canvas id="game" width="960" height="640" aria-label="Spike Rally volleyball court"></canvas>
@@ -500,6 +497,9 @@
 
   <!-- Home page below the game: shown only while the main menu is open (js/landing.js). -->
   <main id="landing" class="landing" aria-labelledby="ld-title">
+    <!-- Desktop ads sit beside this written content only, never beside the game or its menus (js/ads-rails.js). -->
+    <aside id="ad-rail-l" class="ad-rail ad-rail-l" aria-label="Advertisement"><div class="ad-stick"></div></aside>
+    <aside id="ad-rail-r" class="ad-rail ad-rail-r" aria-label="Advertisement"><div class="ad-stick"></div></aside>
     <section class="ld-intro">
       <div class="ld-wrap ld-split">
         <div>
@@ -624,6 +624,24 @@
       </div>
     </section>
 
+    <section class="ld-sec ld-alt" aria-labelledby="ld-guides">
+      <div class="ld-wrap">
+        <h2 id="ld-guides">Volleyball guides</h2>
+        <p class="ld-sub">New to volleyball, or want to play better? Our free guides explain the real sport in plain English.</p>
+        <ul class="ld-why ld-guides">
+          <li><a href="/guides/volleyball-rules"><b>Volleyball rules explained</b></a><span>Scoring, three touches, rotation, faults and the libero, in the order you need them.</span></li>
+          <li><a href="/guides/volleyball-positions"><b>Positions and what each player does</b></a><span>Setter, outside, opposite, middle, libero and the 5-1, 6-2 and 4-2 systems.</span></li>
+          <li><a href="/guides/volleyball-rotations"><b>Rotations explained</b></a><span>The six zones, when to rotate and the overlap rule, with diagrams.</span></li>
+          <li><a href="/guides/how-to-serve"><b>How to serve</b></a><span>Underhand, float, topspin and jump serves, and where to aim.</span></li>
+          <li><a href="/guides/how-to-spike"><b>How to spike</b></a><span>Approach footwork, timing, arm swing and choosing a shot.</span></li>
+          <li><a href="/guides/blocking-and-defense"><b>Blocking and defense</b></a><span>Read or commit, base positions and how to dig a hard spike.</span></li>
+          <li><a href="/guides/beach-vs-indoor-volleyball"><b>Beach vs indoor volleyball</b></a><span>Team size, court, scoring and the rules that catch players out.</span></li>
+          <li><a href="/guides/spike-rally-strategy"><b>Spike Rally strategy guide</b></a><span>How to serve, set, spike and block your way to more wins.</span></li>
+        </ul>
+        <p class="ld-more"><a href="/guides">See all volleyball guides</a></p>
+      </div>
+    </section>
+
     <section class="ld-sec" aria-labelledby="ld-faq">
       <div class="ld-wrap ld-narrow">
         <h2 id="ld-faq">Questions</h2>
@@ -661,6 +679,7 @@
     <footer class="ld-foot">
       <div class="ld-wrap">
         <nav aria-label="Site">
+          <a href="/guides">Volleyball guides</a>
           <a href="/about">About</a>
           <a href="/how-to-play">How to play</a>
           <a href="/privacy">Privacy</a>

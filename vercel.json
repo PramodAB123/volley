@@ -17,6 +17,16 @@
       "permanent": true
     },
     {
+      "source": "/guides/index.html",
+      "destination": "/guides",
+      "permanent": true
+    },
+    {
+      "source": "/guides/:slug([a-z0-9-]+).html",
+      "destination": "/guides/:slug",
+      "permanent": true
+    },
+    {
       "source": "/index.html",
       "destination": "/",
       "permanent": true
@@ -30,6 +40,14 @@
     {
       "source": "/:page(about|how-to-play|privacy|terms|contact)",
       "destination": "/volleyball/Volleyball V1/:page.html"
+    },
+    {
+      "source": "/guides",
+      "destination": "/volleyball/Volleyball V1/guides/index.html"
+    },
+    {
+      "source": "/guides/:slug([a-z0-9-]+)",
+      "destination": "/volleyball/Volleyball V1/guides/:slug.html"
     },
     {
       "source": "/:path((?!volleyball/Volleyball V1/|api/).*)",
