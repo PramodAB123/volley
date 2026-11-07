@@ -323,7 +323,12 @@
   }
 
   function rgb(hex) { var n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+  var toneCache = {};
   function tone(hex, k) {
+    var key = hex + k, c0 = toneCache[key];
+    return c0 || (toneCache[key] = toneRaw(hex, k));
+  }
+  function toneRaw(hex, k) {
     // k < 1 darkens, k > 1 mixes toward white.
     var c = rgb(hex), f = function (x) { return Math.round(k <= 1 ? x * k : x + (255 - x) * (k - 1)); };
     return 'rgb(' + f(c[0]) + ',' + f(c[1]) + ',' + f(c[2]) + ')';
@@ -365,18 +370,19 @@
     }
     // Cartoon look: an ink outline, a flat base colour and a cel-shaded band.
     var ink = Math.max(0.7, Math.min(w0, w1) * 0.14);
-    shape(ink); ctx.fillStyle = INK; ctx.fill();
-    shape(0); ctx.fillStyle = base; ctx.fill();
+    // Thin limbs far away: one fill in a darker tone reads the same as outline + fill.
+    if (w0 < 2.4 && w1 < 2.4) { shape(ink * 0.5); ctx.fillStyle = dark; ctx.fill(); return; }
+    shape(ink * 0.5); ctx.fillStyle = base; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = ink; ctx.stroke();
     var side = nx * LX + ny * LY > 0 ? 1 : -1, hk = 0.38;
-    if (w1 > 2.6) {
+    if (w1 > 4 && !SR.lowFx) {
       ctx.strokeStyle = dark; ctx.lineWidth = Math.max(0.8, Math.min(w0, w1) * 0.32);
       ctx.beginPath();
       ctx.moveTo(a.x - nx * side * r0 * 0.55 + dx * 0.08, a.y - ny * side * r0 * 0.55 + dy * 0.08);
       ctx.lineTo(b.x - nx * side * r1 * 0.55 - dx * 0.08, b.y - ny * side * r1 * 0.55 - dy * 0.08);
       ctx.stroke();
     }
-    // Highlight on the side facing the light.
-    if (w1 > 2.2) {
+    // Highlight on the side facing the light (big, close limbs only).
+    if (w1 > 6.5 && !SR.lowFx) {
       ctx.strokeStyle = light; ctx.lineWidth = Math.max(0.8, Math.min(w0, w1) * 0.28);
       ctx.beginPath();
       ctx.moveTo(a.x + nx * side * r0 * hk + dx * 0.1, a.y + ny * side * r0 * hk + dy * 0.1);
@@ -446,6 +452,33 @@
 
   var shadowCanvas = null;
 
+  // Text drawn once into a small canvas and reused: fillText every frame for
+  // every player's number and role tag was one of the costliest things here.
+  var textCache = {}, textCount = 0;
+  function textSprite(ctx, text, px, fill, stroke) {
+    var sc = ctx.getTransform().a || 1, size = Math.max(6, Math.round(px * sc));
+    var key = text + '|' + size + '|' + fill + '|' + (stroke || '');
+    var t = textCache[key];
+    if (!t) {
+      if (textCount > 400) { textCache = {}; textCount = 0; }
+      var cv = document.createElement('canvas'), c = cv.getContext('2d'), font = '800 ' + size + 'px system-ui, sans-serif', pad = stroke ? 4 : 1;
+      c.font = font;
+      var w = Math.ceil(c.measureText(text).width) + pad * 2, h = Math.ceil(size * 1.3) + pad * 2;
+      cv.width = w; cv.height = h;
+      c.font = font; c.textAlign = 'left'; c.textBaseline = 'middle';
+      if (stroke) { c.lineWidth = 3 * sc; c.lineJoin = 'round'; c.strokeStyle = stroke; c.strokeText(text, pad, h / 2); }
+      c.fillStyle = fill; c.fillText(text, pad, h / 2);
+      t = textCache[key] = { cv: cv, w: w / sc, h: h / sc, pad: pad / sc };
+      textCount++;
+    }
+    return t;
+  }
+  // align: 'left' or 'center'; y is the vertical middle.
+  function drawText(ctx, text, px, fill, stroke, x, y, align) {
+    var t = textSprite(ctx, text, px, fill, stroke);
+    ctx.drawImage(t.cv, align === 'center' ? x - t.w / 2 : x - t.pad, y - t.h / 2, t.w, t.h);
+  }
+
   function circle(ctx, x, y, r, fill) { ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
   function ell(ctx, x, y, rx, ry, fill) { ctx.fillStyle = fill; ctx.beginPath(); ctx.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), 0, 0, Math.PI * 2); ctx.fill(); }
 
@@ -455,7 +488,7 @@
     var ol = Math.max(0.8, hr * 0.13);
     // Facing: front > 0 looks at the camera; fx is how far the face turns sideways on screen.
     var front = -Math.cos(p.yaw), turn = -Math.sin(p.yaw), fx = turn * hr * 0.5;
-    var detail = hr > 5, style = lk.hair;
+    var detail = hr > 6, style = lk.hair, fine = hr > 9 && !SR.lowFx;
     // Hair that sits behind the head (afro, ponytail).
     if (style === 'afro') circle(ctx, hd.x, hd.y - hr * 0.2, hr * 1.38 + ol, INK);
     if (style === 'ponytail') {
@@ -464,7 +497,7 @@
     }
     if (style === 'afro') circle(ctx, hd.x, hd.y - hr * 0.2, hr * 1.38, hairC);
     // Ears on the sides of the head.
-    if (detail) {
+    if (hr > 7) {
       [-1, 1].forEach(function (sd) {
         var ex = hd.x + sd * hr * 0.95 * Math.max(0.35, Math.abs(front)) + fx * 0.3, ey = hd.y + hr * 0.1;
         circle(ctx, ex, ey, hr * 0.28 + ol, INK); circle(ctx, ex, ey, hr * 0.28, skin);
@@ -473,9 +506,13 @@
     circle(ctx, hd.x, hd.y, hr + ol, INK);
     circle(ctx, hd.x, hd.y, hr, skin);
     // Cel shade on the lower right of the head.
-    ctx.save(); ctx.beginPath(); ctx.arc(hd.x, hd.y, hr, 0, Math.PI * 2); ctx.clip();
-    ctx.fillStyle = skinD; ctx.beginPath(); ctx.arc(hd.x + hr * 0.95, hd.y + hr * 0.9, hr * 1.25, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(hd.x - hr * 0.12, hd.y - hr * 0.1, hr * 0.98, 0, Math.PI * 2); ctx.fill();
+    // (A crescent path instead of a clip: clipping per head was slow.)
+    if (!SR.lowFx) {
+      ctx.fillStyle = skinD; ctx.beginPath();
+      ctx.arc(hd.x, hd.y, hr, -0.35, Math.PI * 0.85);
+      ctx.arc(hd.x - hr * 0.16, hd.y - hr * 0.14, hr * 0.95, Math.PI * 0.82, -0.3, true);
+      ctx.closePath(); ctx.fill();
+    }
     // Hair on top of the head.
     ctx.fillStyle = hairC;
     var away = front < 0.15; // back of the head toward the camera
@@ -483,14 +520,13 @@
     else if (away) {
       // Seen from behind the hair covers most of the head.
       var cover = style === 'buzz' ? 0.15 : style === 'crop' ? 0.35 : 0.55;
-      ctx.beginPath(); ctx.arc(hd.x, hd.y - hr * cover, hr * 1.05, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(hd.x, hd.y - hr * cover * 0.6, hr * 0.98, 0, Math.PI * 2); ctx.fill();
     } else {
       var hy = style === 'buzz' ? 0.75 : style === 'swoop' ? 0.35 : 0.5;
-      ctx.beginPath(); ctx.ellipse(hd.x + fx * 0.15, hd.y - hr * (1.25 - hy) , hr * 1.1, hr * 0.85, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(hd.x + fx * 0.15, hd.y - hr * (1.25 - hy) * 0.55, hr * 1.02, hr * 0.92, 0, Math.PI, Math.PI * 2); ctx.fill();
       if (style === 'swoop') { ctx.beginPath(); ctx.ellipse(hd.x - hr * 0.35 + fx * 0.3, hd.y - hr * 0.55, hr * 0.75, hr * 0.35, -0.5, 0, Math.PI * 2); ctx.fill(); }
       if (style === 'ponytail' || style === 'crop') { ctx.beginPath(); ctx.ellipse(hd.x + fx * 0.2, hd.y - hr * 0.6, hr * 0.95, hr * 0.32, 0, 0, Math.PI * 2); ctx.fill(); }
     }
-    ctx.restore();
     // Spikes poke out above the outline.
     if (style === 'spiky') {
       ctx.fillStyle = hairC; ctx.strokeStyle = INK; ctx.lineWidth = ol;
@@ -506,13 +542,14 @@
     }
     // Headband in the team trim.
     if (lk.band && style !== 'afro') {
-      ctx.save(); ctx.beginPath(); ctx.arc(hd.x, hd.y, hr + ol * 0.5, 0, Math.PI * 2); ctx.clip();
-      ctx.fillStyle = team.trim; ctx.fillRect(hd.x - hr * 1.2, hd.y - hr * 0.62, hr * 2.4, hr * 0.32);
-      ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(hd.x - hr * 1.2, hd.y - hr * 0.36, hr * 2.4, hr * 0.06);
-      ctx.restore();
+      // A strap across the forehead, as wide as the head is at that height.
+      var bh = hr * 0.47, half = Math.sqrt(Math.max(0, hr * hr - bh * bh)) + ol * 0.4;
+      ctx.strokeStyle = team.trim; ctx.lineWidth = hr * 0.3; ctx.lineCap = 'butt';
+      ctx.beginPath(); ctx.moveTo(hd.x - half, hd.y - bh); ctx.quadraticCurveTo(hd.x, hd.y - bh - hr * 0.12, hd.x + half, hd.y - bh); ctx.stroke();
+      ctx.lineCap = 'round';
     }
     // Shine on the hair.
-    if (detail && style !== 'buzz') { ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.beginPath(); ctx.ellipse(hd.x - hr * 0.35, hd.y - hr * 0.82, hr * 0.32, hr * 0.14, -0.4, 0, Math.PI * 2); ctx.fill(); }
+    if (fine && style !== 'buzz') { ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.beginPath(); ctx.ellipse(hd.x - hr * 0.35, hd.y - hr * 0.82, hr * 0.32, hr * 0.14, -0.4, 0, Math.PI * 2); ctx.fill(); }
     if (away || !detail) return;
     // ---- face --------------------------------------------------------------
     var m = mood(p, rally), sq = Math.max(0.35, Math.min(1, front * 1.2));
@@ -544,11 +581,13 @@
       ctx.strokeStyle = INK; ctx.lineWidth = Math.max(0.8, er * 0.5); ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(ex - er * 1.1, by + sd * tiltB * er); ctx.lineTo(ex + er * 1.1, by - sd * tiltB * er); ctx.stroke();
     });
+    if (!fine) return mouth();
     // Rosy cheeks.
     ctx.globalAlpha = 0.28; ell(ctx, cx - eg * 1.35, cy + hr * 0.3, er * 0.9 * sq, er * 0.55, '#ff6b6b'); ell(ctx, cx + eg * 1.35, cy + hr * 0.3, er * 0.9 * sq, er * 0.55, '#ff6b6b'); ctx.globalAlpha = 1;
     // Nose.
     ell(ctx, cx + fx * 0.25, cy + hr * 0.2, hr * 0.09, hr * 0.07, skinD);
-    // Mouth.
+    mouth();
+    function mouth() {
     var my = cy + hr * 0.5, mw = hr * 0.32 * sq;
     ctx.strokeStyle = INK; ctx.lineWidth = Math.max(0.8, hr * 0.08);
     if (m === 'happy') {
@@ -562,6 +601,7 @@
       ctx.beginPath(); ctx.moveTo(cx - mw * 0.7, my); ctx.lineTo(cx + mw * 0.7, my); ctx.stroke();
     } else {
       ctx.beginPath(); ctx.arc(cx, my - hr * 0.12, mw, Math.PI * 0.2, Math.PI * 0.8); ctx.stroke();
+    }
     }
   }
 
@@ -704,8 +744,8 @@
       limb(ctx, S.shL, S.shR, wUp * 1.25, wUp * 1.25, jersey, jerseyD, jerseyL);
       // Jersey pattern, clipped to the torso.
       if (team.pattern && s > 9) {
+        // (The lines run edge to edge inside the torso, so no clip is needed.)
         ctx.save();
-        torsoPath(0); ctx.clip();
         ctx.globalAlpha = 0.5;
         var bw = Math.max(1.5, 0.06 * s), i2;
         if (team.pattern === 'stripes') {
@@ -726,9 +766,7 @@
         ctx.beginPath(); ctx.moveTo(cl.x, cl.y); ctx.lineTo(cb.x, cb.y); ctx.lineTo(cr.x, cr.y); ctx.stroke();
       }
       if (s > 13) {
-        ctx.fillStyle = team.trim; ctx.font = '800 ' + Math.round(0.2 * s) + 'px system-ui, sans-serif';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(String(p.num), (cxs * 0.55 + cxh * 0.45), (cys * 0.55 + cyh * 0.45));
+        drawText(ctx, String(p.num), Math.round(0.2 * s), team.trim, null, (cxs * 0.55 + cxh * 0.45), (cys * 0.55 + cyh * 0.45), 'center');
       }
       // Neck and head; the near team shows the back of the head.
       limb(ctx, S.neck, along(S.neck, S.head, 0.55), wUp * 1.05, wUp * 0.95, skin, skinD, skinL);
@@ -739,9 +777,7 @@
       // Role tag beside the head, coloured by position.
       if (s > 9) {
         var tag = SR.ROLE_TAGS[p.idx], col = SR.ROLE_COLORS[tag.replace(/[0-9]/g, '')] || '#fff';
-        ctx.font = '800 ' + Math.max(9, Math.round(0.18 * s)) + 'px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-        ctx.strokeText(tag, hd.x + hr * 1.6, hd.y - hr * 0.6); ctx.fillStyle = col; ctx.fillText(tag, hd.x + hr * 1.6, hd.y - hr * 0.6);
+        drawText(ctx, tag, Math.max(9, Math.round(0.18 * s)), col, 'rgba(0,0,0,0.7)', hd.x + hr * 1.6, hd.y - hr * 0.6, 'left');
       }
       return { x: hd.x, y: hd.y };
     }

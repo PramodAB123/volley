@@ -119,8 +119,8 @@
   function tick() {
     if (!ctx || !track) return;
     var song = SONGS[track], s16 = 60 / song.bpm / 4;
-    if (nextT < ctx.currentTime - 0.3) nextT = ctx.currentTime + 0.05; // after a stall, don't play catch-up
-    while (nextT < ctx.currentTime + 0.15) {
+    if (nextT < ctx.currentTime - 0.4) nextT = ctx.currentTime + 0.05; // after a stall, don't play catch-up
+    while (nextT < ctx.currentTime + 0.25) {
       var b = Math.floor(step / 16), st = step % 16;
       try { song.bar(b, st, nextT, s16, Math.floor(b / 4), energy); } catch (e) { /* skip a broken note */ }
       step++; nextT += s16;
@@ -137,7 +137,7 @@
     if (!setup()) return;
     if (track === name) return;
     track = name; step = 0; nextT = ctx.currentTime + 0.1;
-    if (!timer) timer = setInterval(tick, 40);
+    if (!timer) timer = setInterval(tick, 50);
   }
 
   // Jingles for the end of a match.

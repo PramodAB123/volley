@@ -761,7 +761,7 @@
   }
 
   var squashAt = -9, lastVel = null;
-  var frameAvg = 0.016, slowFor = 0;
+  var frameAvg = 0.016, slowFor = 0, dropFor = 0;
 
   // The ball: panels that roll the way it travels, a stretch along the motion
   // when it's fast, a squash against the hit, and a shadow that sharpens as it
@@ -1153,10 +1153,15 @@
     ctx.restore();
   }
 
+  var vignette = null;
   function drawOverlay(ctx, rally) {
-    var vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.95);
-    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.42)');
-    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    // The vignette gradient is made once per screen size and reused.
+    if (!vignette || vignette._w !== W || vignette._h !== H) {
+      vignette = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.95);
+      vignette.addColorStop(0, 'rgba(0,0,0,0)'); vignette.addColorStop(1, 'rgba(0,0,0,0.42)');
+      vignette._w = W; vignette._h = H;
+    }
+    ctx.fillStyle = vignette; ctx.fillRect(0, 0, W, H);
     if (rally && rally.timeScale < 1) {
       // Slow motion: cinematic bars and a cool tint that slide and fade in
       // with the slowdown, so it eases in and out instead of popping.
@@ -1220,7 +1225,13 @@
       var now = performance.now() / 1000, dt = lastNow ? Math.min(0.05, now - lastNow) : 0;
       lastNow = now;
       // If the device can't keep up, switch to cheaper effects for the session.
-      if (dt > 0) { frameAvg += (dt - frameAvg) * 0.05; slowFor = frameAvg > 0.027 ? slowFor + dt : 0; if (slowFor > 3) SR.lowFx = true; }
+      if (dt > 0) {
+        frameAvg += (dt - frameAvg) * 0.05; slowFor = frameAvg > 0.027 ? slowFor + dt : 0; if (slowFor > 3) SR.lowFx = true;
+        // Dynamic resolution: while frames run long (under ~52 fps), render a
+        // little fewer pixels, one step every 1.5 s, down to 60%. Effects stay.
+        dropFor = game && game.rally && !game.paused && frameAvg > 0.0192 ? dropFor + dt : 0;
+        if (dropFor > 1.5 && (SR.resScale || 1) > 0.6) { SR.resScale = Math.max(0.6, Math.round(((SR.resScale || 1) - 0.1) * 100) / 100); dropFor = 0; frameAvg = 0.017; }
+      }
       var rally = game && game.rally, paused = game && game.paused;
       var simDt = paused ? 0 : dt * (rally ? rally.timeScale : 1) * (SR.speed || 1);
       SR.fx.update(Math.min(0.1, simDt));
