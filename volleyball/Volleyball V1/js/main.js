@@ -34,6 +34,7 @@
       var t = m.teams[winner];
       rally.say(t.short + ' WIN', m.history.map(function (s) { return s[0] + '-' + s[1]; }).join('  '), t.color, 3);
       SR.audio.play('cheer');
+      if (SR.music) SR.music.jingle(this.cfg.human === 0 && winner !== 0 ? 'lose' : 'win');
       SR.fx.emit('confetti', { color: t.color });
       rally.wait(2.6, function () { if (self.cfg.onEnd) self.cfg.onEnd(self); });
     } else if (res.setOver) {
@@ -148,6 +149,7 @@
     // No match (menus): show the cover art instead of the court.
     if (!g !== menuBg) { menuBg = !g; document.getElementById('app').classList.toggle('menu-bg', menuBg); }
     if (SR.landing) SR.landing.sync();
+    if (SR.music) { try { SR.music.sync(g); } catch (e) { SR.oops && SR.oops('music', e); } }
     if (document.hidden || !g || canvas.width < 2 || canvas.height < 2) return;
     var undo = g && !g.paused ? blend(g.rally, acc / STEP) : null;
     try { SR.render.draw(ctx, g); } finally { if (undo) undo(); }

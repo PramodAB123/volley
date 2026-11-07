@@ -59,6 +59,7 @@
     play: function (name) {
       if (!SR.save.data.settings.sound || !SOUNDS[name]) return;
       try { SOUNDS[name](); } catch (e) { /* audio unavailable */ }
-    }
+    },
+    ctx: ac
   };
 })();
