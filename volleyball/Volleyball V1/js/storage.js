@@ -20,7 +20,9 @@
       // (1 out in QF, 2 SF, 3 runner-up, 4 won).
       leagueMap: { unlocked: 0, best: [] },
       cupMap: { unlocked: 0, best: [] },
-      daily: { streak: 0, last: null, week: 0 }
+      daily: { streak: 0, last: null, week: 0 },
+      // Daily challenge: day = day number of today's tries, last = last day won.
+      challenge: { day: 0, done: false, tries: 0, streak: 0, last: 0, total: 0, best: 0 }
     };
   }
 
@@ -86,7 +88,7 @@
   function clean(d) {
     var def = defaults();
     d.stars = num(d.stars);
-    ['owned', 'equipped', 'settings', 'stats', 'trophies', 'daily', 'leagueMap', 'cupMap'].forEach(function (k) { if (!obj(d[k])) d[k] = def[k]; });
+    ['owned', 'equipped', 'settings', 'stats', 'trophies', 'daily', 'challenge', 'leagueMap', 'cupMap'].forEach(function (k) { if (!obj(d[k])) d[k] = def[k]; });
     Object.keys(def.owned).forEach(function (kind) {
       var list = Array.isArray(d.owned[kind]) ? d.owned[kind].filter(function (id) { return typeof id === 'string'; }) : [];
       def.owned[kind].forEach(function (id) { if (list.indexOf(id) < 0) list.unshift(id); });
@@ -122,6 +124,9 @@
     if (d.tournament != null && !okCup(d.tournament)) d.tournament = null;
     if (d.career != null && !(obj(d.career) && isTeam(d.career.team))) d.career = null;
     if (d.career) d.career.unlocked = Math.min(num(d.career.unlocked), SR.CAREER ? SR.CAREER.length : 1e9);
+    var ch = d.challenge;
+    ['day', 'tries', 'streak', 'last', 'total', 'best'].forEach(function (k) { ch[k] = num(ch[k]); });
+    ch.done = ch.done === true;
     var dl = d.daily;
     dl.streak = num(dl.streak); dl.week = num(dl.week);
     if (dl.last != null && !/^\d{4}-\d{2}-\d{2}$/.test(String(dl.last))) dl.last = null;

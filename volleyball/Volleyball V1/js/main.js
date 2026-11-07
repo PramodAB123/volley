@@ -219,6 +219,7 @@
     part('online', function () { if (SR.net) SR.net.init(q); });
     part('demo', function () { if (q.get('demo') !== null && SR.demo && !q.get('room')) SR.demo.start('menu', q.get('demo')); });
     part('daily', function () { if (SR.daily) SR.daily.init(q); });
+    part('challenge', function () { if (SR.challenge) SR.challenge.init(); });
     window.requestAnimationFrame(frame);
   });
 })();

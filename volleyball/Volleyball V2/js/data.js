@@ -173,6 +173,28 @@ SR.colorGap = function (a, b) {
   return Math.sqrt([0, 1, 2].reduce(function (s, i) { var d = p(a, i) - p(b, i); return s + d * d; }, 0));
 };
 
+// Daily challenge (js/challenge.js): one match a day with a goal on top of
+// winning. Difficulty follows the weekday (week[0] = Sunday); n = the number
+// the goal needs at each difficulty (a goal without n only uses diffs);
+// one = the wording when n is 1.
+// Win challenges on days in a row: every 7th day adds streakBonus stars.
+SR.CHALLENGE = {
+  week: ['hard', 'easy', 'normal', 'normal', 'easy', 'normal', 'hard'],
+  stars: { easy: 4, normal: 6, hard: 10 },
+  streakBonus: 10,
+  format: 'p15s1',
+  courts: ['maple', 'ocean', 'clay', 'street', 'dunes', 'blossom', 'tigers', 'falcons', 'sharks', 'night', 'neon', 'owls', 'rays', 'candy', 'wolves', 'hawks', 'lions', 'final'],
+  goals: [
+    { id: 'win',    text: 'Win the match', diffs: ['normal', 'hard'] },
+    { id: 'kills',  text: 'Win with {n}+ kills', n: { easy: 9, normal: 8, hard: 7 } },
+    { id: 'aces',   text: 'Win with {n}+ aces', one: 'Serve an ace and win', n: { easy: 2, normal: 1 } },
+    { id: 'blocks', text: 'Win with {n}+ blocks', one: 'Make a block and win', n: { easy: 2, normal: 2, hard: 1 } },
+    { id: 'errors', text: 'Win with {n} errors or fewer', n: { easy: 1, normal: 2, hard: 3 } },
+    { id: 'hold',   text: 'Win and keep the rival under {n} points', n: { easy: 8, normal: 10, hard: 13 } },
+    { id: 'clean',  text: 'Win 2-0 without losing a set', format: 'p11s3', diffs: ['easy', 'normal', 'hard'] }
+  ]
+};
+
 SR.STARS = { quickWin: 1, leagueWin: 1, leagueTitle: 3, cupWin: 1, cupTitle: 5, careerStage: 2, careerFinal: 5, adReward: 2 };
 // Minimum gap between rewarded videos in the shop.
 SR.AD_REWARD_COOLDOWN_MS = 5 * 60 * 1000;

@@ -204,6 +204,7 @@
     if (q.get('speed')) SR.speed = Number(q.get('speed')) || 1;
     part('demo', function () { if (q.get('demo') !== null && SR.demo) SR.demo.start('menu', q.get('demo')); });
     part('daily', function () { if (SR.daily) SR.daily.init(q); });
+    part('challenge', function () { if (SR.challenge) SR.challenge.init(); });
     part('android', function () { if (SR.app) SR.app.init(); });
     window.requestAnimationFrame(frame);
   });

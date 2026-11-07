@@ -1395,3 +1395,61 @@ html.native input, html.native select { -webkit-user-select: auto; user-select: 
   opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; white-space: nowrap;
 }
 .app-toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+/* Daily challenge (js/challenge.js): home card, screen and in-match goal chip. */
+.chal-teaser { border-color: rgba(94, 234, 212, 0.4); background: linear-gradient(120deg, rgba(20, 184, 166, 0.24), rgba(59, 130, 246, 0.12)); }
+.chal-teaser b { color: #7ff5e3; }
+.chal-teaser .ct-ico { flex: none; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #14b8a6, #2563eb); color: #fff; }
+.chal-teaser .ct-ico svg, .chal-ico svg, .chal-big svg, .goal-chip svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chal-teaser .ct-ico svg { width: 20px; height: 20px; }
+.chal-teaser.ready .ct-ico { animation: dt-wiggle 2.4s ease-in-out infinite; }
+.chal-teaser.done { border-color: rgba(134, 239, 172, 0.35); background: rgba(34, 197, 94, 0.12); }
+.chal-teaser.done b { color: #86efac; }
+.home .chal-teaser { margin-top: 8px; }
+
+.panel.daily.chal { width: min(560px, 100%);
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(20, 184, 166, 0.3), transparent 70%), linear-gradient(170deg, #17304a, #0b1426 70%);
+  border-color: rgba(94, 234, 212, 0.28); }
+.chal .daily-gift.chal-ico { background: linear-gradient(140deg, #14b8a6, #2563eb); box-shadow: 0 8px 20px rgba(20, 184, 166, 0.35); color: #fff; }
+.chal .daily-head p { color: #9ff3e6; }
+.chal-card { position: relative; display: flex; align-items: center; gap: 14px; margin-top: 16px; padding: 14px 16px; border-radius: 16px;
+  background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.12); text-align: left; }
+.chal-card.done { background: rgba(34, 197, 94, 0.12); border-color: rgba(134, 239, 172, 0.4); }
+.chal-big { flex: none; display: flex; width: 54px; height: 54px; align-items: center; justify-content: center; border-radius: 50%; background: rgba(94, 234, 212, 0.14); color: #5eead4; }
+.chal-big svg { width: 34px; height: 34px; }
+.chal-goal { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.chal-goal small { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #8fb3c9; }
+.chal-goal b { font-size: 20px; font-weight: 900; line-height: 1.2; }
+.chal-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.chal-diff, .chal-prize { padding: 2px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 800; }
+.chal-diff { background: rgba(255, 255, 255, 0.12); }
+.chal-diff.d-easy { background: rgba(34, 197, 94, 0.25); color: #bbf7d0; }
+.chal-diff.d-normal { background: rgba(59, 130, 246, 0.28); color: #cfe0ff; }
+.chal-diff.d-hard { background: rgba(239, 68, 68, 0.28); color: #fecaca; }
+.chal-prize { background: rgba(255, 210, 63, 0.18); color: #ffd23f; }
+.chal-done { flex: none; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: #22c55e; color: #05290f; font-size: 22px; font-weight: 900; }
+.chal-match { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(0, 0, 0, 0.22); }
+.chal-vs { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: 14.5px; }
+.chal-vs > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chal-vs i { font-style: normal; font-size: 12px; font-weight: 900; color: #8fa2bf; text-transform: uppercase; }
+.chal-crest { flex: none; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background: var(--c); border: 2px solid rgba(255, 255, 255, 0.7); }
+.chal-crest b { font-size: 10px; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+.chal-where { display: flex; align-items: center; justify-content: center; gap: 10px; text-align: left; }
+.chal-where > span:last-child { display: flex; flex-direction: column; }
+.chal-where b { font-size: 14px; }
+.chal-where small { font-size: 12.5px; color: #a9bbd3; }
+.chal-status { margin: 0; font-size: 13.5px; font-weight: 700; color: #cfe0f7; }
+.chal .btn.daily-claim { background: linear-gradient(135deg, #5eead4, #14b8a6); color: #042a26; }
+.chal .btn.daily-claim:hover { background: linear-gradient(135deg, #7ff5e3, #2dd4bf); }
+.chal .daily-rule b { color: #ffd23f; }
+
+.goal-chip { position: absolute; top: 50px; right: 0; display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; white-space: nowrap;
+  background: rgba(8, 20, 38, 0.78); border: 1px solid rgba(94, 234, 212, 0.5); color: #e6fffb; font-size: 13px; font-weight: 800; pointer-events: none; }
+.goal-chip.hidden { display: none; }
+.goal-chip svg { width: 16px; height: 16px; color: #5eead4; }
+.goal-chip.ok { border-color: #22c55e; background: rgba(21, 83, 45, 0.85); }
+.goal-chip.ok svg { color: #86efac; }
+.goal-chip.bad { border-color: #ef4444; background: rgba(90, 20, 20, 0.85); }
+@media (max-width: 520px) { .chal-goal b { font-size: 17px; } .chal-big { width: 44px; height: 44px; } .chal-big svg { width: 28px; height: 28px; } .goal-chip { font-size: 12px; padding: 5px 10px; } }
+@media (max-height: 520px) { .chal-card { margin-top: 10px; padding: 10px 12px; } .chal-match { margin-top: 8px; padding: 8px 12px; gap: 6px; } .chal .daily-foot { margin-top: 10px; } }
+@media (prefers-reduced-motion: reduce) { .chal-teaser.ready .ct-ico { animation: none; } }

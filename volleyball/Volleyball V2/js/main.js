@@ -219,6 +219,7 @@
     // Every visit opens on the home menu; the demo is under How to play.
     part('demo', function () { if (q.get('demo') !== null && SR.demo && !q.get('room')) SR.demo.start('menu', q.get('demo')); });
     part('daily', function () { if (SR.daily) SR.daily.init(q); });
+    part('challenge', function () { if (SR.challenge) SR.challenge.init(); });
     SR.cg.onSettingsChange(function () {
       try { SR.audio.setMuted(SR.cg.muted()); SR.ui.refresh(); } catch (e) { SR.oops('settings change', e); }
     });

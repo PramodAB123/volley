@@ -9,6 +9,7 @@
     $('hud').classList.toggle('hidden', id !== null);
     SR.cg.syncGameplay();
     if (id === 'scr-menu' && SR.daily) SR.daily.onMenu();
+    if (id === 'scr-menu' && SR.challenge) SR.challenge.teaser();
   }
 
   function save() { SR.save.write(); refreshStars(); refreshCareer(); }
@@ -170,6 +171,9 @@
     if (mode === 'cup' && data().tournament && cupMyMatch(data().tournament)) {
       return { label: 'Next match', go: function () { openCup(); var b = $('btn-cup-play'); if (b) b.click(); } };
     }
+    if (mode === 'daily' && SR.challenge) {
+      return SR.challenge.done() && won ? null : { label: 'Try again', go: SR.challenge.play };
+    }
     if (mode === 'career' && data().career) {
       return { label: !won ? 'Try again' : careerPick !== prevPick ? 'Next island' : 'Play again',
         go: function () { openCareer(); var b = $('btn-career-play'); if (b && !b.disabled) b.click(); } };
@@ -222,6 +226,7 @@
     else if (mode === 'league') { var r = leagueRecord(result); stars += r.stars; notes = r.notes; }
     else if (mode === 'cup') { var c = cupRecord(result); stars += c.stars; notes = c.notes; }
     else if (mode === 'career') { var k = careerRecord(won); stars += k.stars; notes = k.notes; }
+    else if (mode === 'daily' && SR.challenge) { var dc = SR.challenge.record(m, won); stars += dc.stars; notes = dc.notes; }
     data().stars += stars;
     save();
 
@@ -1079,6 +1084,9 @@
     onlineResult: onlineResult,
     save: save,
     renderShop: renderShop,
+    courtSwatch: courtSwatch,
+    // Start a match in a given mode (the daily challenge uses 'daily').
+    play: function (m, home, away, venue, difficulty, format) { mode = m; startMatch(home, away, venue, difficulty, format); },
     // Redraw anything that shows saved data or SDK settings.
     refresh: function () {
       refreshStars();
@@ -1089,6 +1097,7 @@
       if (current === 'scr-cup') openCup();
       refreshCareer();
       if (SR.daily) SR.daily.refresh();
+      if (SR.challenge) SR.challenge.refresh();
       if (current === 'scr-career') { if (data().career) renderCareer(); else show('scr-menu'); }
     },
     init: function () {
@@ -1132,7 +1141,7 @@
       });
       on('btn-result-next', function () { if (resultNext) resultNext.go(); });
       on('btn-result-ok', function () {
-        if (mode === 'league') openLeague(); else if (mode === 'cup') openCup(); else if (mode === 'career') openCareer(); else show('scr-menu');
+        if (mode === 'league') openLeague(); else if (mode === 'cup') openCup(); else if (mode === 'career') openCareer(); else if (mode === 'daily' && SR.challenge) SR.challenge.open(); else show('scr-menu');
       });
       $('btn-ad-stars').addEventListener('click', watchAdForStars);
       on('btn-pause', togglePause);

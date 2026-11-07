@@ -31,6 +31,7 @@
     <div id="net-banner" class="net-banner hidden" role="status" aria-live="polite"></div>
 
     <div id="hud" class="hidden">
+      <div id="goal-chip" class="goal-chip hidden" aria-live="polite"></div>
       <button id="btn-pause" class="icon-btn" aria-label="Pause">II</button>
     </div>
 
@@ -90,6 +91,7 @@
           </button>
         </div>
         <button id="home-daily" class="daily-teaser hidden" type="button"></button>
+        <button id="home-chal" class="daily-teaser chal-teaser hidden" type="button"></button>
         <button id="btn-online" class="tile t-online hidden">
           <span class="t-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.6 14.2c3 .3 5.4 2.7 5.4 5.8"/></svg></span>
           <span class="t-txt"><b>Play online</b><small>Invite a friend with a link</small></span>
@@ -286,6 +288,27 @@
       </div>
     </section>
 
+    <section id="scr-challenge" class="screen hidden">
+      <div class="panel daily chal" role="dialog" aria-labelledby="chal-title">
+        <div class="daily-head">
+          <span class="daily-gift chal-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.2"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M15.5 8.5L21 3M17.5 3H21v3.5"/></svg></span>
+          <div>
+            <h2 id="chal-title">Daily challenge</h2>
+            <p id="chal-date"></p>
+          </div>
+          <button id="btn-chal-x" class="daily-x" type="button" aria-label="Close">×</button>
+        </div>
+        <div id="chal-card" class="chal-card"></div>
+        <div id="chal-match" class="chal-match"></div>
+        <div class="daily-foot">
+          <button id="btn-chal-play" class="btn daily-claim" type="button" data-i18n-skip>Play challenge</button>
+          <p id="chal-status" class="chal-status" data-i18n-skip></p>
+          <p id="chal-next" class="daily-next" data-i18n-skip></p>
+          <p id="chal-streak" class="daily-rule" data-i18n-skip></p>
+        </div>
+      </div>
+    </section>
+
     <section id="scr-stats" class="screen hidden">
       <div class="panel">
         <h2>Career stats</h2>
@@ -389,6 +412,7 @@
   <script src="js/input.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/daily.js"></script>
+  <script src="js/challenge.js"></script>
   <script src="js/net-config.js"></script>
   <script>
     // PeerJS is only needed for online play, which is off in this build:

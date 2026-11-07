@@ -14,7 +14,7 @@
   function screenBack(scr) {
     var el = document.getElementById(scr);
     if (!el) return false;
-    var b = el.querySelector('.career-back, .cup-back, .top-back, [data-back], #btn-privacy-back, #btn-daily-x, #btn-daily-ok, #btn-result-ok, #btn-resume');
+    var b = el.querySelector('.career-back, .cup-back, .top-back, [data-back], #btn-privacy-back, #btn-daily-x, #btn-daily-ok, #btn-chal-x, #btn-result-ok, #btn-resume');
     if (b) { b.click(); return true; }
     return false;
   }
