@@ -226,6 +226,7 @@
     part('online', function () { if (SR.net) SR.net.init(q); });
     // Every visit opens on the home menu; the demo is under How to play.
     part('demo', function () { if (q.get('demo') !== null && SR.demo && !q.get('room')) SR.demo.start('menu', q.get('demo')); });
+    part('custom', function () { if (SR.custom) SR.custom.init(); });
     part('daily', function () { if (SR.daily) SR.daily.init(q); });
     part('challenge', function () { if (SR.challenge) SR.challenge.init(); });
     // A new player's first visit opens straight into the training (the Try it

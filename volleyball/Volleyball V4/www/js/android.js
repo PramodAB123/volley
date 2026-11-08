@@ -22,6 +22,8 @@
   var lastBack = 0;
   function onBack() {
     var ui = SR.ui, g = SR.game, cur = ui ? ui.current() : null;
+    // A Yes / No dialog (star purchase, leave the team builder): Back says No.
+    if (SR.custom && SR.custom.isOpen()) { if (!click('confirm-no')) click('confirm-yes'); return; }
     // How to play demo: Back closes it.
     if (SR.demo && SR.demo.active) { SR.demo.stop(); return; }
     // In a match with no menu open: pause. From the pause menu: resume.

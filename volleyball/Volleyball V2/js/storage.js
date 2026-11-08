@@ -20,7 +20,9 @@
       // Daily challenge: day = day number of today's tries, last = last day won.
       challenge: { day: 0, done: false, tries: 0, streak: 0, last: 0, total: 0, best: 0 },
       // Finished (or skipped) the first-visit training (js/demo.js).
-      trained: false
+      trained: false,
+      // Custom team (js/custom.js): bought once for stars, then edited freely.
+      custom: JSON.parse(JSON.stringify(SR.CUSTOM.base))
     };
   }
 
@@ -41,7 +43,8 @@
   // Career that doesn't hold together is dropped, so a bad save never stops
   // the game from loading.
   function num(v, min) { v = Number(v); return isFinite(v) && v >= (min || 0) ? Math.floor(v) : (min || 0); }
-  function isTeam(id) { return typeof id === 'string' && SR.TEAMS.some(function (t) { return t.id === id; }); }
+  var customOn = false; // set by clean(): the custom team is a valid team only once unlocked
+  function isTeam(id) { return typeof id === 'string' && ((id === 'custom' && customOn) || SR.TEAMS.some(function (t) { return t.id === id; })); }
   function shopHas(kind, id) { return !!(SR.SHOP[kind] && SR.SHOP[kind].some(function (x) { return x.id === id; })); }
   function obj(v) { return v && typeof v === 'object' && !Array.isArray(v); }
   function teamList(a) { return Array.isArray(a) && a.length > 0 && a.every(isTeam); }
@@ -83,9 +86,34 @@
     return true;
   }
 
+  // The custom team: a bad name, colour or rating goes back to its default;
+  // ratings that don't add up to the points budget are reset to even.
+  function cleanCustom(c) {
+    var C = SR.CUSTOM, b = defaults().custom, hex = /^#[0-9a-fA-F]{6}$/;
+    if (!obj(c)) return b;
+    c.unlocked = c.unlocked === true;
+    c.name = SR.customName(c.name) || b.name;
+    c.short = SR.customShort(c.short) || SR.customShort(c.name) || b.short;
+    if (!hex.test(c.color)) c.color = b.color;
+    if (!hex.test(c.trim)) c.trim = b.trim;
+    if (!C.patterns.some(function (p) { return p[0] === c.pattern; })) c.pattern = b.pattern;
+    var r = obj(c.r) ? c.r : {}, sum = 0, ok = true;
+    C.stats.forEach(function (st) {
+      var v = Number(r[st[0]]);
+      if (!isFinite(v) || v < C.min || v > C.max) ok = false; else sum += Math.round(v);
+    });
+    if (!ok || sum > C.total) r = Object.assign({}, b.r);
+    else C.stats.forEach(function (st) { r[st[0]] = Math.round(r[st[0]]); });
+    c.r = {};
+    C.stats.forEach(function (st) { c.r[st[0]] = r[st[0]]; });
+    return c;
+  }
+
   function clean(d) {
     var def = defaults();
     d.stars = num(d.stars);
+    d.custom = cleanCustom(d.custom);
+    customOn = d.custom.unlocked;
     ['owned', 'equipped', 'settings', 'stats', 'trophies', 'daily', 'challenge'].forEach(function (k) { if (!obj(d[k])) d[k] = def[k]; });
     Object.keys(def.owned).forEach(function (kind) {
       var list = Array.isArray(d.owned[kind]) ? d.owned[kind].filter(function (id) { return typeof id === 'string'; }) : [];
@@ -159,6 +187,7 @@
       try { store().setItem(KEY, JSON.stringify(this.data)); } catch (e) { /* storage unavailable */ }
     },
     reset: function () {
+      customOn = false;
       this.data = defaults();
       this.write();
     }

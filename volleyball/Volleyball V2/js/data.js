@@ -42,7 +42,37 @@ SR.TEAMS = [
 ];
 
 SR.teamById = function (id) {
+  if (id === 'custom') { var c = SR.customTeam(); if (c) return c; }
   return SR.TEAMS.find(function (t) { return t.id === id; }) || SR.TEAMS[0];
+};
+
+// Custom team (js/custom.js): your own club, unlocked once for stars. Its
+// id is 'custom'; it is never in SR.TEAMS, so it is never an opponent.
+// Skill points: every rating starts at `min`, `total` is shared out between
+// the five, none above `max`. The default (78 each) matches a top club.
+SR.CUSTOM = {
+  price: 10,
+  min: 60, max: 90, total: 390, step: 2,
+  stats: [['attack', 'Attack'], ['block', 'Block'], ['pass', 'Pass'], ['serve', 'Serve'], ['speed', 'Speed']],
+  colors: ['#e5484d', '#ff6b35', '#f5a524', '#e0b100', '#7cc142', '#2f9e44', '#12a594', '#1fb6d6', '#2f6fe0', '#3b3fbf', '#7c5cd6', '#d9468f', '#607086', '#1f2633', '#f4f4f4'],
+  trims: ['#ffffff', '#111827', '#ffd23f', '#ff6b35', '#e5484d', '#7cc4ff', '#3bf0a0'],
+  patterns: [['stripes', 'Stripes'], ['hoops', 'Hoops'], ['split', 'Half']],
+  base: { unlocked: false, name: 'My Club', short: 'MYC', color: '#ff6b35', trim: '#ffffff', pattern: 'stripes', r: { attack: 78, block: 78, pass: 78, serve: 78, speed: 78 } }
+};
+// Names are shown inside menus, so only letters, digits, spaces and a few
+// marks are kept. Short codes are 2-3 capital letters or digits.
+SR.customName = function (v) {
+  return typeof v === 'string' ? v.replace(/<[^>]*>/g, '').replace(/[^\p{L}\p{N} .'\-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 18).replace(/'/g, '\u2019') : '';
+};
+SR.customShort = function (v) {
+  if (typeof v !== 'string') return '';
+  var s = v.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return s.length >= 2 ? s.slice(0, 3) : '';
+};
+SR.customTeam = function () {
+  var c = SR.save && SR.save.data && SR.save.data.custom;
+  if (!c || !c.unlocked) return null;
+  return { id: 'custom', custom: true, name: c.name, short: c.short, color: c.color, trim: c.trim, pattern: c.pattern, r: Object.assign({}, c.r) };
 };
 
 SR.teamPower = function (t) {
@@ -164,7 +194,7 @@ SR.DAILY = {
 SR.kitTeam = function (t, opp) {
   var id = SR.save && SR.save.data.equipped.kit;
   var k = SR.SHOP.kits.find(function (x) { return x.id === id; });
-  if (!k || !k.color) return t;
+  if (!k || !k.color || t.custom) return t; // a custom team wears its own colours
   if (opp && SR.colorGap(k.color, opp.color) < 90) return t;
   return Object.assign({}, t, { color: k.color, trim: k.trim, pattern: k.pattern });
 };

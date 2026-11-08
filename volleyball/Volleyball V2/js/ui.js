@@ -48,7 +48,7 @@
     var title = mode === 'quick' ? 'Choose your team' :
       ({ league: 'League: choose your team', cup: 'Tournament: choose your team', career: 'Career: choose your team' })[mode];
     $('teams-title').textContent = SR.t(title);
-    teamCards($('team-grid'), null, pickTeam);
+    teamCards($('team-grid'), null, pickTeam, true);
     rulesPicker($('team-rules'));
     courtPicker($('team-courts'));
   }
@@ -103,8 +103,10 @@
   }
 
   // Fill `grid` with a card per team (skipping `skipId`); onPick(team) on click.
-  function teamCards(grid, skipId, onPick) {
+  // withCustom: the Custom team card goes first (offline team picker only).
+  function teamCards(grid, skipId, onPick, withCustom) {
     grid.innerHTML = '';
+    if (withCustom && SR.custom) grid.appendChild(SR.custom.card(onPick));
     SR.TEAMS.forEach(function (t) {
       if (t.id === skipId) return;
       var b = document.createElement('button');
@@ -141,6 +143,8 @@
     show(null);
     if (mode === 'quick') { lastQuick = { home: home, away: away }; if (SR.ARENAS[s.quickCourt]) venue = s.quickCourt; }
     home = SR.kitTeam(home, away);
+    // A custom team that looks like the opponent swaps its jersey and trim.
+    if (home.custom && SR.colorGap(home.color, away.color) < 90 && SR.colorGap(home.trim, away.color) >= 90) home = Object.assign({}, home, { color: home.trim, trim: home.color });
     SR.game = new SR.Game({ home: home, away: away, format: format || s.format, difficulty: difficulty || s.difficulty, human: 0, mode: mode, venue: venue || null, onEnd: finishMatch });
   }
 
@@ -194,8 +198,10 @@
   // ---- venues -------------------------------------------------------------
 
   // League rounds are played at the opponent's arena, the last round at yours.
+  // A custom team has no arena: its home is the court equipped in the Shop.
   function leagueVenue(L) {
-    return L.round === L.rounds.length - 1 ? L.me : myFixture(L);
+    var v = L.round === L.rounds.length - 1 ? L.me : myFixture(L);
+    return v === 'custom' ? data().equipped.court : v;
   }
 
   // Tournament: the opponent's arena, and Champions Court for the final.
@@ -461,8 +467,8 @@
     $('btn-league-quit').classList.toggle('hidden', L.done);
     hallConfetti('#scr-league .lg-hall', champ);
     if (!L.done) {
-      var o = team(opp), vid = leagueVenue(L), a = SR.ARENAS[vid];
-      var host = vid === L.me ? SR.t('Your home court') : SR.t('Home of the {team}', { team: team(vid).name });
+      var o = team(opp), vid = leagueVenue(L), a = SR.courtById(vid);
+      var host = vid === L.me || (L.me === 'custom' && !SR.ARENAS[vid]) ? SR.t('Your home court') : SR.t('Home of the {team}', { team: team(vid).name });
       nx.className = 'cup-next';
       nx.innerHTML = '<div class="cup-vs"><span class="cv me">' + crest(me, 'lg-shield') + '<b>' + me.short + '</b></span><span class="cv-x">VS</span><span class="cv">' + crest(o, 'lg-shield') + '<b>' + o.short + '</b></span></div>' +
         '<span class="cpick-thumb">' + thumbImg(vid) + '</span>' +
@@ -971,6 +977,7 @@
 
   function renderShop() {
     renderShopAd();
+    if (SR.custom) SR.custom.shopCard($('shop-custom'));
     ['balls', 'courts', 'kits'].forEach(function (kind) {
       var box = $('shop-' + kind), key = { balls: 'ball', courts: 'court', kits: 'kit' }[kind];
       if (!box) return;
@@ -988,9 +995,18 @@
         b.addEventListener('click', function () {
           if (!owned && it.daily) { SR.audio.play('click'); SR.daily.open(); return; }
           if (!owned) {
-            if (data().stars < it.price) { b.classList.add('shake'); setTimeout(function () { b.classList.remove('shake'); }, 400); return; }
-            data().stars -= it.price;
-            data().owned[kind].push(it.id);
+            if (data().stars < it.price) { b.classList.add('shake'); setTimeout(function () { b.classList.remove('shake'); }, 400); }
+            // Ask Yes / No before spending stars; buying equips it.
+            var noun = { balls: '{item} ball', courts: '{item} court', kits: '{item} jersey' }[kind];
+            SR.confirmBuy({ name: SR.t(noun, { item: SR.t(it.name) }), price: it.price, art: sw, what: SR.t('It is equipped as soon as you buy it.'),
+              onBuy: function () {
+                data().owned[kind].push(it.id);
+                data().equipped[key] = it.id;
+                SR.audio.play('reward');
+                save();
+                renderShop();
+              } });
+            return;
           }
           data().equipped[key] = it.id;
           SR.audio.play('click');
@@ -1087,6 +1103,8 @@
     save: save,
     renderShop: renderShop,
     courtSwatch: courtSwatch,
+    // Back to "Choose your team" in the same mode (the custom team builder).
+    teams: function () { renderTeams(); show('scr-teams'); },
     // Start a match in a given mode (the daily challenge uses 'daily').
     play: function (m, home, away, venue, difficulty, format) { mode = m; startMatch(home, away, venue, difficulty, format); },
     // Redraw anything that shows saved data or SDK settings.
@@ -1113,8 +1131,8 @@
       var careerArmed = false;
       on('btn-career-reset', function () {
         var b = $('btn-career-reset');
-        if (!careerArmed) { careerArmed = true; b.textContent = SR.t('Click again to restart'); setTimeout(function () { careerArmed = false; b.textContent = SR.t('Restart career'); }, 3000); return; }
-        careerArmed = false; b.textContent = SR.t('Restart career');
+        if (!careerArmed) { careerArmed = true; b.textContent = SR.t('Click again to restart'); b.classList.add('armed'); setTimeout(function () { careerArmed = false; b.textContent = SR.t('Restart career'); b.classList.remove('armed'); }, 3000); return; }
+        careerArmed = false; b.textContent = SR.t('Restart career'); b.classList.remove('armed');
         data().career = null; careerPick = 0; save(); openTeams('career');
       });
       on('btn-league', openLeague);
@@ -1130,15 +1148,15 @@
       var leagueArmed = false;
       on('btn-league-quit', function () {
         var b = $('btn-league-quit');
-        if (!leagueArmed) { leagueArmed = true; b.textContent = SR.t('Click again to abandon'); setTimeout(function () { leagueArmed = false; b.textContent = SR.t('Abandon league'); }, 3000); return; }
-        leagueArmed = false; b.textContent = SR.t('Abandon league');
+        if (!leagueArmed) { leagueArmed = true; b.textContent = SR.t('Click again to abandon'); b.classList.add('armed'); setTimeout(function () { leagueArmed = false; b.textContent = SR.t('Abandon league'); b.classList.remove('armed'); }, 3000); return; }
+        leagueArmed = false; b.textContent = SR.t('Abandon league'); b.classList.remove('armed');
         data().league = null; save(); show('scr-menu');
       });
       var cupArmed = false;
       on('btn-cup-quit', function () {
         var b = $('btn-cup-quit');
-        if (!cupArmed) { cupArmed = true; b.textContent = SR.t('Click again to abandon'); setTimeout(function () { cupArmed = false; b.textContent = SR.t('Abandon tournament'); }, 3000); return; }
-        cupArmed = false; b.textContent = SR.t('Abandon tournament');
+        if (!cupArmed) { cupArmed = true; b.textContent = SR.t('Click again to abandon'); b.classList.add('armed'); setTimeout(function () { cupArmed = false; b.textContent = SR.t('Abandon tournament'); b.classList.remove('armed'); }, 3000); return; }
+        cupArmed = false; b.textContent = SR.t('Abandon tournament'); b.classList.remove('armed');
         data().tournament = null; save(); show('scr-menu');
       });
       on('btn-result-next', function () { if (resultNext) resultNext.go(); });

@@ -211,6 +211,7 @@
     var q = query();
     if (q.get('speed')) SR.speed = Number(q.get('speed')) || 1;
     part('demo', function () { if (q.get('demo') !== null && SR.demo) SR.demo.start('menu', q.get('demo')); });
+    part('custom', function () { if (SR.custom) SR.custom.init(); });
     part('daily', function () { if (SR.daily) SR.daily.init(q); });
     part('challenge', function () { if (SR.challenge) SR.challenge.init(); });
     part('android', function () { if (SR.app) SR.app.init(); });
