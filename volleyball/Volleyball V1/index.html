@@ -351,8 +351,10 @@
         <div id="shop-balls" class="shop-grid"></div>
         <h3>Courts</h3>
         <div id="shop-courts" class="shop-grid"></div>
+        <h3>Custom team</h3>
+        <div id="shop-custom"></div>
         <h3>Jerseys</h3>
-        <p class="muted small">Your team wears it in offline matches. New jerseys come from the daily rewards.</p>
+        <p class="muted small">Your team wears it in offline matches. New jerseys come from the daily rewards. A custom team always wears its own colours.</p>
         <div id="shop-kits" class="shop-grid"></div>
         <button class="btn ghost" data-back>Back</button>
       </div>
@@ -508,6 +510,31 @@
       </div>
     </section>
 
+    <section id="scr-custom" class="screen hidden">
+      <div class="panel custom" aria-labelledby="ct-title">
+        <h2><button id="btn-custom-back" class="top-back" type="button" aria-label="Back"><span aria-hidden="true">‹</span> Back</button><span id="ct-title">Custom team</span></h2>
+        <p id="ct-new" class="ct-new hidden">Unlocked! Name your club, pick its colours and share out the skill points.</p>
+        <div class="ct-wrap">
+          <div id="ct-preview" class="ct-preview"></div>
+          <div class="ct-form">
+            <div class="ct-names">
+              <label class="ct-field"><span class="rule-name">Team name</span><input id="ct-name" type="text" maxlength="18" autocomplete="off" spellcheck="false"></label>
+              <label class="ct-field ct-short"><span class="rule-name">Short name</span><input id="ct-short" type="text" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+            </div>
+            <div class="ct-field"><span class="rule-name">Jersey colour</span><div id="ct-colors" class="ct-swatches" role="radiogroup" aria-label="Jersey colour"></div></div>
+            <div class="ct-field"><span class="rule-name">Trim colour</span><div id="ct-trims" class="ct-swatches" role="radiogroup" aria-label="Trim colour"></div></div>
+            <p id="ct-warn" class="ct-warn hidden">The trim is close to the jersey colour, so the pattern and numbers will be hard to see.</p>
+            <div class="ct-field"><span class="rule-name">Pattern</span><div id="ct-pattern" class="seg" role="radiogroup" aria-label="Pattern"></div></div>
+            <div class="ct-field"><span class="rule-name">Skill points <b id="ct-left" class="ct-left"></b></span><p class="ct-hint muted">Take points from one skill to add them to another. Each skill goes from 60 to 90.</p><div id="ct-stats" class="ct-stats"></div></div>
+          </div>
+        </div>
+        <div class="row ct-actions">
+          <button id="btn-custom-cancel" class="btn ghost" type="button">Cancel</button>
+          <button id="btn-custom-save" class="btn primary" type="button">Save team</button>
+        </div>
+      </div>
+    </section>
+
     <section id="scr-pause" class="screen hidden">
       <div class="panel center">
         <h2>Paused</h2>
@@ -517,6 +544,19 @@
         </div>
       </div>
     </section>
+
+    <!-- Yes / No before every star purchase (js/custom.js). -->
+    <div id="confirm" class="confirm hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div class="confirm-box">
+        <div id="confirm-art" class="confirm-art"></div>
+        <h3 id="confirm-title"></h3>
+        <p id="confirm-text"></p>
+        <div class="confirm-btns">
+          <button id="confirm-no" class="btn ghost" type="button">No</button>
+          <button id="confirm-yes" class="btn primary" type="button">Yes</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Home page below the game: shown only while the main menu is open (js/landing.js). -->
@@ -729,6 +769,7 @@
   <script src="js/render.js"></script>
   <script src="js/input.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/custom.js"></script>
   <script src="js/daily.js"></script>
   <script src="js/challenge.js"></script>
   <script src="js/vendor/peerjs.min.js"></script>
