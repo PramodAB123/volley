@@ -113,7 +113,9 @@
   // screen opens or closes, so it only reports real changes.
   cg.syncGameplay = function () {
     var g = SR.game;
-    var on = !!(g && g.cfg.human !== -1 && !g.cfg.demo && !g.paused && !cg.busy && SR.ui && SR.ui.current() === null);
+    // The demo counts as play only in Try it mode, where the player makes the calls.
+    var demoPlay = !g || !g.cfg.demo || !!(SR.demo && SR.demo.active && SR.demo.tryMode);
+    var on = !!(g && g.cfg.human !== -1 && demoPlay && !g.paused && !cg.busy && SR.ui && SR.ui.current() === null);
     if (on === playing) return;
     playing = on;
     safe(function (s) { return on ? s.game.gameplayStart() : s.game.gameplayStop(); });

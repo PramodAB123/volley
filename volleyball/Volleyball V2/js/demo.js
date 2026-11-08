@@ -11,7 +11,7 @@
   var D = SR.demo = { active: false };
   var game = null, rally = null, from = 'help';
   var ch = 0, bi = 0, started = false, bt = 0, waitT = 0, retries = 0, playing = true;
-  var mode = 'try', calls = [], nudged = 0;
+  var mode = 'try', calls = [], nudged = 0, training = false;
   var ptr = { x: 0, y: 0, a: 0, tapAt: -9, seen: false }, spec = null;
 
   // ---- helpers for chapter scripts ----------------------------------------
@@ -33,6 +33,10 @@
   function called(kind, arg) { return calls.some(function (c) { return c[0] === kind && (arg === undefined || c[1] === arg); }); }
   function powerReady(lo, hi) { return function (r) { return r.ui.power >= lo && r.ui.power <= hi; }; }
 
+  // Point at one of your players (by index: 0 S, 1 OH, 2 MB, 3 OP, 4 OH, 5 MB), or the ball.
+  function who(i) { return function (r) { var p = r.players[0][i]; return p ? { w: [p.x, p.y] } : null; }; }
+  function ballSpot(r) { return { w: [r.ball.x, r.ball.y] }; }
+
   // The CPU's serve in the scenes where you receive: an easy ball to your passer.
   var EASY_SERVE = [3.2, 4.4, 0.45];
   // Your serve straight at their passer, so they can set up an attack.
@@ -53,8 +57,26 @@
       beats: [
         { say: 'This is your team, on the near side of the net.', aim: { w: [4.6, 4.5] }, dur: 3.2 },
         { say: 'This is the other team, across the net.', aim: { w: [13.4, 4.5] }, dur: 3.2 },
-        { say: 'Next: each call, played out in a real rally.', dur: 2.4, end: true }
-      ]
+        { say: 'Each rally you make up to four calls: the serve, who gets the set, where the spike lands, and the block.', dur: 4.2 },
+        { say: 'In Try it mode the game waits for your call. In Watch mode a coach shows you each one.', dur: 3.6 },
+        { say: 'Next: meet your players, then each call in a real rally.', dur: 2.6, end: true }
+      ],
+      tips: ['You never steer a player: you make the calls and they play.', 'Your team always plays on the near side of the net.', 'Use Back, Next or the numbered chips to jump between steps, and ↻ to replay one.']
+    },
+    {
+      name: 'Players', title: 'Your six players',
+      body: 'Six players are on court. The letters over their heads show each job. Three stand at the net (the front row) and three behind them (the back row).',
+      stage: 'idle',
+      beats: [
+        { say: 'S is your setter. Every pass goes to the setter, who sets the ball up for a hitter.', aim: who(0), dur: 3.6 },
+        { say: 'OH are your outside hitters: all-round players who attack from the left side.', aim: who(1), dur: 3.4 },
+        { say: 'MB are your middle blockers: quick attacks in the middle and the heart of your block.', aim: who(2), dur: 3.4 },
+        { say: 'OP is your opposite: a big hitter on the right side.', aim: who(3), dur: 3.0 },
+        { say: 'The three players at the net are the front row: they block and spike.', aim: { w: [7.6, 4.5] }, dur: 3.4 },
+        { say: 'The back row passes the serve and digs spikes. All of this happens on its own.', aim: { w: [2.8, 4.5] }, dur: 3.6 },
+        { say: 'Win the serve back and your team rotates one spot, so everyone takes a turn at the net.', dur: 3.6, end: true }
+      ],
+      tips: ['Your setter never spikes: pick a hitter instead.']
     },
     {
       name: 'Serve', title: 'Serve: aim and power',
@@ -68,8 +90,11 @@
           youSay: 'Your turn: move over their court to aim (the red ring), then click, tap or press Space while the power bar is about two thirds full.' },
         { say: 'The power bar on the left swings up and down. Serve when it is about two thirds full.', aim: aimAt, dur: 2.2,
           ready: powerReady(0.56, 0.7), act: function (r) { r.humanServe(); }, youSkip: true },
-        { wait: dead, say: 'Ace! The serve dropped in before their passers could reach it.', dur: 2.8, end: true }
-      ]
+        { wait: dead, say: 'Ace! The serve dropped in before their passers could reach it.', dur: 2.8 },
+        { say: 'Too much power and the serve can fly long or hit the net. Too little is easy to pass.', dur: 3.6 },
+        { say: 'Good targets: the gap between two passers, or deep near the end line.', aim: { w: [15.6, 2.6] }, dur: 3.4, end: true }
+      ],
+      tips: ['About two thirds power is the safe sweet spot.', 'Aiming right on a line can go out: leave a little room.', 'The serve rotates: after you win a rally on their serve, you serve next.']
     },
     {
       name: 'Set', title: 'Set: pick your hitter',
@@ -77,12 +102,14 @@
       keys: { pc: 'Click a player or press 1 to 3, then click a spot', touch: 'Tap a numbered player, then a spot' },
       server: 1, script: { cpuServe: EASY_SERVE, noDig: 1 },
       beats: [
-        { wait: inPlay, slow: 0.6, say: 'They serve. Your players pass on their own, up to your setter.', dur: 1.4 },
-        { wait: prompt('hitter'), slow: 0.05, say: 'Numbers pop up over your hitters. Pick number 1, your left-side hitter.', aim: { head: 0 }, dur: 3, act: function (r) { r.pickHitterIndex(0); },
+        { wait: inPlay, slow: 0.4, say: 'They serve. Passing is automatic: the player nearest the ball bumps it up to your setter.', aim: ballSpot, dur: 2.1 },
+        { wait: prompt('hitter'), slow: 0.05, say: 'Good pass! Numbers pop up over your hitters. Pick number 1, your left-side hitter.', aim: { head: 0 }, dur: 3, act: function (r) { r.pickHitterIndex(0); },
           you: function () { return called('hitter'); }, youSay: 'Your turn: numbers pop up over your hitters. Tap any of them (or press 1, 2 or 3) to choose who gets the set.' },
         tapSpot(13.4, 4.5, 'The set is up. Tap where the spike should land: open floor, away from their defenders and off the lines.', 'Your turn: the set is up. Tap where the spike should land on their court: open floor, away from their defenders.'),
-        { wait: dead, say: 'Kill! A Power spike into open court.', dur: 2.4, end: true }
-      ]
+        { wait: dead, say: 'Kill! A Power spike into open court.', dur: 2.4 },
+        { say: 'A bad pass gives you fewer hitters to choose from, so the numbers you see can change.', dur: 3.4, end: true }
+      ],
+      tips: ['Pick the hitter facing the fewest blockers.', 'Mix it up: always setting the same hitter makes them easy to block.', 'If you don\'t pick in time, your setter chooses for you.']
     },
     {
       name: 'Spike', title: 'Spike: one Power hit',
@@ -94,8 +121,10 @@
           you: function () { return called('hitter'); }, youSay: 'Your turn: set your right-side hitter (3). Tap the numbered player, or press the number.' },
         tapSpot(16.2, 7.6, 'Aim for the open deep corner, away from their blockers.', 'Your turn: tap the open deep corner of their court, away from their blockers.'),
         { slow: 0.25, say: 'The red ring marks the spot. Your hitter swings with full power.', dur: 1.2 },
-        { wait: dead, say: 'Power spike into the corner. Kill!', dur: 2.4, end: true }
-      ]
+        { wait: dead, say: 'Power spike into the corner. Kill!', dur: 2.4 },
+        { say: 'Deep corners and the gaps between defenders score most. Straight at a defender gets dug.', dur: 3.6, end: true }
+      ],
+      tips: ['Aim before the hitter jumps: the spot must be picked while the set is in the air.', 'No spot means a whiff: the point goes to them.', 'You can change the spot until the hitter swings.']
     },
     {
       name: 'Block', title: 'Block: commit to a side',
@@ -108,8 +137,10 @@
           you: function () { return called('block', 'left'); }, youSay: 'Your turn: their hitters glow orange. You expect the set to go to the hitter on your left, so commit Left (tap Left or press 1).',
           youWrong: 'In this rally the set goes to the hitter on your left. Commit Left (tap Left or press 1).' },
         { slow: 0.3, say: 'All three blockers slide over before the set.', dur: 1.6 },
-        { wait: dead, say: 'Stuff block! You read it right.', dur: 2.6, end: true }
-      ]
+        { wait: dead, say: 'Stuff block! You read it right.', dur: 2.6 },
+        { say: 'Guess wrong and the hitter has an open net. When in doubt, use Read (next step).', dur: 3.4, end: true }
+      ],
+      tips: ['Watch which hitters glow orange: only they can get the set.', 'Commit early, before their setter touches the ball.', 'Left, Middle and Right are as you see them from your side.']
     },
     {
       name: 'Read', title: 'Read and dig',
@@ -128,12 +159,25 @@
           you: function (r) { return called('target') || !!r.ui.attackTarget; },
           youSay: 'Your turn: the setter chose the hitter, but you aim the spike. Tap open floor on their court.' },
         { wait: dead, say: 'Point! Dug, set and put away.', dur: 2.8, end: true }
-      ]
+      ],
+      tips: ['Read is the safe call: it never leaves the net empty.', 'A dug ball becomes your attack: pick a hitter and aim again.']
+    },
+    {
+      name: 'Practice', title: 'Practice rally',
+      body: 'Now a real rally with nothing scripted: you make every call until the point is over. Hints show up for each call.',
+      keys: { pc: 'Mouse to aim, Space to serve, 1 to 3 for hitters, 1 to 4 for blocks', touch: 'Tap to serve, tap hitters, tap spots, tap block buttons' },
+      server: 0, practice: true,
+      beats: [
+        { wait: dead, coach: true, maxWait: 90, say: 'Free rally: play it out.', dur: 0 },
+        { say: function () { return SR.t(won ? 'You won the point! That was a full rally.' : 'They won this one. Tap ↻ to play it again, or move on.'); }, dur: 3.2, end: true }
+      ],
+      tips: ['Every rally in a match plays like this one.', 'Replay it as often as you like with ↻.']
     },
     {
       name: 'Scoring', title: 'Scoring and rules',
       rules: ['Rally scoring: every rally wins a point, whoever served.', 'Win each set by two. Before a match, choose 5, 11 or 15 points and 1, 3 or 5 sets.',
         'Win a rally on their serve and you take the serve; your team rotates one spot.', 'Press P or Esc to pause. Wins earn stars to spend in the Shop.',
+        'Besides Quick match, try Career, League, Tournament and the Daily challenge from the home screen.',
         { online: 'Play online: create a room and send the code to a friend.' }],
       stage: 'idle', last: true,
       beats: [
@@ -143,11 +187,14 @@
     }
   ];
 
+  D.steps = CH;
+
   // ---- staging --------------------------------------------------------------
 
   function clearFx() {
     var fx = SR.fx;
     fx.parts.length = 0; fx.rings.length = 0; fx.marks.length = 0;
+    if (fx.clearElem) fx.clearElem();
     fx.shake = fx.hitStop = fx.punch = fx.cheer = fx.flash = 0;
   }
 
@@ -174,8 +221,25 @@
   function go(i) {
     ch = Math.max(0, Math.min(CH.length - 1, i));
     bi = 0; started = false; bt = 0; waitT = 0; spec = null;
+    lastPrompt = null; promptT = 0;
     stage(CH[ch]);
+    startScore = game.match.score[0];
     panel();
+    if (CH[ch].last) trained();
+  }
+
+  // ---- first-visit training -------------------------------------------------
+
+  // New players (no training done, no match played) start in the training.
+  D.needsTraining = function () {
+    var d = SR.save.data;
+    return !d.trained && !(d.stats && d.stats.matches > 0);
+  };
+  // Reaching the last chapter, or leaving early, counts as done: it shows once.
+  function trained() {
+    if (!training || SR.save.data.trained) return;
+    SR.save.data.trained = true;
+    SR.save.write();
   }
 
   // ---- director ---------------------------------------------------------------
@@ -187,6 +251,7 @@
     if (!b) { rally.loopScale = 1; return; }
     if (!started) {
       if (mode === 'try' && b.youSkip) { bi++; return; }
+      if (b.coach && !b.wait(rally)) { coach(dt); waitT += dt; if (waitT > (b.maxWait || 16)) go(ch); return; }
       if (b.wait && !b.wait(rally)) {
         rally.loopScale = b.fast || 1;
         waitT += dt;
@@ -196,6 +261,7 @@
         }
         return;
       }
+      if (b.coach) won = game.match.score[0] > startScore;
       started = true; bt = 0; waitT = 0; calls = []; nudged = 0;
       if (b.enter) b.enter(rally);
       rally.loopScale = b.slow || 1;
@@ -228,6 +294,46 @@
   };
 
   function yours(b) { return mode === 'try' && !!b.you; }
+
+  // ---- practice rally ---------------------------------------------------------
+
+  // A free rally: a hint for each call as it comes up. In Try it mode the
+  // game slows while a call waits for you; in Watch mode the coach makes it.
+  var HINTS = {
+    serve: 'Serve: aim at their court, then serve when the power bar is about two thirds full.',
+    hitter: 'Pick a hitter: tap a numbered player, or press 1, 2 or 3.',
+    target: 'Aim the spike: tap open floor on their court.',
+    block: 'Call the block: Left, Middle or Right, or Read if you are not sure.'
+  };
+  var lastPrompt = null, promptT = 0, won = false, startScore = 0;
+  function coach(dt) {
+    var p = rally.ui.prompt;
+    if (p !== lastPrompt) {
+      lastPrompt = p; promptT = 0;
+      if (p && HINTS[p]) say(HINTS[p]);
+      spec = null;
+    }
+    promptT += dt;
+    if (mode === 'try') {
+      rally.loopScale = p && p !== 'serve' ? 0.35 : 1;
+      return;
+    }
+    rally.loopScale = p && p !== 'serve' ? 0.6 : 1;
+    if (!p || promptT < 0.9) return;
+    if (p === 'serve') {
+      if (promptT < 1) return;
+      if (!spec) { var s = rally.openSpot(0); rally.setAim(s); spec = { w: [s.x, s.y] }; }
+      if (rally.ui.power >= 0.56 && rally.ui.power <= 0.7 && promptT > 2) { rally.humanServe(); ptr.tapAt = performance.now() / 1000; }
+    } else if (p === 'hitter') {
+      var n = rally.ui.hitters.length;
+      if (n) { var i = Math.floor(Math.random() * n); spec = { head: i }; rally.pickHitterIndex(i); ptr.tapAt = performance.now() / 1000; }
+    } else if (p === 'target') {
+      var t = rally.openSpot(0); spec = { w: [t.x, t.y] };
+      rally.pickTarget(t, false); ptr.tapAt = performance.now() / 1000;
+    } else if (p === 'block') {
+      spec = { btn: 'read' }; rally.pickBlock('read'); ptr.tapAt = performance.now() / 1000;
+    }
+  }
 
   function next() {
     if (ch < CH.length - 1) go(ch + 1);
@@ -315,6 +421,7 @@
     $('demo-body').innerHTML = c.rules ? '<ul>' + c.rules.map(function (x) {
       return typeof x === 'string' ? '<li>' + esc(SR.t(x)) + '</li>' : online ? '<li>' + esc(SR.t(x.online)) + '</li>' : '';
     }).join('') + '</ul>' : '<p>' + esc(SR.t(c.body)) + '</p>';
+    if (c.tips) $('demo-body').innerHTML += '<div class="demo-tips"><b>' + esc(SR.t('Tips')) + '</b><ul>' + c.tips.map(function (x) { return '<li>' + esc(SR.t(x)) + '</li>'; }).join('') + '</ul></div>';
     var k = c.keys;
     $('demo-keys').innerHTML = k ? '<span><b>' + esc(SR.t('PC')) + '</b>' + esc(SR.t(k.pc)) + '</span><span><b>' + esc(SR.t('Phone')) + '</b>' + esc(SR.t(k.touch)) + '</span>' : '';
     $('demo-keys').classList.toggle('hidden', !k);
@@ -369,8 +476,11 @@
     });
   }
 
-  D.start = function (origin, m) {
+  // first: the first-visit training (its end leads into the first match).
+  D.start = function (origin, m, first) {
     from = origin || 'help';
+    training = !!first;
+    $('demo').classList.toggle('training', training);
     setMode(m);
     SR.ui.show(null);
     $('hud').classList.add('hidden');
@@ -393,6 +503,8 @@
 
   // quiet: the match was replaced elsewhere (e.g. an online invite), so just tidy up.
   D.stop = function (quiet) {
+    trained();
+    training = false;
     D.active = false;
     $('demo').classList.add('hidden');
     if (rally) rally.loopScale = 1;
@@ -425,7 +537,12 @@
     document.querySelectorAll('#demo-mode button').forEach(function (b) {
       b.addEventListener('click', function () { SR.audio.play('click'); setMode(b.getAttribute('data-mode')); retries = 0; go(ch); setPlaying(true); });
     });
-    on('demo-quick', function () { D.stop(true); SR.ui.show('scr-menu'); $('btn-quick').click(); });
+    on('demo-quick', function () {
+      var first = training;
+      D.stop(true); SR.ui.show('scr-menu');
+      // After the training: straight into the first match (one set, random teams).
+      if (first && $('btn-quick-random')) $('btn-quick-random').click(); else $('btn-quick').click();
+    });
     on('demo-help', function () { D.stop(true); SR.ui.show('scr-help'); });
     // Tapping the court pauses and resumes.
     $('game').addEventListener('pointerup', function () { if (D.active && mode === 'watch') setPlaying(!playing); });

@@ -143,6 +143,7 @@
   function clearFx() {
     var fx = SR.fx;
     fx.parts.length = 0; fx.rings.length = 0; fx.marks.length = 0;
+    if (fx.clearElem) fx.clearElem();
     fx.shake = fx.hitStop = fx.punch = fx.cheer = fx.flash = 0;
   }
 

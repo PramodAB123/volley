@@ -34,6 +34,7 @@
       var t = m.teams[winner];
       rally.say(t.short + ' WIN', m.history.map(function (s) { return s[0] + '-' + s[1]; }).join('  '), t.color, 3);
       SR.audio.play('cheer');
+      if (SR.music) SR.music.jingle(this.cfg.human === 0 && winner !== 0 ? 'lose' : 'win');
       SR.fx.emit('confetti', { color: t.color });
       rally.wait(2.6, function () { if (self.cfg.onEnd) self.cfg.onEnd(self); });
     } else if (res.setOver) {
@@ -50,7 +51,7 @@
     }
   };
 
-  var canvas, ctx, last = 0, acc = 0, lowRes = false, menuBg = false;
+  var canvas, ctx, last = 0, acc = 0, lowRes = false, lastRes = 1, menuBg = false;
 
   // The match steps at a fixed 120 Hz but screens refresh at 60, 90, 144 Hz
   // and slow motion runs fewer steps per frame. Drawing the raw step leaves
@@ -112,7 +113,13 @@
     // Very sharp phone screens cost a lot of pixels for little gain: cap the
     // backing resolution, and lower it further if the device is struggling.
     var dpr = Math.min(window.devicePixelRatio || 1, SR.lowFx ? 1.25 : 2);
-    lowRes = !!SR.lowFx;
+    // Never push more than ~2.6 million pixels a frame (big or sharp PC screens),
+    // and scale down further while the device can't hold a smooth frame rate.
+    var px = SR.render.W * s * SR.render.H * s, cap = SR.lowFx ? 1.3e6 : 2.6e6;
+    if (px * dpr * dpr > cap) dpr = Math.sqrt(cap / px);
+    // (Never below one canvas pixel per screen pixel, so it stays sharp.)
+    if (SR.resScale && SR.resScale < 1) dpr = Math.max(Math.min(dpr, 1), dpr * SR.resScale);
+    lowRes = !!SR.lowFx; lastRes = SR.resScale || 1;
     canvas.style.width = Math.floor(SR.render.W * s) + 'px';
     canvas.style.height = Math.floor(SR.render.H * s) + 'px';
     canvas.width = Math.max(1, Math.floor(SR.render.W * s * dpr));
@@ -145,9 +152,10 @@
       var n = 0;
       while (acc >= STEP && n < 4000) { saveStep(g.rally); g.rally.update(STEP); acc -= STEP; n++; }
     }
-    if (SR.lowFx && !lowRes) resize();
+    if ((SR.lowFx && !lowRes) || (SR.resScale || 1) !== lastRes) resize();
     // No match (menus): show the cover art instead of the court.
     if (!g !== menuBg) { menuBg = !g; document.getElementById('app').classList.toggle('menu-bg', menuBg); }
+    if (SR.music) { try { SR.music.sync(g); } catch (e) { SR.oops && SR.oops('music', e); } }
     if (document.hidden || !g || canvas.width < 2 || canvas.height < 2) return;
     var undo = g && !g.paused ? blend(g.rally, acc / STEP) : null;
     try { SR.render.draw(ctx, g); } finally { if (undo) undo(); }

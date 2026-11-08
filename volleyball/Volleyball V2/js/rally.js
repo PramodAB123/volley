@@ -537,7 +537,8 @@
     this.touches[def] = 0;
     this.formation(team, 'defense');
     SR.audio.play('spike');
-    this.fx('spike', { pos: cp, shot: shot });
+    // How hard the spike is (0-1): a strong hitter on a good set lights it up.
+    this.fx('spike', { pos: cp, shot: shot, power: Math.round(clamp((vs - 18) / 6, 0, 1) * 100) / 100 });
     if (netErr) return;
 
     var f = this.flight, tn = P.crossX(f.p0, f.v, C.NET_X);

@@ -8,7 +8,7 @@
       stars: 0,
       owned: { balls: ['classic'], courts: ['maple'], kits: ['team'] },
       equipped: { ball: 'classic', court: 'maple', kit: 'team' },
-      settings: { format: 'standard', difficulty: 'normal', sound: true, team: 'hawks' },
+      settings: { format: 'standard', difficulty: 'normal', sound: true, music: true, team: 'hawks' },
       stats: { matches: 0, wins: 0, points: 0, aces: 0, kills: 0, blocks: 0 },
       // The League screen's trophy cabinet; seasons = last finishes, newest first.
       trophies: { league: 0, unbeaten: 0, silver: 0, bronze: 0, cup: 0, seasons: [] },
@@ -104,6 +104,7 @@
     if (!SR.DIFFICULTY[s.difficulty]) s.difficulty = def.settings.difficulty;
     if (typeof s.format !== 'string' || (!SR.FORMATS[s.format] && SR.formatOf(s.format) === SR.FORMATS.standard)) s.format = def.settings.format;
     if (typeof s.sound !== 'boolean') s.sound = s.sound !== false && s.sound !== 'false';
+    if (typeof s.music !== 'boolean') s.music = s.music !== false && s.music !== 'false';
     if ('lang' in def.settings && typeof s.lang !== 'string') s.lang = def.settings.lang;
     Object.keys(def.stats).forEach(function (k) { d.stats[k] = num(d.stats[k]); });
     Object.keys(def.trophies).forEach(function (k) { if (k !== 'seasons') d.trophies[k] = num(d.trophies[k]); });

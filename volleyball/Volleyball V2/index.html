@@ -37,8 +37,8 @@
 
     <aside id="demo" class="demo hidden" aria-label="How to play demo">
       <div class="demo-head">
-        <span class="demo-tag">Demo</span>
-        <span id="demo-count" class="demo-count">1 / 7</span>
+        <span class="demo-tag"><span class="demo-std">Demo</span><span class="demo-first">Training</span></span>
+        <span id="demo-count" class="demo-count">1 / 9</span>
         <div id="demo-mode" class="demo-mode" role="radiogroup" aria-label="Demo mode">
           <button type="button" role="radio" data-mode="try" aria-checked="true" class="on">Try it</button>
           <button type="button" role="radio" data-mode="watch" aria-checked="false">Watch</button>
@@ -54,7 +54,7 @@
         <p id="demo-keys" class="demo-keys"></p>
       </div>
       <div id="demo-end" class="demo-end hidden">
-        <button id="demo-quick" class="btn primary" type="button">Play a quick match</button>
+        <button id="demo-quick" class="btn primary" type="button"><span class="demo-std">Play a quick match</span><span class="demo-first">Play your first match</span></button>
         <button id="demo-again" class="btn" type="button">Watch again</button>
         <button id="demo-help" class="btn ghost" type="button">How to play</button>
       </div>
@@ -327,6 +327,7 @@
         <label class="field">Difficulty <select id="set-diff"></select></label>
         <label class="field">Language <select id="set-lang"></select></label>
         <label class="field check"><input id="set-sound" type="checkbox"> Sound effects</label>
+        <label class="field check"><input id="set-music" type="checkbox"> Music</label>
         <p id="sound-note" class="muted small hidden">Sound is muted by your CrazyGames settings.</p>
         <button class="btn ghost" data-back>Back</button>
       </div>
@@ -403,6 +404,7 @@
   <script src="js/i18n.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/music.js"></script>
   <script src="js/physics.js"></script>
   <script src="js/match.js"></script>
   <script src="js/rally.js"></script>

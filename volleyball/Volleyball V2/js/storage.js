@@ -9,7 +9,7 @@
       stars: 0,
       owned: { balls: ['classic'], courts: ['maple'], kits: ['team'] },
       equipped: { ball: 'classic', court: 'maple', kit: 'team' },
-      settings: { format: 'standard', difficulty: 'normal', sound: true, team: 'hawks', lang: 'auto' },
+      settings: { format: 'standard', difficulty: 'normal', sound: true, music: true, team: 'hawks', lang: 'auto' },
       stats: { matches: 0, wins: 0, points: 0, aces: 0, kills: 0, blocks: 0 },
       // The League screen's trophy cabinet; seasons = last finishes, newest first.
       trophies: { league: 0, unbeaten: 0, silver: 0, bronze: 0, cup: 0, seasons: [] },
@@ -18,7 +18,9 @@
       career: null,
       daily: { streak: 0, last: null, week: 0, claimed: [] },
       // Daily challenge: day = day number of today's tries, last = last day won.
-      challenge: { day: 0, done: false, tries: 0, streak: 0, last: 0, total: 0, best: 0 }
+      challenge: { day: 0, done: false, tries: 0, streak: 0, last: 0, total: 0, best: 0 },
+      // Finished (or skipped) the first-visit training (js/demo.js).
+      trained: false
     };
   }
 
@@ -100,6 +102,7 @@
     if (!SR.DIFFICULTY[s.difficulty]) s.difficulty = def.settings.difficulty;
     if (typeof s.format !== 'string' || (!SR.FORMATS[s.format] && SR.formatOf(s.format) === SR.FORMATS.standard)) s.format = def.settings.format;
     if (typeof s.sound !== 'boolean') s.sound = s.sound !== false && s.sound !== 'false';
+    if (typeof s.music !== 'boolean') s.music = s.music !== false && s.music !== 'false';
     if ('lang' in def.settings && typeof s.lang !== 'string') s.lang = def.settings.lang;
     Object.keys(def.stats).forEach(function (k) { d.stats[k] = num(d.stats[k]); });
     Object.keys(def.trophies).forEach(function (k) { if (k !== 'seasons') d.trophies[k] = num(d.trophies[k]); });
@@ -109,6 +112,8 @@
     if (d.tournament != null && !okCup(d.tournament)) d.tournament = null;
     if (d.career != null && !(obj(d.career) && isTeam(d.career.team))) d.career = null;
     if (d.career) d.career.unlocked = Math.min(num(d.career.unlocked), SR.CAREER ? SR.CAREER.length : 1e9);
+    // Anyone who has already played a match doesn't need the training.
+    d.trained = d.trained === true || d.stats.matches > 0;
     var ch = d.challenge;
     ['day', 'tries', 'streak', 'last', 'total', 'best'].forEach(function (k) { ch[k] = num(ch[k]); });
     ch.done = ch.done === true;

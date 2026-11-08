@@ -1023,8 +1023,10 @@
       Object.keys(SR.LANGS).map(function (k) { return '<option value="' + k + '">' + SR.LANGS[k] + '</option>'; }).join('');
     $('set-lang').value = SR.LANGS[s.lang] ? s.lang : 'auto';
     $('set-sound').checked = !!s.sound && !SR.cg.settings.muteAudio;
-    // CrazyGames' mute setting overrides the in-game sound toggle.
+    $('set-music').checked = s.music !== false && !SR.cg.settings.muteAudio;
+    // CrazyGames' mute setting overrides the in-game sound and music toggles.
     $('set-sound').disabled = !!SR.cg.settings.muteAudio;
+    $('set-music').disabled = !!SR.cg.settings.muteAudio;
     $('sound-note').classList.toggle('hidden', !SR.cg.settings.muteAudio);
   }
 
@@ -1169,6 +1171,7 @@
       $('set-diff').addEventListener('change', function (e) { data().settings.difficulty = e.target.value; save(); });
       $('set-lang').addEventListener('change', function (e) { SR.i18n.set(e.target.value); SR.ui.refresh(); fillSettings(); });
       $('set-sound').addEventListener('change', function (e) { data().settings.sound = e.target.checked; save(); });
+      $('set-music').addEventListener('change', function (e) { data().settings.music = e.target.checked; save(); if (SR.music) SR.music.refresh(); });
       stopMatch();
       show('scr-menu');
     }

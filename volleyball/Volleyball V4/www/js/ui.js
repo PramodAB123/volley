@@ -1227,6 +1227,7 @@
     $('set-format').value = s.format;
     $('set-diff').value = s.difficulty;
     $('set-sound').checked = !!s.sound;
+    $('set-music').checked = s.music !== false;
   }
 
   // ---- pause --------------------------------------------------------------
@@ -1359,6 +1360,7 @@
       $('set-format').addEventListener('change', function (e) { data().settings.format = e.target.value; save(); });
       $('set-diff').addEventListener('change', function (e) { data().settings.difficulty = e.target.value; save(); });
       $('set-sound').addEventListener('change', function (e) { data().settings.sound = e.target.checked; save(); });
+      $('set-music').addEventListener('change', function (e) { data().settings.music = e.target.checked; save(); if (SR.music) SR.music.refresh(); });
       stopMatch();
       show('scr-menu');
     }

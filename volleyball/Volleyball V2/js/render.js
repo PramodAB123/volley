@@ -652,6 +652,96 @@
 
   // ---- ball and effects ----------------------------------------------------
 
+  // Soft round glow sprites, one small canvas per colour, drawn with 'lighter'
+  // blending for fire, sparks and auras (much cheaper than shadowBlur).
+  var glows = {};
+  function glowSprite(color) {
+    var g = glows[color];
+    if (g) return g;
+    g = document.createElement('canvas'); g.width = g.height = 64;
+    var c = g.getContext('2d'), n = parseInt(color.slice(1), 16), rgb = (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+    var gr = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(' + rgb + ',1)'); gr.addColorStop(0.3, 'rgba(' + rgb + ',0.65)'); gr.addColorStop(1, 'rgba(' + rgb + ',0)');
+    c.fillStyle = gr; c.fillRect(0, 0, 64, 64);
+    glows[color] = g;
+    return g;
+  }
+  function glow(ctx, color, x, y, rad) { ctx.drawImage(glowSprite(color), x - rad, y - rad, rad * 2, rad * 2); }
+
+  // The trail of a ball that carries an element (see fx.js): flames, crackling
+  // lightning, a frosty streak or twin air spirals.
+  function drawElemTrail(ctx, el, b) {
+    var n = trail.length, qb = proj(b.x, b.y, b.z), rad = Math.max(3, 0.21 * qb.s), t = performance.now() / 1000, i, k, q, pts = [];
+    for (i = 0; i < n; i++) { q = proj(trail[i].x, trail[i].y, trail[i].z); q.k = (i + 1) / n; pts.push(q); }
+    pts.push(qb);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.globalCompositeOperation = 'lighter';
+    if (el === 'fire') {
+      for (i = 0; i < pts.length; i++) {
+        q = pts[i]; k = i / (pts.length - 1);
+        var fl = 0.8 + Math.random() * 0.4, sz = rad * (0.7 + 1.9 * k) * fl;
+        ctx.globalAlpha = 0.12 + 0.3 * k; glow(ctx, '#e8380d', q.x, q.y, sz * 1.8);
+        ctx.globalAlpha = 0.1 + 0.32 * k; glow(ctx, '#ff9b3d', q.x, q.y - sz * 0.2, sz);
+      }
+      strokePts(ctx, pts, '#ffd23f', rad * 0.8, 0.55);
+      ctx.globalAlpha = 0.6; glow(ctx, '#ff7a1f', qb.x, qb.y, rad * 2.8);
+    } else if (el === 'thunder') {
+      ctx.globalAlpha = 0.9; glow(ctx, '#3f8cff', qb.x, qb.y, rad * 4.2); glow(ctx, '#cfefff', qb.x, qb.y, rad * 2);
+      var zz = [];
+      for (i = 0; i < pts.length; i++) {
+        q = pts[i]; var j = i === pts.length - 1 ? 0 : (Math.random() - 0.5) * rad * 1.6;
+        zz.push({ x: q.x + j, y: q.y + j * 0.7, k: q.k });
+      }
+      strokePts(ctx, zz, '#3f8cff', rad * 1.6, 0.35);
+      strokePts(ctx, zz, '#9fe3ff', rad * 0.55, 0.9);
+      strokePts(ctx, zz, '#ffffff', Math.max(1, rad * 0.22), 1);
+      // Little arcs jumping off the ball.
+      ctx.strokeStyle = '#cfefff'; ctx.lineWidth = 1.4; ctx.globalAlpha = 0.9;
+      for (var a = 0; a < (SR.lowFx ? 1 : 3); a++) {
+        var ang = Math.random() * 6.3, x = qb.x, y = qb.y;
+        ctx.beginPath(); ctx.moveTo(x + Math.cos(ang) * rad, y + Math.sin(ang) * rad);
+        for (var s2 = 1; s2 <= 3; s2++) ctx.lineTo(x + Math.cos(ang + (Math.random() - 0.5) * 0.8) * rad * (1 + s2 * 0.6), y + Math.sin(ang + (Math.random() - 0.5) * 0.8) * rad * (1 + s2 * 0.6));
+        ctx.stroke();
+      }
+    } else if (el === 'ice') {
+      strokePts(ctx, pts, '#5ab8f0', rad * 2.2, 0.3);
+      strokePts(ctx, pts, '#dff6ff', rad * 0.8, 0.75);
+      ctx.globalAlpha = 0.75; glow(ctx, '#9fe0ff', qb.x, qb.y, rad * 3);
+      // Frost glints along the streak.
+      for (i = 1; i < pts.length - 1; i += 3) {
+        q = pts[i]; var tw = 0.5 + 0.5 * Math.sin(t * 20 + i * 1.7), gs = rad * 0.7 * q.k * tw;
+        ctx.globalAlpha = 0.9 * q.k; ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.moveTo(q.x, q.y - gs * 2); ctx.lineTo(q.x + gs * 0.4, q.y); ctx.lineTo(q.x, q.y + gs * 2); ctx.lineTo(q.x - gs * 0.4, q.y); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(q.x - gs * 2, q.y); ctx.lineTo(q.x, q.y + gs * 0.4); ctx.lineTo(q.x + gs * 2, q.y); ctx.lineTo(q.x, q.y - gs * 0.4); ctx.closePath(); ctx.fill();
+      }
+    } else if (el === 'wind') {
+      strokePts(ctx, pts, '#b8f5dc', rad * 1.4, 0.18);
+      for (var st = 0; st < 2; st++) {
+        ctx.beginPath();
+        for (i = 0; i < pts.length; i++) {
+          q = pts[i]; var nb = pts[Math.min(pts.length - 1, i + 1)], pv = pts[Math.max(0, i - 1)];
+          var dx = nb.x - pv.x, dy = nb.y - pv.y, dl = Math.sqrt(dx * dx + dy * dy) || 1;
+          var off = Math.sin(t * 18 + i * 0.9 + st * Math.PI) * rad * (0.4 + 1.6 * (i / pts.length));
+          var x2 = q.x - dy / dl * off, y2 = q.y + dx / dl * off;
+          if (i) ctx.lineTo(x2, y2); else ctx.moveTo(x2, y2);
+        }
+        ctx.globalAlpha = 0.75; ctx.strokeStyle = st ? '#e8fff4' : '#ffffff'; ctx.lineWidth = Math.max(1.5, rad * 0.32); ctx.stroke();
+      }
+      ctx.globalAlpha = 0.5; glow(ctx, '#e8fff4', qb.x, qb.y, rad * 2.2);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+  }
+  // A polyline that thickens toward the ball.
+  function strokePts(ctx, pts, color, w, alpha) {
+    ctx.strokeStyle = color;
+    for (var i = 1; i < pts.length; i++) {
+      var k = i / (pts.length - 1);
+      ctx.globalAlpha = alpha * k; ctx.lineWidth = Math.max(1, w * (0.2 + 0.8 * k));
+      ctx.beginPath(); ctx.moveTo(pts[i - 1].x, pts[i - 1].y); ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke();
+    }
+  }
+
   // Tapered streak behind the ball; hard hits burn orange and glow.
   function drawTrail(ctx, style) {
     if (trail.length < 2) return;
@@ -671,30 +761,66 @@
   }
 
   var squashAt = -9, lastVel = null;
-  var frameAvg = 0.016, slowFor = 0;
+  var frameAvg = 0.016, slowFor = 0, dropFor = 0;
 
+  // The ball: panels that roll the way it travels, a stretch along the motion
+  // when it's fast, a squash against the hit, and a shadow that sharpens as it
+  // comes down.
+  var ballVX = 0, ballVY = 0, ballAng = 0, ballPrev = null;
+  function ballBand(ctx, R, t1, t2) {
+    var a = R * Math.sin(t1), c = R * Math.sin(t2);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, Math.max(0.01, Math.abs(a)), R, 0, -Math.PI / 2, Math.PI / 2, a < 0);
+    ctx.ellipse(0, 0, Math.max(0.01, Math.abs(c)), R, 0, Math.PI / 2, -Math.PI / 2, c >= 0);
+    ctx.closePath();
+  }
   function drawBall(ctx, b, style) {
     var hgt = b.z, nowS = performance.now() / 1000;
-    groundEllipse(ctx, b.x, b.y, 0.15 + Math.min(0.25, hgt * 0.03), 'rgba(0,0,0,' + Math.max(0.1, 0.42 - hgt * 0.05) + ')');
+    groundEllipse(ctx, b.x, b.y, 0.15 + Math.min(0.32, hgt * 0.035), 'rgba(0,0,0,' + Math.max(0.08, 0.36 - hgt * 0.045).toFixed(3) + ')');
+    if (hgt < 1.6) groundEllipse(ctx, b.x, b.y, 0.11 + hgt * 0.04, 'rgba(0,0,0,' + (0.3 * (1 - hgt / 1.6)).toFixed(3) + ')');
     var q = proj(b.x, b.y, b.z), rad = Math.max(3, 0.21 * q.s);
-    // A quick squash when the ball is struck, then it springs back round.
-    var sq = Math.max(0, 1 - (nowS - squashAt) / 0.12), sx = 1 + 0.28 * sq, sy = 1 - 0.22 * sq;
+    // Screen velocity, smoothed, for the stretch and the roll direction.
+    if (ballPrev && nowS > ballPrev.t && nowS - ballPrev.t < 0.1) {
+      var dq = nowS - ballPrev.t, kq = Math.min(1, dq * 25);
+      ballVX += ((q.x - ballPrev.x) / dq - ballVX) * kq; ballVY += ((q.y - ballPrev.y) / dq - ballVY) * kq;
+    }
+    ballPrev = { x: q.x, y: q.y, t: nowS };
+    var sp = Math.sqrt(ballVX * ballVX + ballVY * ballVY);
+    if (sp > 40) ballAng = Math.atan2(ballVY, ballVX);
+    var stretch = 1 + Math.min(0.28, Math.max(0, sp - 250) / 3500);
+    // A quick squash against the hit, then it springs back round (with a small overshoot).
+    var st = (nowS - squashAt) / 0.16, sq = st < 1 ? Math.sin(Math.PI * st) * (1 - st * 0.6) : 0;
+    var ax = stretch * (1 - 0.3 * sq), ay = (1 / Math.sqrt(stretch)) * (1 + 0.24 * sq);
     ctx.save();
-    ctx.translate(q.x, q.y); ctx.scale(sx, sy);
+    ctx.translate(q.x, q.y); ctx.rotate(ballAng); ctx.scale(ax, ay);
     ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2);
     ctx.fillStyle = style.main; ctx.fill();
     ctx.clip();
-    ctx.rotate(spin);
-    ctx.strokeStyle = style.stripe; ctx.lineWidth = rad * 0.42;
-    ctx.beginPath(); ctx.arc(-rad * 0.95, 0, rad * 1.1, -0.9, 0.9); ctx.stroke();
-    ctx.beginPath(); ctx.arc(rad * 0.95, 0, rad * 1.1, Math.PI - 0.9, Math.PI + 0.9); ctx.stroke();
+    // Curved panels: meridians of a sphere rolling toward +x slide across it.
+    var P3 = Math.PI / 3, ph = spin % P3, k, t1, t2;
+    ctx.fillStyle = style.stripe;
+    for (k = -2; k <= 2; k++) {
+      t1 = Math.max(-Math.PI / 2, ph + k * P3 - P3 * 0.25); t2 = Math.min(Math.PI / 2, ph + k * P3 + P3 * 0.25);
+      if (t2 > t1) { ballBand(ctx, rad, t1, t2); ctx.fill(); }
+    }
+    if (rad > 6) {
+      ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = Math.max(0.6, rad * 0.06);
+      for (k = -3; k <= 3; k++) {
+        t1 = ph + k * P3 / 2;
+        if (t1 <= -Math.PI / 2 || t1 >= Math.PI / 2) continue;
+        var ex = rad * Math.sin(t1);
+        ctx.beginPath(); ctx.ellipse(0, 0, Math.max(0.01, Math.abs(ex)), rad, 0, -Math.PI / 2, Math.PI / 2, ex < 0); ctx.stroke();
+      }
+    }
+    // Light from the upper left, in screen space.
+    ctx.rotate(-ballAng);
+    var hl = ctx.createRadialGradient(-rad * 0.4, -rad * 0.45, 0, 0, 0, rad * 1.05);
+    hl.addColorStop(0, 'rgba(255,255,255,0.6)'); hl.addColorStop(0.45, 'rgba(255,255,255,0)'); hl.addColorStop(1, 'rgba(0,0,0,0.32)');
+    ctx.fillStyle = hl; ctx.fillRect(-rad * 1.5, -rad * 1.5, rad * 3, rad * 3);
     ctx.restore();
-    ctx.save();
-    ctx.translate(q.x, q.y); ctx.scale(sx, sy);
-    var hl = ctx.createRadialGradient(-rad * 0.4, -rad * 0.45, 0, 0, 0, rad);
-    hl.addColorStop(0, 'rgba(255,255,255,0.55)'); hl.addColorStop(0.5, 'rgba(255,255,255,0)'); hl.addColorStop(1, 'rgba(0,0,0,0.28)');
-    ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = hl; ctx.fill();
-    ctx.restore();
+    ctx.lineWidth = Math.max(0.8, rad * 0.08); ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(ballAng); ctx.scale(ax, ay);
+    ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.restore(); ctx.stroke();
   }
 
   function drawFx(ctx, pass) {
@@ -702,6 +828,7 @@
     if (pass === 'ground') {
       fx.marks.forEach(function (mk) {
         var a = 1 - Math.max(0, (mk.life - mk.max + 0.8) / 0.8), grow = Math.min(1, mk.life / 0.08);
+        if (mk.cracks) { drawCracks(ctx, mk, a); return; }
         ctx.globalAlpha = 0.55 * a;
         groundEllipse(ctx, mk.x, mk.y, 0.2 * mk.size * grow, 'rgba(70,40,20,0.9)');
         groundEllipse(ctx, mk.x, mk.y, 0.3 * mk.size * grow, null, 'rgba(255,255,255,0.7)', 1.5);
@@ -717,20 +844,106 @@
         }
       });
       fx.rings.forEach(function (r) {
+        if (r.life < 0) return;
         var a = 1 - r.life / r.max;
         groundEllipse(ctx, r.x, r.y, r.r, null, r.color, 3 * a + 1);
         ctx.globalAlpha = a * 0.25; groundEllipse(ctx, r.x, r.y, r.r * 0.9, r.color); ctx.globalAlpha = 1;
       });
       return;
     }
+    var glowing = 0;
     fx.parts.forEach(function (p) {
+      if (p.k === 'glow' || p.k === 'spark') { glowing++; return; }
       var q = proj(p.x, p.y, p.z), a = 1 - p.life / p.max;
       ctx.globalAlpha = Math.max(0, a);
       ctx.fillStyle = p.color;
       var sz = Math.max(1.2, p.size * q.s);
       if (p.flutter !== undefined) { ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(p.life * 6 + p.flutter); ctx.fillRect(-sz, -sz * 0.5, sz * 2, sz); ctx.restore(); }
+      else if (p.k === 'shard') {
+        // A spinning ice/glass splinter.
+        var c = Math.cos(p.rot) * sz * 1.6, s = Math.sin(p.rot) * sz * 1.6;
+        ctx.beginPath(); ctx.moveTo(q.x + c, q.y + s); ctx.lineTo(q.x - s * 0.45, q.y + c * 0.45); ctx.lineTo(q.x - c * 0.8, q.y - s * 0.8); ctx.closePath(); ctx.fill();
+      }
       else { ctx.beginPath(); ctx.arc(q.x, q.y, sz, 0, Math.PI * 2); ctx.fill(); }
     });
+    // Glowing particles (flames, embers, sparks) add light.
+    if (glowing || fx.bolts.length || fx.gusts.length) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      fx.parts.forEach(function (p) {
+        if (p.k !== 'glow' && p.k !== 'spark') return;
+        var q = proj(p.x, p.y, p.z), a = Math.max(0, 1 - p.life / p.max);
+        if (p.k === 'glow') {
+          ctx.globalAlpha = a * 0.7;
+          glow(ctx, p.color, q.x, q.y, Math.max(2, p.size * q.s * (0.5 + a)) * 1.5);
+        } else {
+          var e = proj(p.x - p.vx * 0.035, p.y - p.vy * 0.035, p.z - p.vz * 0.035);
+          ctx.globalAlpha = a; ctx.strokeStyle = p.color; ctx.lineWidth = Math.max(1.2, p.size * q.s);
+          ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+        }
+      });
+      fx.gusts.forEach(function (g) {
+        if (g.life < 0) return;
+        var k = g.life / g.max, q = proj(g.x, g.y, g.z), R = Math.max(3, g.r * (0.6 + 1.4 * k) * q.s), ang = 0, sq = 0.38;
+        if (g.flat) sq = 0.3;
+        else { var e = proj(g.x + g.dx * 0.5, g.y + g.dy * 0.5, g.z + g.dz * 0.5); ang = Math.atan2(e.y - q.y, e.x - q.x); }
+        ctx.globalAlpha = 0.55 * (1 - k); ctx.strokeStyle = '#e8fff4'; ctx.lineWidth = Math.max(1.2, 2.4 * (1 - k));
+        ctx.beginPath(); ctx.ellipse(q.x, q.y, R * sq, R, ang, 0, Math.PI * 2); ctx.stroke();
+      });
+      fx.bolts.forEach(function (bo) { drawBolt(ctx, bo); });
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    fx.words.forEach(function (w) {
+      var q = proj(w.x, w.y, w.z), k = w.life / w.max, pop = Math.min(1, w.life / 0.12);
+      var size = Math.round(Math.max(16, 0.62 * q.s) * (1.35 - 0.35 * pop) * UI);
+      ctx.globalAlpha = k > 0.75 ? (1 - k) / 0.25 : 1;
+      ctx.font = 'italic 900 ' + size + 'px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      var y = q.y - 0.9 * q.s - k * 26;
+      ctx.lineJoin = 'round'; ctx.lineWidth = 6; ctx.strokeStyle = '#0a1a3a'; var wt = SR.upper(SR.t(w.text)); ctx.strokeText(wt, q.x, y);
+      ctx.fillStyle = w.color; ctx.fillText(wt, q.x + 2, y + 2);
+      ctx.fillStyle = '#ffffff'; ctx.fillText(wt, q.x, y);
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  function drawBolt(ctx, bo) {
+    var k = bo.life / bo.max, a = k < 0.15 ? 1 : (1 - k) / 0.85, path = bo.path;
+    var line = function (pts, w) {
+      ctx.beginPath();
+      for (var i = 0; i < pts.length; i++) { var q = proj(pts[i].x, pts[i].y, pts[i].z); if (i) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y); }
+      ctx.lineWidth = w; ctx.stroke();
+    };
+    var end = proj(bo.b.x, bo.b.y, bo.b.z), s = Math.max(0.6, Math.min(1.6, end.s / 40));
+    ctx.lineJoin = 'round';
+    if (!SR.lowFx) { ctx.globalAlpha = 0.35 * a; ctx.strokeStyle = '#3f8cff'; line(path.pts, 20 * s); }
+    ctx.globalAlpha = 0.9 * a; ctx.strokeStyle = bo.color; line(path.pts, 8 * s);
+    ctx.globalAlpha = a; ctx.strokeStyle = '#ffffff'; line(path.pts, 3 * s);
+    ctx.globalAlpha = 0.8 * a; ctx.strokeStyle = '#9fe3ff';
+    path.forks.forEach(function (fk) { line(fk, 2.4 * s); });
+    ctx.globalAlpha = a; glow(ctx, '#cfefff', end.x, end.y, 34 * s);
+  }
+
+  // Glowing cracks around a big elemental landing; the glow cools down.
+  function drawCracks(ctx, mk, a) {
+    var grow = Math.min(1, mk.life / 0.15), hot = Math.max(0, 1 - mk.life / 1.4);
+    groundEllipse(ctx, mk.x, mk.y, 0.45 * grow, 'rgba(20,10,5,' + (0.45 * a).toFixed(3) + ')');
+    for (var pass = 0; pass < 2; pass++) {
+      if (pass && hot <= 0) break;
+      ctx.globalAlpha = pass ? hot : 0.6 * a;
+      ctx.strokeStyle = pass ? mk.color : 'rgba(25,12,6,0.85)';
+      ctx.lineWidth = pass ? 1.6 : 3.2;
+      if (pass) ctx.globalCompositeOperation = 'lighter';
+      mk.cracks.forEach(function (ray) {
+        ctx.beginPath();
+        for (var i = 0; i < ray.length; i++) {
+          var px = mk.x + (ray[i].x - mk.x) * grow, py = mk.y + (ray[i].y - mk.y) * grow, q = proj(px, py, 0);
+          if (i) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y);
+        }
+        ctx.stroke();
+      });
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    if (hot > 0) { var q0 = proj(mk.x, mk.y, 0); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = hot * 0.8; glow(ctx, mk.color, q0.x, q0.y, 0.9 * q0.s); ctx.globalCompositeOperation = 'source-over'; }
     ctx.globalAlpha = 1;
   }
 
@@ -910,10 +1123,15 @@
     ctx.restore();
   }
 
+  var vignette = null;
   function drawOverlay(ctx, rally) {
-    var vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.95);
-    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.42)');
-    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    // The vignette gradient is made once per screen size and reused.
+    if (!vignette || vignette._w !== W || vignette._h !== H) {
+      vignette = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.95);
+      vignette.addColorStop(0, 'rgba(0,0,0,0)'); vignette.addColorStop(1, 'rgba(0,0,0,0.42)');
+      vignette._w = W; vignette._h = H;
+    }
+    ctx.fillStyle = vignette; ctx.fillRect(0, 0, W, H);
     if (rally && rally.timeScale < 1) {
       // Slow motion: cinematic bars and a cool tint that slide and fade in
       // with the slowdown, so it eases in and out instead of popping.
@@ -977,7 +1195,13 @@
       var now = performance.now() / 1000, dt = lastNow ? Math.min(0.05, now - lastNow) : 0;
       lastNow = now;
       // If the device can't keep up, switch to cheaper effects for the session.
-      if (dt > 0) { frameAvg += (dt - frameAvg) * 0.05; slowFor = frameAvg > 0.027 ? slowFor + dt : 0; if (slowFor > 3) SR.lowFx = true; }
+      if (dt > 0) {
+        frameAvg += (dt - frameAvg) * 0.05; slowFor = frameAvg > 0.027 ? slowFor + dt : 0; if (slowFor > 3) SR.lowFx = true;
+        // Dynamic resolution: while frames run long (under ~52 fps), render a
+        // little fewer pixels, one step every 1.5 s, down to 60%. Effects stay.
+        dropFor = game && game.rally && !game.paused && frameAvg > 0.0192 ? dropFor + dt : 0;
+        if (dropFor > 1.5 && (SR.resScale || 1) > 0.6) { SR.resScale = Math.max(0.6, Math.round(((SR.resScale || 1) - 0.1) * 100) / 100); dropFor = 0; frameAvg = 0.017; }
+      }
       var rally = game && game.rally, paused = game && game.paused;
       var simDt = paused ? 0 : dt * (rally ? rally.timeScale : 1) * (SR.speed || 1);
       SR.fx.update(Math.min(0.1, simDt));
@@ -1006,7 +1230,7 @@
       var b = rally.ball;
       if (lastBall && rally.state === 'rally' && simDt > 0) {
         var dd = Math.sqrt(Math.pow(b.x - lastBall.x, 2) + Math.pow(b.y - lastBall.y, 2) + Math.pow(b.z - lastBall.z, 2));
-        spin += dd * 3;
+        spin += Math.min(dd / 0.21, 0.42);
         var vel = { x: (b.x - lastBall.x) / simDt, y: (b.y - lastBall.y) / simDt, z: (b.z - lastBall.z) / simDt };
         if (lastVel) {
           // A sharp change of direction means someone just hit the ball.
@@ -1016,7 +1240,11 @@
         lastVel = vel;
         trail.push({ x: b.x, y: b.y, z: b.z, v: dd / simDt });
         if (trail.length > 16) trail.shift();
-      } else if (rally.state !== 'rally') { trail.length = 0; lastVel = null; }
+        SR.fx.trail(b, vel, simDt);
+      } else if (rally.state !== 'rally') {
+        trail.length = 0; lastVel = null;
+        if (lastBall && simDt > 0) spin += Math.min(0.3, Math.sqrt(Math.pow(b.x - lastBall.x, 2) + Math.pow(b.y - lastBall.y, 2) + Math.pow(b.z - lastBall.z, 2)) / 0.21 * 0.6);
+      }
       lastBall = { x: b.x, y: b.y, z: b.z };
 
       // Ground markers under everything else
@@ -1054,7 +1282,8 @@
             ctx.fillText(String(hitterSet[p.idx]), head.x, by + 1);
           }
         } else {
-          drawTrail(ctx, ballStyle);
+          if (SR.fx.elem && trail.length > 1 && rally.state === 'rally') drawElemTrail(ctx, SR.fx.elem, it.o);
+          else drawTrail(ctx, ballStyle);
           drawBall(ctx, it.o, ballStyle);
         }
       });

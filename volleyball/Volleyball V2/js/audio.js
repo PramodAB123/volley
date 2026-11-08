@@ -63,6 +63,7 @@
     setMuted: function (on) {
       if (!ctx) return;
       try { quiet(on ? ctx.suspend() : ctx.resume()); } catch (e) { /* ignore */ }
-    }
+    },
+    ctx: ac
   };
 })();
