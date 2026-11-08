@@ -38,6 +38,10 @@ jobs:
 
       - uses: android-actions/setup-android@v4
 
+      # Keeps Gradle itself and the downloaded libraries between runs,
+      # so most builds don't need to download Gradle from GitHub at all.
+      - uses: gradle/actions/setup-gradle@v4
+
       - name: Install Capacitor
         run: npm ci
 
@@ -59,6 +63,21 @@ jobs:
             echo "keyAlias=$KEY_ALIAS"
             echo "keyPassword=$KEY_PW"
           } > android/keystore.properties
+
+      # GitHub sometimes answers Gradle downloads with 502/503/504 for a few minutes.
+      # Try up to 5 times, waiting longer each time, before giving up.
+      - name: Download Gradle (retries if GitHub is busy)
+        working-directory: 'volleyball/Volleyball V4/android'
+        run: |
+          chmod +x gradlew
+          for i in 1 2 3 4 5; do
+            if ./gradlew --no-daemon --version; then exit 0; fi
+            echo "::warning::Gradle download failed (try $i of 5), waiting $((i*20))s"
+            rm -rf ~/.gradle/wrapper/dists/gradle-8.14.3-bin
+            sleep $((i*20))
+          done
+          echo "::error title=Gradle download failed::GitHub would not send the Gradle download after 5 tries. This is a GitHub outage, not a problem in the game. Re-run the job in a few minutes."
+          exit 1
 
       - name: Build the signed App Bundle
         working-directory: 'volleyball/Volleyball V4/android'
