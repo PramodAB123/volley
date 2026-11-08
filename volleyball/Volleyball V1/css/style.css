@@ -819,8 +819,7 @@ html:not(.page-home) .home .more-cue { display: none; }
 .career-pick.locked .cwhat { color: #cfe8f5; }
 .career-pick .btn { flex: none; min-width: 104px; min-height: 48px; font-size: 17px; background: linear-gradient(135deg, #ffd23f, #ff9f1c); color: #241a00; box-shadow: 0 6px 16px rgba(255, 159, 28, 0.35); }
 .career-pick .btn[disabled] { background: rgba(255, 255, 255, 0.15); color: #cfe8f5; box-shadow: none; cursor: not-allowed; }
-.career-actions { display: flex; justify-content: center; gap: 18px; margin-top: 6px; }
-.career-actions .link-btn { color: #cfe8f5; font-size: 13px; }
+.career-actions { display: flex; justify-content: center; gap: 12px; margin-top: 10px; }
 @media (max-width: 560px) {
   .career-pick { flex-wrap: wrap; }
   .cpick-thumb { width: 80px; height: 50px; }
@@ -1090,8 +1089,20 @@ html:not(.page-home) .home .more-cue { display: none; }
 .cup-end-ico .crest { width: 48px; height: 52px; }
 .cup-end-ico .cup-trophy { width: 60px; height: 60px; }
 .cup-next.won .venue-text b { font-size: 20px; color: #ffd23f; }
-.cup-actions { display: flex; justify-content: center; gap: 18px; margin-top: 6px; }
-.cup-actions .link-btn { color: #9fb3d1; font-size: 13px; }
+.cup-actions { display: flex; justify-content: center; gap: 12px; margin-top: 10px; }
+/* Footer buttons under Career, League and Tournament (Menu, Change team, Abandon...). */
+.btn.foot-btn { min-width: 150px; min-height: 46px; padding: 10px 22px; border-radius: 12px; font-size: 16px; font-weight: 800; color: #fff;
+  background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.28); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25); transition: background 0.15s, transform 0.1s; }
+.btn.foot-btn:hover { background: rgba(255, 255, 255, 0.18); }
+.btn.foot-btn:active { transform: scale(0.97); }
+.btn.foot-btn:focus-visible { outline: 2px solid #ffd23f; outline-offset: 2px; }
+.btn.foot-btn.quit { color: #ffd0d0; background: rgba(255, 82, 82, 0.14); border-color: rgba(255, 110, 110, 0.6); }
+.btn.foot-btn.quit:hover { background: rgba(255, 82, 82, 0.26); }
+.btn.foot-btn.quit.armed { color: #fff; background: #e03b3b; border-color: #ff8080; }
+@media (max-width: 560px) {
+  .career-actions, .cup-actions { gap: 10px; }
+  .btn.foot-btn { flex: 1 1 0; min-width: 0; padding: 10px 6px; font-size: 14px; white-space: nowrap; }
+}
 /* Confetti when you win the cup. */
 .cup-won .cup-arena { background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255, 196, 64, 0.3), transparent 70%), radial-gradient(ellipse 120% 60% at 50% 115%, rgba(77, 139, 255, 0.28), transparent 60%), linear-gradient(180deg, #0a1328, #0b1530 55%, #0a1a3a); }
 .cup-confetti { position: absolute; inset: 0; }
@@ -1132,8 +1143,8 @@ html:not(.page-home) .home .more-cue { display: none; }
   .cup-next .cpick-thumb { display: none; }
   .cup-next .btn { min-height: 42px; }
   .cv .crest { width: 28px; height: 30px; }
-  .cup-actions { margin-top: 2px; }
-  .cup-actions .link-btn { padding: 0 2px; font-size: 12px; }
+  .cup-actions { margin-top: 6px; }
+  .cup-actions .btn.foot-btn { min-height: 38px; min-width: 130px; padding: 6px 16px; font-size: 14px; }
   .cup-bottom { padding-top: 6px; }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -1317,8 +1317,8 @@
       var careerArmed = false;
       on('btn-career-reset', function () {
         var b = $('btn-career-reset');
-        if (!careerArmed) { careerArmed = true; b.textContent = 'Click again to restart'; setTimeout(function () { careerArmed = false; b.textContent = 'Restart career'; }, 3000); return; }
-        careerArmed = false; b.textContent = 'Restart career';
+        if (!careerArmed) { careerArmed = true; b.textContent = 'Click again to restart'; b.classList.add('armed'); setTimeout(function () { careerArmed = false; b.textContent = 'Restart career'; b.classList.remove('armed'); }, 3000); return; }
+        careerArmed = false; b.textContent = 'Restart career'; b.classList.remove('armed');
         data().career = null; careerPick = 0; save(); openTeams('career');
       });
       on('btn-league', function () { openWorld('league'); });
@@ -1336,15 +1336,15 @@
       var leagueArmed = false;
       on('btn-league-quit', function () {
         var b = $('btn-league-quit');
-        if (!leagueArmed) { leagueArmed = true; b.textContent = 'Click again to abandon'; setTimeout(function () { leagueArmed = false; b.textContent = 'Abandon league'; }, 3000); return; }
-        leagueArmed = false; b.textContent = 'Abandon league';
+        if (!leagueArmed) { leagueArmed = true; b.textContent = 'Click again to abandon'; b.classList.add('armed'); setTimeout(function () { leagueArmed = false; b.textContent = 'Abandon league'; b.classList.remove('armed'); }, 3000); return; }
+        leagueArmed = false; b.textContent = 'Abandon league'; b.classList.remove('armed');
         data().league = null; save(); openWorld('league');
       });
       var cupArmed = false;
       on('btn-cup-quit', function () {
         var b = $('btn-cup-quit');
-        if (!cupArmed) { cupArmed = true; b.textContent = 'Click again to abandon'; setTimeout(function () { cupArmed = false; b.textContent = 'Abandon tournament'; }, 3000); return; }
-        cupArmed = false; b.textContent = 'Abandon tournament';
+        if (!cupArmed) { cupArmed = true; b.textContent = 'Click again to abandon'; b.classList.add('armed'); setTimeout(function () { cupArmed = false; b.textContent = 'Abandon tournament'; b.classList.remove('armed'); }, 3000); return; }
+        cupArmed = false; b.textContent = 'Abandon tournament'; b.classList.remove('armed');
         data().tournament = null; save(); openWorld('cup');
       });
       on('btn-result-next', function () { if (resultNext) resultNext.go(); });
