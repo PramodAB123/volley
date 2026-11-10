@@ -1,6 +1,7 @@
 :root {
   --bg: #0b1220;
   --panel: rgba(255, 255, 255, 0.94);
+  --panel-solid: #eceff4;
   --panel-border: rgba(15, 23, 42, 0.12);
   --text: #0f172a;
   --muted: #5b6b82;
@@ -16,6 +17,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --panel: rgba(17, 24, 39, 0.93);
+    --panel-solid: #121a2a;
     --panel-border: rgba(255, 255, 255, 0.1);
     --text: #e8eef8;
     --muted: #9aa9bf;
@@ -27,6 +29,7 @@
 }
 :root[data-theme="dark"] {
   --panel: rgba(17, 24, 39, 0.93);
+  --panel-solid: #121a2a;
   --panel-border: rgba(255, 255, 255, 0.1);
   --text: #e8eef8;
   --muted: #9aa9bf;
@@ -59,7 +62,7 @@ body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; co
 .panel {
   width: min(720px, 100%); max-height: 100%; overflow-y: auto;
   background: var(--panel); border: 1px solid var(--panel-border); border-radius: 18px;
-  padding: 24px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  --px: 24px; --py: 24px; padding: var(--py) var(--px); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
 }
 .panel.center { text-align: center; width: min(460px, 100%); }
 .panel.menu { width: min(460px, 100%); text-align: center; }
@@ -146,31 +149,10 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 
 .help ol { padding-left: 20px; }
 
-/* Online lobby */
 .btn.block { width: 100%; }
-.or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; margin: 18px 0 12px; }
-.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--panel-border); }
-.join-row { display: flex; gap: 10px; }
-.join-row input {
-  flex: 1; min-width: 0; font: inherit; font-size: 20px; font-weight: 800; letter-spacing: 0.25em; text-transform: uppercase;
-  padding: 10px 14px; border-radius: 12px; border: 1px solid var(--panel-border); background: var(--btn); color: var(--text);
-}
-.join-row input::placeholder { letter-spacing: 0.08em; font-size: 15px; font-weight: 600; color: var(--muted); }
 .center { text-align: center; }
-.room-code { font-size: 44px; font-weight: 900; letter-spacing: 0.18em; margin: 4px 0 8px; font-variant-numeric: tabular-nums; color: var(--accent); }
 .status { min-height: 1.4em; margin: 14px 0 0; font-weight: 600; color: var(--muted); }
 .status.error { color: var(--loss); }
-.net-banner {
-  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 3; max-width: calc(100% - 32px);
-  padding: 12px 18px; border-radius: 14px; background: rgba(6, 10, 18, 0.88); color: #fff; font-weight: 700; text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-}
-.net-link {
-  position: absolute; left: 10px; bottom: 10px; z-index: 3; padding: 4px 9px; border-radius: 10px; pointer-events: none;
-  background: rgba(6, 10, 18, 0.7); color: #7ee0a0; font: 700 12px system-ui, sans-serif; font-variant-numeric: tabular-nums;
-}
-.net-link.meh { color: #ffd23f; }
-.net-link.bad { color: #ff7a59; }
 .help li { margin-bottom: 10px; line-height: 1.45; }
 
 #result-title { font-size: 34px; }
@@ -180,9 +162,8 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 .stars-earned { color: var(--gold); font-weight: 800; font-size: 18px; }
 
 @media (max-width: 560px) {
-  .room-code { font-size: 36px; }
   .screen { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
-  .panel { padding: 18px 16px; border-radius: 16px; }
+  .panel { --px: 16px; --py: 18px; padding: var(--py) var(--px); border-radius: 16px; }
   h1 { font-size: 36px; }
   h2 { font-size: 21px; }
   .team-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -203,7 +184,7 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 /* Phones held sideways: short screens get compact panels. */
 @media (max-height: 520px) {
   .screen { padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-  .panel { padding: 14px 18px; border-radius: 14px; }
+  .panel { --px: 18px; --py: 14px; padding: var(--py) var(--px); border-radius: 14px; }
   .panel.menu { width: min(620px, 100%); }
   h1 { font-size: 30px; }
   .tag { margin: 2px 0 8px; font-size: 14px; }
@@ -354,6 +335,16 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 /* First-visit training: same demo, its own tag and end button. */
 .demo .demo-first, .demo.training .demo-std { display: none; }
 .demo.training .demo-first { display: inline; }
+.welcome-ball { font-size: 34px; line-height: 1; }
+/* Training only: a clear way straight into the first match, in place of the Try it / Watch switch. */
+.demo-skip { display: none; margin-left: auto; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; min-height: 40px; padding: 8px 14px; border: 0; border-radius: 10px; cursor: pointer; background: #2f6fed; color: #fff; font: 800 13.5px system-ui, sans-serif; white-space: nowrap; }
+.demo-skip:hover { background: #3f7dfa; }
+.demo-skip:focus-visible { outline: 2px solid #ffd23f; outline-offset: 2px; }
+.demo.training .demo-skip { display: inline-block; }
+.demo.training .demo-mode, .demo.training.last .demo-skip { display: none; }
+.demo-skip + .demo-x { margin-left: 0; }
+.demo.narrow .demo-skip { padding: 8px 10px; font-size: 13px; }
+.demo.training.last .demo-x { margin-left: auto; }
 .demo-progress { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); overflow: hidden; flex: none; }
 .demo-progress span { display: block; height: 100%; width: 0; background: #ffd23f; transition: width 0.3s; }
 .demo-chapters { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; flex: none; }
@@ -513,8 +504,6 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 .t-bar { display: block; width: 100%; height: 6px; margin-top: 7px; border-radius: 999px; background: rgba(0, 0, 0, 0.25); overflow: hidden; }
 .t-bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #ffd23f, #ff9f1c); }
 @keyframes isle-bob { 50% { transform: translateY(-3px); } }
-.t-online { width: 100%; margin-top: 10px; flex-direction: row; align-items: center; gap: 12px; padding: 10px 14px; background: linear-gradient(120deg, #8b5cf6, #d946ef); }
-.t-online .t-ico { margin: 0; flex: none; }
 .t-txt { display: flex; flex-direction: column; flex: 1 1 auto; }
 .t-go { font-size: 28px; font-weight: 300; line-height: 1; opacity: 0.85; }
 .home-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
@@ -541,8 +530,6 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
   .home-hero .t-ico { display: none; }
   .t-isle { width: 64px; height: 40px; }
   .tile b { font-size: 16px; }
-  .t-online { margin-top: 8px; padding: 6px 12px; }
-  .t-online .t-ico { width: 32px; height: 32px; }
   .home-grid { grid-template-columns: repeat(6, 1fr); }
   .mini { min-height: 50px; font-size: 11.5px; }
 }
@@ -1276,7 +1263,10 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
   .dd-sh { display: none; }
 }
 
-/* Shop: a Back button at the top too, so a long list never hides the way out. */
+/* Every inner screen: the Back button is the first thing in the panel, left-aligned, and stays
+   in view while a long list scrolls. */
+.back-row { position: sticky; top: calc(-1 * var(--py)); z-index: 5; display: flex; align-items: center; margin: calc(-1 * var(--py)) calc(-1 * var(--px)) 12px; padding: var(--py) var(--px) 8px; background: var(--panel-solid); }
+.back-row .top-back { min-height: 40px; height: 40px; padding: 0 16px 0 10px; font-size: 15px; }
 .top-back { display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 12px 0 8px; border: 1px solid rgba(127, 140, 160, 0.35); border-radius: 10px;
   background: rgba(127, 140, 160, 0.12); color: inherit; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
 .top-back:hover { background: rgba(127, 140, 160, 0.24); }
@@ -1454,7 +1444,6 @@ h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: u
 .ct-pm:disabled { opacity: 0.35; cursor: default; }
 .ct-bar { height: 8px; border-radius: 4px; background: rgba(127, 127, 127, 0.22); overflow: hidden; }
 .ct-bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #ffd23f, #ff9f1c); transition: width 0.15s; }
-.panel.custom { --px: 24px; --py: 24px; }
 .ct-actions { justify-content: flex-end; position: sticky; bottom: calc(-1 * var(--py)); margin: 16px calc(-1 * var(--px)) calc(-1 * var(--py)); padding: 12px var(--px); background: var(--panel); border-top: 1px solid var(--panel-border); z-index: 2; }
 .ct-actions .btn.primary { min-width: 150px; }
 

@@ -15,7 +15,6 @@
       'Coache ein Volleyballteam mit sechs Spielern: Du entscheidest Aufschlag, Zuspiel und Angriff.',
       'Altı kişilik bir voleybol takımını yönet: servisi, pası ve smacı sen seç.'],
     'Quick match': ['Partido rápido', 'Partida rápida', 'Match rapide', 'Schnelles Spiel', 'Hızlı maç'],
-    'Play online': ['Jugar en línea', 'Jogar online', 'Jouer en ligne', 'Online spielen', 'Çevrimiçi oyna'],
     'League': ['Liga', 'Liga', 'Championnat', 'Liga', 'Lig'],
     'Tournament': ['Torneo', 'Torneio', 'Tournoi', 'Turnier', 'Turnuva'],
     'Shop': ['Tienda', 'Loja', 'Boutique', 'Shop', 'Mağaza'],
@@ -90,12 +89,6 @@
       '<b>Attaque.</b> Pendant que la passe est en l\'air, clique ou touche l\'endroit de leur terrain où le smash doit tomber. Chaque smash est un coup de Puissance, le plus rapide et le plus fort, droit sur ce point. Sans point visé, ton attaquant rate et le point va à l\'adversaire. Viser pile sur les lignes est risqué.',
       '<b>Angriff.</b> Während das Zuspiel in der Luft ist, klicke oder tippe auf den Punkt in ihrem Feld, wo der Angriff landen soll. Jeder Angriff ist ein Wucht-Schlag, der schnellste und härteste, genau auf diesen Punkt. Wählst du keinen Punkt, verfehlt dein Angreifer und der Punkt geht an den Gegner. Genau auf die Linien zu zielen ist riskant.',
       '<b>Hücum.</b> Pas havadayken rakip sahada smacın düşeceği noktaya tıkla ya da dokun. Her smaç o noktaya doğrudan Güçlü bir vuruştur, en hızlı ve en sert vuruş. Bir nokta seçmezsen smaççın ıskalar ve sayı rakibe gider. Tam çizgilere nişan almak risklidir.'],
-    'help.online': [
-      '<b>En línea.</b> Elige Jugar en línea, crea una sala y envía el código o el enlace a un amigo. Cada uno decide por su equipo y ambos veis la cancha desde vuestro lado. Si se corta la conexión, el juego espera hasta 30 segundos.',
-      '<b>Online.</b> Escolha Jogar online, crie uma sala e envie o código ou o link para um amigo. Cada um decide pelo próprio time e os dois veem a quadra do próprio lado. Se a conexão cair, o jogo espera até 30 segundos.',
-      '<b>En ligne.</b> Choisis Jouer en ligne, crée un salon et envoie le code ou le lien à un ami. Chacun décide pour son équipe et voit le terrain de son côté. Si la connexion coupe, le jeu attend jusqu\'à 30 secondes.',
-      '<b>Online.</b> Wähle Online spielen, erstelle einen Raum und schicke einem Freund den Code oder Link. Jeder entscheidet für sein eigenes Team und sieht das Feld von seiner Seite. Bricht die Verbindung ab, wartet das Spiel bis zu 30 Sekunden.',
-      '<b>Çevrimiçi.</b> Çevrimiçi oyna\'yı seç, bir oda kur ve kodu ya da bağlantıyı bir arkadaşına gönder. Herkes kendi takımı için karar verir ve sahayı kendi tarafından görür. Bağlantı koparsa oyun 30 saniyeye kadar bekler.'],
     'help.block': [
       '<b>Bloqueo.</b> Cuando el rival recibe, decide tu bloqueo con los botones o las teclas 1 a 4. Elige Izquierda, Centro o Derecha para juntar a los tres bloqueadores allí antes de la colocación (un gran bloqueo si aciertas, la red abierta si no), o elige Leer para reaccionar con dos bloqueadores.',
       '<b>Bloqueio.</b> Quando o adversário recebe, escolha seu bloqueio com os botões ou as teclas 1 a 4. Escolha Esquerda, Meio ou Direita para juntar os três bloqueadores ali antes do levantamento (um ótimo bloqueio se acertar, a rede aberta se errar), ou escolha Ler para reagir com dois bloqueadores.',
@@ -139,8 +132,6 @@
     '+{n} star': ['+{n} estrella', '+{n} estrela', '+{n} étoile', '+{n} Stern', '+{n} yıldız'],
     '+{n} stars': ['+{n} estrellas', '+{n} estrelas', '+{n} étoiles', '+{n} Sterne', '+{n} yıldız'],
     'No stars this time': ['Sin estrellas esta vez', 'Nenhuma estrela desta vez', 'Pas d\'étoile cette fois', 'Diesmal keine Sterne', 'Bu sefer yıldız yok'],
-    '(online)': ['(en línea)', '(online)', '(en ligne)', '(online)', '(çevrimiçi)'],
-    '(vs {name})': ['(contra {name})', '(contra {name})', '(contre {name})', '(gegen {name})', '({name} ile)'],
 
     // ---- league ----
     'League champions! +{n} bonus stars.': ['¡Campeones de liga! +{n} estrellas extra.', 'Campeões da liga! +{n} estrelas bônus.', 'Champions ! +{n} étoiles bonus.', 'Ligameister! +{n} Bonussterne.', 'Lig şampiyonu! +{n} bonus yıldız.'],
@@ -557,12 +548,6 @@
       'Appuie sur P ou Échap pour mettre en pause. Les victoires rapportent des étoiles à dépenser dans la Boutique.',
       'Drücke P oder Esc für Pause. Siege bringen Sterne für den Shop.',
       'Duraklatmak için P ya da Esc\'ye bas. Galibiyetler Mağaza\'da harcayacağın yıldızlar kazandırır.'],
-    'Play online: create a room and send the code to a friend.': [
-      'Juega en línea: crea una sala y envía el código a un amigo.',
-      'Jogue online: crie uma sala e mande o código para um amigo.',
-      'Jouer en ligne : crée une salle et envoie le code à un ami.',
-      'Online spielen: Erstelle einen Raum und schick den Code an einen Freund.',
-      'Çevrimiçi oyna: bir oda kur ve kodu bir arkadaşına gönder.'],
     'The scoreboard: points in white, sets in gold. The small ball marks who serves.': [
       'El marcador: puntos en blanco, sets en dorado. El balón pequeño indica quién saca.',
       'O placar: pontos em branco, sets em dourado. A bolinha mostra quem saca.',
@@ -690,7 +675,6 @@
     'Restart career': ['Reiniciar carrera', 'Reiniciar carreira', 'Recommencer la carrière', 'Karriere neu starten', 'Kariyeri yeniden başlat'],
     'Click again to restart': ['Pulsa otra vez para reiniciar', 'Clique de novo para reiniciar', 'Clique encore pour recommencer', 'Zum Neustart nochmal klicken', 'Yeniden başlatmak için tekrar tıkla'],
     'Back to menu': ['Volver al menú', 'Voltar ao menu', 'Retour au menu', 'Zurück zum Menü', 'Menüye dön'],
-    'Invite a friend with a link': ['Invita a un amigo con un enlace', 'Convide um amigo com um link', 'Invite un ami avec un lien', 'Lade einen Freund per Link ein', 'Bir arkadaşını bağlantıyla davet et'],
     'Champions Court': ['Cancha de Campeones', 'Quadra dos Campeões', 'Terrain des Champions', 'Champions-Halle', 'Şampiyonlar Sahası'],
     // ---- 2026-10-27: Tournament bracket redesign ----
     'Quarter-final': ['Cuartos de final', 'Quartas de final', 'Quart de finale', 'Viertelfinale', 'Çeyrek final'],
@@ -973,6 +957,12 @@
     // ---- 2026-11-08: first-visit training ----
     'Training': ['Entrenamiento', 'Treino', 'Entraînement', 'Training', 'Antrenman'],
     'Play your first match': ['Juega tu primer partido', 'Jogue sua primeira partida', 'Joue ton premier match', 'Spiel dein erstes Match', 'İlk maçını oyna'],
+    // ---- 2026-11-10: skip the training, new player popup ----
+    'The game waits for your call, so you make every call yourself.': ['El juego espera tu decisión, así que tú tomas todas las decisiones.', 'O jogo espera a sua decisão, então você toma todas as decisões.', 'Le jeu attend ta décision : c\'est toi qui fais tous les choix.', 'Das Spiel wartet auf deine Entscheidung: Du triffst jeden Call selbst.', 'Oyun senin kararını bekler, yani her kararı sen verirsin.'],
+    'New to Spike Rally?': ['¿Nuevo en Spike Rally?', 'Novo no Spike Rally?', 'Nouveau sur Spike Rally\u00a0?', 'Neu bei Spike Rally?', 'Spike Rally\'de yeni misin?'],
+    'Play a short demo game to learn the serve, the set and the spike. You can also find it later under How to play.': ['Juega una partida de demostración corta para aprender el saque, la colocación y el remate. También la encontrarás después en Cómo jugar.', 'Jogue uma partida de demonstração curta para aprender o saque, o levantamento e a cortada. Você também a encontra depois em Como jogar.', 'Joue un court match de démonstration pour apprendre le service, la passe et l\'attaque. Tu le retrouveras aussi plus tard dans Comment jouer.', 'Spiel ein kurzes Demo-Match und lerne Aufschlag, Zuspiel und Angriff. Du findest es später auch unter So wird gespielt.', 'Servisi, pası ve smacı öğrenmek için kısa bir demo maçı oyna. Daha sonra Nasıl oynanır bölümünde de bulabilirsin.'],
+    'Play the demo': ['Jugar la demo', 'Jogar a demo', 'Jouer la démo', 'Demo spielen', 'Demoyu oyna'],
+    'Skip, play now': ['Saltar y jugar', 'Pular e jogar', 'Passer', 'Überspringen', 'Geç ve oyna'],
     // ---- 2026-11-08: more detailed training (players, tips, practice rally) ----
     'Tips': ['Consejos', 'Dicas', 'Astuces', 'Tipps', 'İpuçları'],
     'Players': ['Jugadores', 'Jogadores', 'Joueurs', 'Spieler', 'Oyuncular'],

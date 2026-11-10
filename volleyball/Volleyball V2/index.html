@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Spike Rally: 6v6 Volleyball Game</title>
   <meta name="description"
-    content="Coach a six-player volleyball team: call the serve, the set and the spike. Free in your browser, play the computer or a friend online.">
+    content="Coach a six-player volleyball team: call the serve, the set and the spike. Free in your browser: quick matches, career, league and tournament.">
   <meta name="theme-color" content="#0b1220">
   <meta name="color-scheme" content="dark light">
   <link rel="icon" href="favicon.ico" sizes="48x48">
@@ -26,10 +26,6 @@
 
     <div id="ad-block" class="ad-block hidden" aria-hidden="true"></div>
 
-    <div id="net-link" class="net-link hidden" aria-hidden="true"></div>
-
-    <div id="net-banner" class="net-banner hidden" role="status" aria-live="polite"></div>
-
     <div id="hud" class="hidden">
       <div id="goal-chip" class="goal-chip hidden" aria-live="polite"></div>
       <button id="btn-pause" class="icon-btn" aria-label="Pause">II</button>
@@ -43,6 +39,7 @@
           <button type="button" role="radio" data-mode="try" aria-checked="true" class="on">Try it</button>
           <button type="button" role="radio" data-mode="watch" aria-checked="false">Watch</button>
         </div>
+        <button id="demo-skip" class="demo-skip" type="button">Skip, play now<span aria-hidden="true"> ▶</span></button>
         <button id="demo-exit" class="demo-x" type="button" aria-label="Close demo">✕</button>
       </div>
       <div class="demo-progress" aria-hidden="true"><span id="demo-bar"></span></div>
@@ -55,7 +52,7 @@
       </div>
       <div id="demo-end" class="demo-end hidden">
         <button id="demo-quick" class="btn primary" type="button"><span class="demo-std">Play a quick match</span><span class="demo-first">Play your first match</span></button>
-        <button id="demo-again" class="btn" type="button">Watch again</button>
+        <button id="demo-again" class="btn" type="button"><span class="demo-std">Watch again</span><span class="demo-first">Try again</span></button>
         <button id="demo-help" class="btn ghost" type="button">How to play</button>
       </div>
       <div class="demo-ctrl">
@@ -69,7 +66,7 @@
     <section id="scr-menu" class="screen">
       <div class="panel menu home">
         <div class="home-head">
-          <h1>Spike <span>Rally</span></h1>
+          <h1 data-i18n-skip>Spike <span>Rally</span></h1>
           <div class="home-badges">
             <button id="btn-daily" class="daily-btn" type="button" aria-label="Daily rewards" title="Daily rewards">
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="9" width="17" height="11.5" rx="2"/><path d="M2.5 9h19v-3h-19zM12 6v14.5"/><path d="M12 6c-1.6-3.4-6-3.6-5.4-.9C6.9 6.3 9.6 6.1 12 6zM12 6c1.6-3.4 6-3.6 5.4-.9-.3 1.2-3 1-5.4.9z"/></svg>
@@ -92,11 +89,6 @@
         </div>
         <button id="home-daily" class="daily-teaser hidden" type="button"></button>
         <button id="home-chal" class="daily-teaser chal-teaser hidden" type="button"></button>
-        <button id="btn-online" class="tile t-online hidden">
-          <span class="t-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.6 14.2c3 .3 5.4 2.7 5.4 5.8"/></svg></span>
-          <span class="t-txt"><b>Play online</b><small>Invite a friend with a link</small></span>
-          <span class="t-go" aria-hidden="true">›</span>
-        </button>
         <div class="home-grid">
           <button id="btn-league" class="mini feat f-league"><span class="f-ico"><svg viewBox="0 0 32 36" aria-hidden="true"><rect x="7" y="31" width="18" height="4" rx="1.2" fill="#4a2a12"/><path d="M13 23h6l1 8h-8z" fill="#e8a400"/><circle cx="16" cy="13" r="12" fill="#ffd23f" stroke="#b86e00" stroke-width="1.2"/><circle cx="16" cy="13" r="8.5" fill="none" stroke="#fff3b0" stroke-width="1" stroke-dasharray="1.6 2"/><circle cx="16" cy="13" r="4.6" fill="#fff8e1"/><path d="M11.8 11.6c2.6.5 5 2.6 6 5.4M14.3 8.7c1.5 1.6 2.3 4 1.8 6.6" fill="none" stroke="#c98a00" stroke-width="1" stroke-linecap="round"/><path d="M7 6a10 10 0 0 1 5-3.6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".7"/></svg></span><span class="f-txt"><b>League</b><small data-i18n-skip id="league-prog"></small></span><i class="f-shine" aria-hidden="true"></i></button>
           <button id="btn-cup" class="mini feat f-cup"><span class="f-ico"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M8 3h16v9c0 5-3.6 9-8 9s-8-4-8-9z" fill="#ffd23f" stroke="#b86e00" stroke-width="1.2"/><path d="M8 6H3.5c0 5 2.4 8 6 8.5M24 6h4.5c0 5-2.4 8-6 8.5" fill="none" stroke="#ffd23f" stroke-width="2.4" stroke-linecap="round"/><path d="M14 21h4v5h-4z" fill="#e8a400"/><path d="M9.5 27h13l1.6 5H7.9z" fill="#ffd23f" stroke="#b86e00" stroke-width="1"/><rect x="7" y="31.5" width="18" height="3" rx="1" fill="#8a4b00"/><path d="M12 6c0 4 .6 7 2.6 9.5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".65"/><path d="M16 7.5l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.2-2.4 1.2.5-2.6-1.9-1.8 2.6-.4z" fill="#fff8d6"/></svg></span><span class="f-txt"><b>Tournament</b><small data-i18n-skip id="cup-prog"></small></span><i class="f-shine" aria-hidden="true"></i></button>
@@ -110,6 +102,7 @@
 
     <section id="scr-quick" class="screen hidden">
       <div class="panel quick-pick">
+        <div class="back-row"><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button></div>
         <h2>Quick match</h2>
         <div class="qp-opts">
           <button id="btn-quick-random" class="tile qp-random" type="button">
@@ -121,51 +114,16 @@
             <b>Choose team</b><small>Pick your team, court and rules</small>
           </button>
         </div>
-        <button class="btn ghost" data-back>Back</button>
       </div>
     </section>
 
     <section id="scr-teams" class="screen hidden">
       <div class="panel">
+        <div class="back-row"><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button></div>
         <h2 id="teams-title">Choose your team</h2>
         <div id="team-rules" class="rules"></div>
         <div id="team-courts" class="rule courts hidden" data-i18n-skip></div>
         <div id="team-grid" class="team-grid"></div>
-        <button class="btn ghost" data-back>Back</button>
-      </div>
-    </section>
-
-    <section id="scr-online" class="screen hidden">
-      <div class="panel online">
-        <h2>Play online</h2>
-        <div id="on-home">
-          <p class="muted">Play a friend on another phone or computer. One of you creates a room and sends the code; the
-            other joins with it.</p>
-          <button id="btn-on-create" class="btn primary block">Create a room</button>
-          <div class="or"><span>or join a friend's room</span></div>
-          <div class="join-row">
-            <input id="on-code" type="text" inputmode="text" maxlength="6" placeholder="ROOM CODE" autocomplete="off"
-              autocapitalize="characters" spellcheck="false" aria-label="Room code">
-            <button id="btn-on-join" class="btn primary">Join</button>
-          </div>
-        </div>
-        <div id="on-teams" class="hidden">
-          <h3 id="on-teams-title">Choose your team</h3>
-          <div id="on-rules" class="rules"></div>
-          <div id="on-team-grid" class="team-grid"></div>
-        </div>
-        <div id="on-room" class="hidden center">
-          <p class="muted small">Your room code</p>
-          <div id="on-code-big" class="room-code">······</div>
-          <div class="row center">
-            <button id="btn-on-copy" class="btn primary">Copy invite link</button>
-            <button id="btn-on-share" class="btn">Share</button>
-          </div>
-        </div>
-        <p id="on-status" class="status" role="status" aria-live="polite"></p>
-        <div class="row">
-          <button id="btn-on-back" class="btn ghost">Back</button>
-        </div>
       </div>
     </section>
 
@@ -240,7 +198,8 @@
 
     <section id="scr-shop" class="screen hidden">
       <div class="panel">
-        <h2><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button>Shop <span class="stars-badge inline">★ <span data-stars>0</span></span></h2>
+        <div class="back-row"><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button></div>
+        <h2>Shop <span class="stars-badge inline">★ <span data-stars>0</span></span></h2>
         <p class="muted">Win matches to earn stars, then unlock new looks.</p>
         <div id="shop-ad" class="shop-ad hidden">
           <button id="btn-ad-stars" class="btn" data-i18n-skip></button>
@@ -255,7 +214,6 @@
         <h3>Jerseys</h3>
         <p class="muted small">Your team wears it in every match. New jerseys come from the daily rewards. <span>A custom team always wears its own colours.</span></p>
         <div id="shop-kits" class="shop-grid"></div>
-        <button class="btn ghost" data-back>Back</button>
       </div>
     </section>
 
@@ -313,10 +271,10 @@
 
     <section id="scr-stats" class="screen hidden">
       <div class="panel">
+        <div class="back-row"><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button></div>
         <h2>Career stats</h2>
         <div id="stats-list" class="stats"></div>
         <div class="row">
-          <button class="btn ghost" data-back>Back</button>
           <button id="btn-reset" class="btn danger">Reset progress</button>
         </div>
       </div>
@@ -324,6 +282,7 @@
 
     <section id="scr-settings" class="screen hidden">
       <div class="panel">
+        <div class="back-row"><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button></div>
         <h2>Settings</h2>
         <label class="field">Match length <select id="set-format"></select></label>
         <label class="field">Difficulty <select id="set-diff"></select></label>
@@ -331,12 +290,12 @@
         <label class="field check"><input id="set-sound" type="checkbox"> Sound effects</label>
         <label class="field check"><input id="set-music" type="checkbox"> Music</label>
         <p id="sound-note" class="muted small hidden">Sound is muted by your CrazyGames settings.</p>
-        <button class="btn ghost" data-back>Back</button>
       </div>
     </section>
 
     <section id="scr-help" class="screen hidden">
       <div class="panel help">
+        <div class="back-row"><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button></div>
         <h2>How to play</h2>
         <p data-i18n="help.intro">You coach the team in the near half. Your players move on their own; you make the
           three calls that decide each rally.</p>
@@ -354,10 +313,6 @@
             where the spike should land. Every spike is a Power hit, the fastest and hardest swing, straight at that
             spot. If you don't pick a spot, your hitter misses and the point goes to the other team. Aiming right on
             the lines is risky.</li>
-          <li id="help-online" class="hidden" data-i18n="help.online"><b>Online.</b> Choose Play online, create a room
-            and send the code or invite link to a friend. Each of you makes the calls for your own team, and you both
-            see the court from your own end. If the connection drops, the game waits up to 30 seconds for it to come
-            back.</li>
           <li data-i18n="help.block"><b>Block.</b> When the other team passes, call your block with the buttons or keys
             1 to 4. Commit Left, Middle or Right to stack all three blockers there before the set (a great block if you
             guess right, an open net if you don't), or choose Read to react with two blockers.</li>
@@ -369,7 +324,6 @@
           (the final island +5). Spend them in the Shop.</p>
         <div class="row">
           <button id="btn-demo-2" class="btn primary" type="button">Try the guided demo</button>
-          <button class="btn ghost" data-back>Back</button>
         </div>
       </div>
     </section>
@@ -392,7 +346,8 @@
 
     <section id="scr-custom" class="screen hidden">
       <div class="panel custom" aria-labelledby="ct-title">
-        <h2><button id="btn-custom-back" class="top-back" type="button" aria-label="Back"><span aria-hidden="true">‹</span> Back</button><span id="ct-title">Custom team</span></h2>
+        <div class="back-row"><button id="btn-custom-back" class="top-back" type="button" aria-label="Back"><span aria-hidden="true">‹</span> Back</button></div>
+        <h2><span id="ct-title">Custom team</span></h2>
         <p id="ct-new" class="ct-new hidden">Unlocked! Name your club, pick its colours and share out the skill points.</p>
         <div class="ct-wrap">
           <div data-i18n-skip id="ct-preview" class="ct-preview"></div>
@@ -456,14 +411,6 @@
   <script src="js/custom.js"></script>
   <script src="js/daily.js"></script>
   <script src="js/challenge.js"></script>
-  <script src="js/net-config.js"></script>
-  <script>
-    // PeerJS is only needed for online play, which is off in this build:
-    // skip downloading it so the game starts sooner.
-    if (SR.NET_CONFIG && SR.NET_CONFIG.online) document.write('<script src="js/vendor/peerjs.min.js"><\/script>');
-  </script>
-  <script src="js/relay.js"></script>
-  <script src="js/net.js"></script>
   <script src="js/demo.js"></script>
   <script src="js/main.js"></script>
 </body>

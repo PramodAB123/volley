@@ -48,8 +48,8 @@
           rally.startServe();
         };
         // The break between sets is a natural point for a CrazyGames midgame
-        // ad. Not online (it would freeze the friend's game) or in the demo.
-        if (self.cfg.online || self.cfg.human === -1) next(); else SR.cg.midgame(next);
+        // ad. Not in the demo.
+        if (self.cfg.human === -1) next(); else SR.cg.midgame(next);
       });
     } else {
       rally.startServe();
@@ -140,14 +140,13 @@
     var g = SR.game;
     if (SR.demo && SR.demo.active) SR.demo.tick(dt);
     // Hit-stop on big hits: a short, light slow-down rather than a dead
-    // freeze, so motion never visibly stops. Skipped online so the match never stalls.
-    if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; if (!(g && g.cfg.online)) dt *= 0.6; }
+    // freeze, so motion never visibly stops.
+    if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; dt *= 0.6; }
     if (g && !g.paused) {
       acc += dt * (g.rally.loopScale || g.rally.timeScale) * (SR.speed || 1);
       var n = 0;
       while (acc >= STEP && n < 4000) { saveStep(g.rally); g.rally.update(STEP); acc -= STEP; n++; }
     }
-    if (SR.net) SR.net.tick();
     if ((SR.lowFx && !lowRes) || (SR.resScale || 1) !== lastRes) resize();
     // Report play starting/stopping to CrazyGames (only sends on a change).
     SR.cg.syncGameplay();
@@ -174,20 +173,6 @@
     }
   }
 
-  // A hidden tab stops animation frames. When hosting online, keep the match
-  // running on a timer so the friend's game doesn't freeze. Browsers slow page
-  // timers in hidden tabs to once a second, so the beat comes from a worker,
-  // whose timers keep running; a plain timer is the fallback.
-  function hiddenTick() {
-    var g = SR.game;
-    if (!document.hidden || !g || g.cfg.online !== 'host') return;
-    try { step(performance.now()); } catch (e) { SR.oops('hidden tick', e); }
-  }
-  try {
-    var beat = new Worker(URL.createObjectURL(new Blob(['setInterval(function(){postMessage(0)},33)'], { type: 'text/javascript' })));
-    beat.onmessage = hiddenTick;
-  } catch (e) { setInterval(hiddenTick, 50); }
-
   SR.resize = function () { if (canvas) resize(); };
 
   // The page's ?key=value options (URLSearchParams is missing on some old browsers).
@@ -203,7 +188,7 @@
     return { get: function (k) { return k in map ? map[k] : null; }, has: function (k) { return k in map; } };
   }
 
-  // One optional part of start-up failing (online, demo, daily rewards...)
+  // One optional part of start-up failing (demo, daily rewards...)
   // must not leave the player without a menu.
   function part(name, fn) { try { fn(); } catch (e) { SR.oops('boot ' + name, e); } }
 
@@ -223,17 +208,26 @@
     SR.ui.init();
     var q = query();
     if (q.get('speed')) SR.speed = Number(q.get('speed')) || 1;
-    part('online', function () { if (SR.net) SR.net.init(q); });
     // Every visit opens on the home menu; the demo is under How to play.
-    part('demo', function () { if (q.get('demo') !== null && SR.demo && !q.get('room')) SR.demo.start('menu', q.get('demo')); });
+    part('demo', function () { if (q.get('demo') !== null && SR.demo) SR.demo.start('menu', q.get('demo')); });
     part('custom', function () { if (SR.custom) SR.custom.init(); });
     part('daily', function () { if (SR.daily) SR.daily.init(q); });
     part('challenge', function () { if (SR.challenge) SR.challenge.init(); });
-    // A new player's first visit opens straight into the training (the Try it
-    // demo); the menu comes after it. Not with ?demo or an online invite.
+    // A new player's first visit opens on the home menu with one question:
+    // play the demo game (the training) or skip it. Asked once. Not with
+    // ?demo.
     part('training', function () {
-      if (q.get('demo') === null && !q.get('room') && !SR.cg.inviteParam('room') && !SR.cg.instantMultiplayer &&
-          SR.demo && SR.demo.needsTraining()) SR.demo.start('menu', 'try', true);
+      if (q.get('demo') === null && SR.demo && SR.demo.needsTraining() && SR.custom && SR.custom.ask) {
+        var seen = function () { SR.save.data.trained = true; SR.save.write(); };
+        SR.custom.ask({
+          art: '<span class="welcome-ball" aria-hidden="true">\uD83C\uDFD0</span>',
+          title: SR.t('New to Spike Rally?'),
+          text: SR.t('Play a short demo game to learn the serve, the set and the spike. You can also find it later under How to play.'),
+          yes: SR.t('Play the demo'), no: SR.t('Skip'),
+          onYes: function () { SR.audio.play('click'); SR.demo.start('menu', 'try', true); },
+          onNo: seen
+        });
+      }
     });
     SR.cg.onSettingsChange(function () {
       try { SR.audio.setMuted(SR.cg.muted()); SR.ui.refresh(); } catch (e) { SR.oops('settings change', e); }

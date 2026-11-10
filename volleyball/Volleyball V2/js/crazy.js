@@ -12,14 +12,12 @@
     adPlaying: false,
     adsOff: false,         // ads unavailable this session (Basic Launch)
     adblock: false,
-    username: null,
     locale: null,
-    settings: { muteAudio: false, disableChat: false },
-    instantMultiplayer: false
+    settings: { muteAudio: false, disableChat: false }
   };
   SR.cg = cg;
 
-  var playing = false, inRoom = false, settingsListeners = [], authListeners = [];
+  var playing = false, settingsListeners = [], authListeners = [];
 
   function sdk() { return cg.ready ? window.CrazyGames.SDK : null; }
 
@@ -71,30 +69,20 @@
         each(settingsListeners, cg.settings);
       });
     } catch (e) { /* settings unavailable */ }
-    try { cg.instantMultiplayer = !!s.game.isInstantMultiplayer; } catch (e) { /* ignore */ }
     // Player's language on CrazyGames, e.g. "es-ES" (used by i18n.js).
     try { cg.locale = (s.user && s.user.systemInfo && s.user.systemInfo.locale) || null; } catch (e) { /* ignore */ }
     try {
       var ab = s.ad.hasAdblock();
       if (ab && ab.then) ab.then(function (b) { cg.adblock = !!b; }, function () { /* unknown */ });
     } catch (e) { /* ignore */ }
-    // CrazyGames account: show the player's username online and reload saves on sign-in.
+    // CrazyGames account: reload saves on sign-in.
     try {
       if (s.user && s.user.isUserAccountAvailable) {
-        refreshUser();
         s.user.addAuthListener(function () {
-          refreshUser();
           each(authListeners);
         });
       }
     } catch (e) { /* ignore */ }
-  }
-
-  function refreshUser() {
-    safe(function (s) {
-      var p = s.user.getUser();
-      return p && p.then ? p.then(function (u) { cg.username = u && u.username ? String(u.username).slice(0, 24) : null; }, function () { /* guest */ }) : null;
-    });
   }
 
   cg.onSettingsChange = function (fn) { settingsListeners.push(fn); };
@@ -198,25 +186,5 @@
   cg.storage = function () {
     var d = safe(function (s) { return s.data; });
     return d || null;
-  };
-
-  // ---- online rooms and invites --------------------------------------------------
-
-  cg.inviteLink = function (params) { return safe(function (s) { return s.game.inviteLink(params); }) || null; };
-  cg.inviteParam = function (name) { return safe(function (s) { return s.game.getInviteParam(name); }) || null; };
-
-  cg.updateRoom = function (info) {
-    inRoom = true;
-    safe(function (s) { return s.game.updateRoom(info); });
-  };
-
-  cg.leftRoom = function () {
-    if (!inRoom) return;
-    inRoom = false;
-    safe(function (s) { return s.game.leftRoom(); });
-  };
-
-  cg.onJoinRoom = function (fn) {
-    safe(function (s) { s.game.addJoinRoomListener(function (p) { try { fn(p); } catch (e) { SR.oops('join room', e); } }); });
   };
 })();

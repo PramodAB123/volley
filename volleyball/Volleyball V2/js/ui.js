@@ -1051,40 +1051,13 @@
   function togglePause() {
     var g = SR.game;
     if (!g || g.cfg.human === -1 || SR.cg.busy) return;
-    // Online the match keeps running for your friend; the menu just opens on top.
-    if (g.cfg.online) { show(current === 'scr-pause' ? null : 'scr-pause'); return; }
     g.paused = !g.paused;
     if (g.paused) show('scr-pause'); else show(null);
   }
 
   function quitMatch() {
-    if (SR.game && SR.game.cfg.online && SR.net) { SR.net.leave(); return; }
     stopMatch();
     show('scr-menu');
-  }
-
-  // Result screen for an online match, from this player's side.
-  function onlineResult(r) {
-    var won = r.mySets > r.oppSets, st = data().stats, stars = won ? SR.STARS.quickWin : 0;
-    mode = 'online';
-    st.matches++;
-    if (won) st.wins++;
-    r.history.forEach(function (x) { st.points += x[0]; });
-    st.aces += r.stats.aces; st.kills += r.stats.kills; st.blocks += r.stats.blocks;
-    data().stars += stars;
-    save();
-    $('result-title').textContent = SR.t(won ? 'Victory!' : 'Defeat');
-    $('result-title').className = won ? 'win' : 'loss';
-    $('result-sub').textContent = r.me.name + ' ' + r.mySets + ' - ' + r.oppSets + ' ' + r.opp.name + ' ' + (r.oppName ? SR.t('(vs {name})', { name: r.oppName }) : SR.t('(online)'));
-    $('result-sets').textContent = r.history.map(function (x) { return x[0] + '-' + x[1]; }).join('   ');
-    $('result-stats').textContent = SR.t('Aces {a} · Kills {k} · Blocks {b} · Errors {e}', { a: r.stats.aces, k: r.stats.kills, b: r.stats.blocks, e: r.stats.errors });
-    $('result-stars').textContent = stars ? SR.t('+{n} star', { n: stars }) : SR.t('No stars this time');
-    $('result-notes').textContent = '';
-    resultButtons(null);
-    SR.cg.midgame(function () {
-      stopMatch();
-      show('scr-result');
-    });
   }
 
   // ---- wiring -------------------------------------------------------------
@@ -1099,7 +1072,6 @@
     quit: quitMatch,
     teamCards: teamCards,
     rulesPicker: rulesPicker,
-    onlineResult: onlineResult,
     save: save,
     renderShop: renderShop,
     courtSwatch: courtSwatch,
@@ -1141,7 +1113,6 @@
       on('btn-stats', function () { renderStats(); show('scr-stats'); });
       on('btn-settings', function () { fillSettings(); show('scr-settings'); });
       on('btn-help', function () { show('scr-help'); });
-      on('btn-online', function () { SR.net.openLobby(); });
       document.querySelectorAll('[data-back]').forEach(function (b) {
         b.addEventListener('click', function () { SR.audio.play('click'); show('scr-menu'); });
       });

@@ -51,34 +51,6 @@
 
   var CH = [
     {
-      name: 'Coach', title: 'You are the coach',
-      body: 'You coach the team on the near side of the net. Your players run, pass, set and jump by themselves. You make the four calls that decide each rally: the serve, the set, the attack and the block.',
-      stage: 'idle',
-      beats: [
-        { say: 'This is your team, on the near side of the net.', aim: { w: [4.6, 4.5] }, dur: 3.2 },
-        { say: 'This is the other team, across the net.', aim: { w: [13.4, 4.5] }, dur: 3.2 },
-        { say: 'Each rally you make up to four calls: the serve, who gets the set, where the spike lands, and the block.', dur: 4.2 },
-        { say: 'In Try it mode the game waits for your call. In Watch mode a coach shows you each one.', dur: 3.6 },
-        { say: 'Next: meet your players, then each call in a real rally.', dur: 2.6, end: true }
-      ],
-      tips: ['You never steer a player: you make the calls and they play.', 'Your team always plays on the near side of the net.', 'Use Back, Next or the numbered chips to jump between steps, and ↻ to replay one.']
-    },
-    {
-      name: 'Players', title: 'Your six players',
-      body: 'Six players are on court. The letters over their heads show each job. Three stand at the net (the front row) and three behind them (the back row).',
-      stage: 'idle',
-      beats: [
-        { say: 'S is your setter. Every pass goes to the setter, who sets the ball up for a hitter.', aim: who(0), dur: 3.6 },
-        { say: 'OH are your outside hitters: all-round players who attack from the left side.', aim: who(1), dur: 3.4 },
-        { say: 'MB are your middle blockers: quick attacks in the middle and the heart of your block.', aim: who(2), dur: 3.4 },
-        { say: 'OP is your opposite: a big hitter on the right side.', aim: who(3), dur: 3.0 },
-        { say: 'The three players at the net are the front row: they block and spike.', aim: { w: [7.6, 4.5] }, dur: 3.4 },
-        { say: 'The back row passes the serve and digs spikes. All of this happens on its own.', aim: { w: [2.8, 4.5] }, dur: 3.6 },
-        { say: 'Win the serve back and your team rotates one spot, so everyone takes a turn at the net.', dur: 3.6, end: true }
-      ],
-      tips: ['Your setter never spikes: pick a hitter instead.']
-    },
-    {
       name: 'Serve', title: 'Serve: aim and power',
       body: 'Aim anywhere on their court, then serve while the power bar swings. A harder serve is tougher to pass but less accurate. A serve into the gap between two passers can win the point outright.',
       keys: { pc: 'Move the mouse to aim, then click or press Space', touch: 'Tap the spot on their court to serve there' },
@@ -177,8 +149,7 @@
       name: 'Scoring', title: 'Scoring and rules',
       rules: ['Rally scoring: every rally wins a point, whoever served.', 'Win each set by two. Before a match, choose 5, 11 or 15 points and 1, 3 or 5 sets.',
         'Win a rally on their serve and you take the serve; your team rotates one spot.', 'Press P or Esc to pause. Wins earn stars to spend in the Shop.',
-        'Besides Quick match, try Career, League, Tournament and the Daily challenge from the home screen.',
-        { online: 'Play online: create a room and send the code to a friend.' }],
+        'Besides Quick match, try Career, League, Tournament and the Daily challenge from the home screen.'],
       stage: 'idle', last: true,
       beats: [
         { say: 'The scoreboard: points in white, sets in gold. The small ball marks who serves.', aim: { board: true }, dur: 4 },
@@ -270,8 +241,8 @@
         // Hold the moment almost still until you make the call.
         rally.loopScale = b.youSlow || (b.slow < 1 ? 0.015 : 1);
         if (b.youAim !== undefined) spec = b.youAim;
-        say(b.youSay || b.say);
-      } else say(b.say);
+        say((training && b.trySay) || b.youSay || b.say);
+      } else say((training && b.trySay) || b.say);
     }
     if (yours(b)) {
       if (!b.you(rally)) {
@@ -416,10 +387,8 @@
     var c = CH[ch];
     $('demo-count').textContent = (ch + 1) + ' / ' + CH.length;
     $('demo-title').textContent = SR.t(c.title);
-    // Online play is off in single-player releases (net-config.js): leave its rule out.
-    var online = SR.NET_CONFIG && SR.NET_CONFIG.online;
     $('demo-body').innerHTML = c.rules ? '<ul>' + c.rules.map(function (x) {
-      return typeof x === 'string' ? '<li>' + esc(SR.t(x)) + '</li>' : online ? '<li>' + esc(SR.t(x.online)) + '</li>' : '';
+      return '<li>' + esc(SR.t(x)) + '</li>';
     }).join('') + '</ul>' : '<p>' + esc(SR.t(c.body)) + '</p>';
     if (c.tips) $('demo-body').innerHTML += '<div class="demo-tips"><b>' + esc(SR.t('Tips')) + '</b><ul>' + c.tips.map(function (x) { return '<li>' + esc(SR.t(x)) + '</li>'; }).join('') + '</ul></div>';
     var k = c.keys;
@@ -468,7 +437,7 @@
   };
 
   function setMode(m) {
-    mode = m === 'watch' ? 'watch' : 'try';
+    mode = m === 'watch' && !training ? 'watch' : 'try';
     D.tryMode = mode === 'try';
     document.querySelectorAll('#demo-mode button').forEach(function (b) {
       var on = b.getAttribute('data-mode') === mode;
@@ -501,7 +470,7 @@
     go(0);
   };
 
-  // quiet: the match was replaced elsewhere (e.g. an online invite), so just tidy up.
+  // quiet: the match was replaced elsewhere , so just tidy up.
   D.stop = function (quiet) {
     trained();
     training = false;
@@ -542,6 +511,11 @@
       D.stop(true); SR.ui.show('scr-menu');
       // After the training: straight into the first match (one set, random teams).
       if (first && $('btn-quick-random')) $('btn-quick-random').click(); else $('btn-quick').click();
+    });
+    // Training only: skip the rest and start the first match now.
+    on('demo-skip', function () {
+      D.stop(true); SR.ui.show('scr-menu');
+      if ($('btn-quick-random')) $('btn-quick-random').click();
     });
     on('demo-help', function () { D.stop(true); SR.ui.show('scr-help'); });
     // Tapping the court pauses and resumes.
