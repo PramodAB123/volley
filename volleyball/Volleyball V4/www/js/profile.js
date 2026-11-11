@@ -47,60 +47,114 @@
     return '<path d="' + d + '" fill="none" stroke="#1b1410" stroke-width="' + (w + 4) + '" stroke-linecap="round" stroke-linejoin="round"/>' +
       '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"/>';
   }
+  // The hero spiker on the title banner: tapered, shaded limbs, no ink outline,
+  // a rim of floodlight on the lit side. Team colours, avatar skin and hair.
+  // Catmull-Rom through points [x, y, width]; returns { body: closed outline path, rim: right/lit edge path }.
+  function limbPath(pts) {
+    var c = [], i, t, k;
+    for (i = 0; i < pts.length - 1; i++) {
+      var p0 = pts[Math.max(i - 1, 0)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(i + 2, pts.length - 1)];
+      for (k = 0; k < 10; k++) {
+        t = k / 10; var t2 = t * t, t3 = t2 * t;
+        var f = function (a, b, cc, d) { return 0.5 * (2 * b + (-a + cc) * t + (2 * a - 5 * b + 4 * cc - d) * t2 + (-a + 3 * b - 3 * cc + d) * t3); };
+        c.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1]), p1[2] + (p2[2] - p1[2]) * t]);
+      }
+    }
+    c.push(pts[pts.length - 1].slice());
+    var L = [], R = [];
+    for (i = 0; i < c.length; i++) {
+      var a = c[Math.max(i - 1, 0)], b = c[Math.min(i + 1, c.length - 1)], dx = b[0] - a[0], dy = b[1] - a[1], d = Math.sqrt(dx * dx + dy * dy) || 1, nx = -dy / d, ny = dx / d, w = c[i][2] / 2;
+      L.push([c[i][0] + nx * w, c[i][1] + ny * w]); R.push([c[i][0] - nx * w, c[i][1] - ny * w]);
+    }
+    function fmt(p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }
+    function cap(p, q, ctr) {   // half circle from p to q around ctr, bulging away from the limb
+      var out = [], a0 = Math.atan2(p[1] - ctr[1], p[0] - ctr[0]), r = ctr[2] / 2, j, dir = ctr.dir;
+      for (j = 1; j < 8; j++) { var a = a0 + dir * Math.PI * j / 8; out.push([ctr[0] + Math.cos(a) * r, ctr[1] + Math.sin(a) * r]); }
+      return out;
+    }
+    var e = c[c.length - 1], s0 = c[0];
+    function side(p, ctr, nxt) { // which way round the cap goes: away from the next sample
+      var a = Math.atan2(p[1] - ctr[1], p[0] - ctr[0]) + Math.PI / 2, tx = Math.cos(a), ty = Math.sin(a);
+      return (tx * (ctr[0] - nxt[0]) + ty * (ctr[1] - nxt[1])) > 0 ? 1 : -1;
+    }
+    e.dir = side(L[L.length - 1], e, c[c.length - 2]); s0.dir = side(R[0], s0, c[1]);
+    var pts2 = L.concat(cap(L[L.length - 1], R[R.length - 1], e), R.slice().reverse(), cap(R[0], L[0], s0));
+    var body = 'M' + pts2.map(fmt).join('L') + 'Z';
+    return { body: body, L: 'M' + L.map(fmt).join('L'), R: 'M' + R.map(fmt).join('L') };
+  }
   function spiker(t) {
     var a = avatarById(prof().avatar);
     var o = { id: 'sp' + (++uid), skin: a.skin.length === 7 ? a.skin : '#f2c7a5', hair: a.hair, color: t.color, trim: t.trim };
-    var INK = '#141022', skin = o.skin, skinD = tone(skin, -0.2), hair = o.hair, hairL = tone(hair.length === 7 ? hair : '#2a2233', 0.28);
-    var jc = o.color, jd = tone(jc, -0.38), jl = tone(jc, 0.22), trim = o.trim, g = o.id;
-    var st = ' stroke="' + INK + '" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"';
-    return '<svg class="sp-svg" viewBox="0 -34 244 284" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><defs>' +
-      '<linearGradient id="' + g + 's" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".8"/></linearGradient>' +
-      '<linearGradient id="' + g + 'j" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + jl + '"/><stop offset=".5" stop-color="' + jc + '"/><stop offset="1" stop-color="' + jd + '"/></linearGradient>' +
-      '<linearGradient id="' + g + 'r" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
-      '<pattern id="' + g + 'n" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M0 0h10v10" fill="none" stroke="rgba(230,238,255,.5)" stroke-width="1.1"/></pattern></defs>' +
-      // swing trail behind the hitting arm
-      '<path d="M150 60 C170 22 206 8 232 14" fill="none" stroke="url(#' + g + 's)" stroke-width="7" stroke-linecap="round" opacity=".55"/>' +
-      '<path d="M160 74 C180 40 208 28 230 32" fill="none" stroke="url(#' + g + 's)" stroke-width="3.5" stroke-linecap="round" opacity=".4"/>' +
-      '<g opacity=".9"><rect x="150" y="206" width="110" height="50" fill="url(#' + g + 'n)"/><rect x="150" y="202" width="110" height="6" rx="2" fill="#f4f6ff" stroke="#1b2440" stroke-width="1.5"/></g>' +
-      // far (left) arm, stretched forward for balance
-      '<g transform="rotate(-9 140 200)">' +
-      '<path d="M96 132 C78 126 60 116 44 100 L30 84 C26 78 34 70 40 76 L58 92 C72 102 88 108 104 112 Z" fill="' + skinD + '"' + st + '/>' +
-      '<path d="M32 86 L18 76 M34 80 L22 66 M39 76 L32 62 M45 78 L44 64" fill="none" stroke="' + INK + '" stroke-width="7.5" stroke-linecap="round"/>' +
-      '<path d="M32 86 L18 76 M34 80 L22 66 M39 76 L32 62 M45 78 L44 64" fill="none" stroke="' + skinD + '" stroke-width="4" stroke-linecap="round"/>' +
-      // shorts (cut off by the banner edge)
-      '<path d="M112 214 C130 222 156 220 176 208 L192 270 L100 270 Z" fill="#161a33"' + st + '/>' +
-      '<path d="M172 212 L186 270" stroke="' + trim + '" stroke-width="5"/>' +
-      // torso: back view, twisted into the swing
-      '<path d="M90 124 C102 108 124 100 140 102 C158 98 178 102 190 114 C192 144 186 178 176 210 C156 222 130 224 112 216 C104 188 94 156 90 124 Z" fill="url(#' + g + 'j)"' + st + '/>' +
-      '<path d="M90 124 C96 158 104 190 112 216 C118 219 124 220 130 221 C120 190 112 150 108 112 C101 115 95 119 90 124 Z" fill="' + jd + '" opacity=".6"/>' +
-      '<path d="M176 108 C182 140 178 180 166 215" fill="none" stroke="' + trim + '" stroke-width="6" opacity=".95"/>' +
-      '<path d="M118 150 C128 158 146 158 160 150" fill="none" stroke="' + jd + '" stroke-width="2.5" opacity=".7" stroke-linecap="round"/>' +
-      '<path d="M138 104 C140 130 140 170 136 220" fill="none" stroke="' + jd + '" stroke-width="2" opacity=".45"/>' +
-      '<text x="142" y="184" text-anchor="middle" transform="rotate(-6 142 180) skewX(-8)" font-size="40" font-weight="900" font-style="italic" fill="#fff" stroke="' + INK + '" stroke-width="3" paint-order="stroke" font-family="system-ui, sans-serif">10</text>' +
-      // collar
-      '<path d="M118 106 C128 114 146 114 156 102" fill="none" stroke="' + trim + '" stroke-width="5" stroke-linecap="round"/>' +
-      // neck
-      '<path d="M124 92 L122 108 C130 114 144 112 150 104 L148 88 Z" fill="' + skinD + '"' + st + '/>' +
-      // hitting arm: elbow high, hand cocked back
-      '<path d="M162 112 C176 96 190 82 204 70 C212 62 212 46 206 30 C204 22 216 18 220 26 C228 46 228 66 218 80 C206 96 194 112 184 128 Z" fill="' + skin + '"' + st + '/>' +
-      '<path d="M196 84 C204 76 210 68 212 58" fill="none" stroke="' + skinD + '" stroke-width="3" stroke-linecap="round" opacity=".8"/>' +
-      '<path d="M203 32 C196 26 194 16 198 8 L196 -6 C196 -11 203 -11 204 -6 L205 2 L207 -10 C208 -15 215 -14 214 -9 L213 3 L217 -7 C219 -12 225 -10 224 -5 L221 6 L225 0 C228 -4 233 -1 231 3 L226 14 C228 22 226 28 221 31 Z" fill="' + skin + '"' + st + '/>' +
+    var g = o.id, skin = o.skin, skinD = tone(skin, -0.34), skinL = tone(skin, 0.22), hair = o.hair;
+    var jc = o.color, jd = tone(jc, -0.5), jl = tone(jc, 0.3), trim = o.trim, rim = 'rgba(205,225,255,.95)';
+    function limb(pts, fill, lit, side, from) {
+      var p = limbPath(pts), r = limbPath(pts.slice(from || 0));
+      return '<path d="' + p.body + '" fill="' + fill + '"/>' + (lit ? '<path d="' + r[side || 'R'] + '" fill="none" stroke="' + lit + '" stroke-width="1.2" stroke-linecap="round" opacity=".75"/>' : '');
+    }
+    var sk = 'url(#' + g + 'k)', skd = 'url(#' + g + 'kd)';
+    // Pose: airborne, back arched, hitting arm cocked high, off arm pointing at the ball, knees bent behind.
+    var legB = limb([[124, 148, 22], [114, 172, 17], [106, 192, 13.5], [116, 210, 10.5], [128, 224, 8]], skd);
+    var legF = limb([[140, 148, 23], [150, 172, 18.5], [157, 192, 14.5], [169, 206, 11], [182, 216, 8]], sk, rim, 'R', 1);
+    var armOff = limb([[106, 94, 15], [97, 78, 11.5], [91, 62, 9.5], [86, 46, 8], [83, 33, 6.5]], skd);
+    var armHit = limb([[162, 92, 15], [168, 72, 12.5], [175, 54, 10.5], [173, 38, 9], [168, 25, 7.5]], sk, rim, 'R', 1);
+    // an open hand: palm plus four fingers and a thumb, drawn as small tapered strokes
+    function hand(x, y, ang, fill) {
+      var out = '<g transform="translate(' + x + ' ' + y + ') rotate(' + ang + ')"><ellipse cx="0" cy="-5" rx="5.4" ry="6.6" fill="' + fill + '"/>', f = [[-3.6, 9.5], [-1.2, 11.5], [1.3, 11.5], [3.7, 9.8]];
+      for (var q = 0; q < f.length; q++) out += '<path d="M' + f[q][0] + ' -8 L' + (f[q][0] * 1.25) + ' ' + (-8 - f[q][1]) + '" stroke="' + fill + '" stroke-width="2.5" stroke-linecap="round"/>';
+      return out + '<path d="M-4.5 -3 L-9 -8" stroke="' + fill + '" stroke-width="2.6" stroke-linecap="round"/></g>';
+    }
+    return '<svg class="sp-svg" viewBox="58 -18 186 200" preserveAspectRatio="xMaxYMax meet" aria-hidden="true"><defs>' +
+      '<linearGradient id="' + g + 'k" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="' + skinD + '"/><stop offset=".55" stop-color="' + skin + '"/><stop offset="1" stop-color="' + skinL + '"/></linearGradient>' +
+      '<linearGradient id="' + g + 'kd" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="' + tone(skin, -0.5) + '"/><stop offset="1" stop-color="' + skinD + '"/></linearGradient>' +
+      '<linearGradient id="' + g + 'j" x1="0" y1="0" x2="1" y2=".25"><stop offset="0" stop-color="' + jd + '"/><stop offset=".55" stop-color="' + jc + '"/><stop offset=".9" stop-color="' + jl + '"/></linearGradient>' +
+      '<linearGradient id="' + g + 'sh" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#05070f"/><stop offset=".7" stop-color="#1a1f36"/><stop offset="1" stop-color="#2c3352"/></linearGradient>' +
+      '<radialGradient id="' + g + 'b" cx=".65" cy=".3" r=".8"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#f3f0e6"/><stop offset="1" stop-color="#9aa3c0"/></radialGradient>' +
+      '<radialGradient id="' + g + 'bg" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".75"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="' + g + 'h" cx=".7" cy=".25" r=".9"><stop offset="0" stop-color="' + tone(hair.length === 7 ? hair : '#2a2233', 0.18) + '"/><stop offset="1" stop-color="' + hair + '"/></radialGradient>' +
+      '<linearGradient id="' + g + 'tr" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
+      '<pattern id="' + g + 'n" width="9" height="9" patternUnits="userSpaceOnUse"><path d="M0 0h9v9" fill="none" stroke="rgba(230,238,255,.45)" stroke-width="1"/></pattern></defs>' +
+      // net behind, lower right
+      '<rect x="150" y="214" width="110" height="40" fill="url(#' + g + 'n)"/><rect x="150" y="210" width="110" height="5" rx="1.5" fill="#eef2ff"/>' +
+      // ball: glow, motion trail, panels
+      '<circle cx="212" cy="14" r="26" fill="url(#' + g + 'bg)"/>' +
+      '<path d="M196 24 C176 34 160 44 150 58" fill="none" stroke="url(#' + g + 'tr)" stroke-width="7" stroke-linecap="round" opacity=".45"/>' +
+      '<g transform="translate(212 14) rotate(-20)"><circle r="12" fill="url(#' + g + 'b)"/>' +
+      '<path d="M-11.5 -3 C-4 -2 3 3 6 10.5 M-4 -11.3 C0 -5 1 3 -1 11.8 M11 -5 C4 -6 -3 -3 -8 3.5" fill="none" stroke="#2f4fa8" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>' +
+      '<path d="M3 -11.5 C8 -9 11 -5 11.8 0" fill="none" stroke="#f2b51e" stroke-width="2.4" stroke-linecap="round"/></g>' +
+      // far side first: back leg, off arm
+      legB +
+      '<path d="M117 222 L131 219 C135 219 137 222 136 226 L121 229 C117 229 115 225 117 222 Z" fill="#cfd5e6"/><path d="M118 227 L136 224" stroke="#5b6480" stroke-width="2.2"/>' +
+      '<rect x="100" y="185" width="14" height="11" rx="5" transform="rotate(30 107 190)" fill="#1b1f33"/>' +
+      armOff + hand(83, 32, -12, skinD) +
+      // shorts
+      '<path d="M114 140 C126 146 142 146 154 138 L162 168 C150 176 134 178 122 174 L118 182 C110 180 104 176 102 170 Z" fill="url(#' + g + 'sh)"/>' +
+      '<path d="M154 140 L161 167" stroke="' + trim + '" stroke-width="2.6" opacity=".9"/>' +
+      // front leg + shoe + knee pad
+      legF +
+      '<path d="M174 214 L188 210 C193 209 196 213 194 217 L180 222 C175 223 172 218 174 214 Z" fill="#f4f6fb"/><path d="M175 220 L194 214" stroke="#5b6480" stroke-width="2.4"/><path d="M183 211 l4 -1" stroke="' + trim + '" stroke-width="2"/>' +
+      '<rect x="148" y="184" width="16" height="12" rx="5.5" transform="rotate(-38 156 190)" fill="#22273f"/><path d="M151 186 l9 -6" stroke="rgba(255,255,255,.18)" stroke-width="2" stroke-linecap="round"/>' +
+      // torso (back view, twisting into the swing)
+      '<path d="M99 94 C105 82 126 77 140 79 C157 78 169 84 172 96 C170 114 162 132 156 144 C142 152 126 152 112 146 C106 128 97 110 99 94 Z" fill="url(#' + g + 'j)"/>' +
+      '<path d="M112 146 C106 128 97 110 99 94 C104 86 112 82 120 81 C116 100 116 124 122 149 Z" fill="' + jd + '" opacity=".55"/>' +
+      '<path d="M131 86 C134 104 136 124 134 146" fill="none" stroke="' + jd + '" stroke-width="1.6" opacity=".55"/>' +
+      '<path d="M118 118 C126 122 140 122 150 116" fill="none" stroke="' + jd + '" stroke-width="1.4" opacity=".45"/>' +
+      '<path d="M170 98 C168 116 161 132 155 143" fill="none" stroke="' + rim + '" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M158 83 C166 92 166 114 158 138" fill="none" stroke="' + trim + '" stroke-width="3.4" opacity=".9"/>' +
+      '<text x="136" y="130" text-anchor="middle" transform="rotate(-4 136 120)" font-size="27" font-weight="800" fill="' + trim + '" font-family="Arial Black, Arial, sans-serif" letter-spacing="-1" opacity=".95">10</text>' +
+      '<path d="M120 84 C128 90 142 90 150 82" fill="none" stroke="' + trim + '" stroke-width="2.6" stroke-linecap="round"/>' +
       // sleeves
-      '<path d="M154 104 C166 98 180 100 190 110 C192 118 190 126 186 132 C176 128 166 124 158 122 Z" fill="' + jc + '"' + st + '/>' +
-      '<path d="M186 132 C190 126 192 118 190 110" fill="none" stroke="' + trim + '" stroke-width="5" stroke-linecap="round"/>' +
-      '<path d="M90 126 C94 116 104 110 114 110 C116 118 114 128 108 136 C100 136 94 132 90 126 Z" fill="' + jd + '"' + st + '/>' +
-      // head: turned toward the ball, seen from behind
-      '<path d="M98 66 C96 86 104 100 120 102 C138 104 152 92 152 72 C152 54 140 44 124 44 C108 44 100 52 98 66 Z" fill="' + skin + '"' + st + '/>' +
-      '<path d="M100 78 C98 80 96 84 98 88 L102 88" fill="' + skin + '"' + st + '/>' +
-      '<path d="M102 66 L115 70" fill="none" stroke="' + INK + '" stroke-width="2.6" stroke-linecap="round"/>' +
-      '<path d="M106 74 C108 72 111 72 112 75 C111 78 108 78 106 77 Z" fill="' + INK + '"/>' +
-      '<path d="M104 90 C108 92 112 92 115 90" fill="none" stroke="' + INK + '" stroke-width="2" stroke-linecap="round"/>' +
-      '<ellipse cx="129" cy="80" rx="4" ry="6" fill="' + skinD + '" stroke="' + INK + '" stroke-width="2"/>' +
-      // hair: swept back in spikes
-      '<path d="M104 62 C100 50 104 38 114 34 L110 24 L124 30 L128 16 L138 28 L152 20 L152 34 L168 34 L160 46 L174 56 L160 62 L166 78 L154 76 L152 92 L142 84 C138 78 136 70 136 62 C130 66 124 66 118 60 C114 62 108 62 104 62 Z" fill="' + hair + '"' + st + '/>' +
-      '<path d="M122 36 C130 34 140 36 146 42 M132 50 C140 48 148 52 152 60" fill="none" stroke="' + hairL + '" stroke-width="3" stroke-linecap="round" opacity=".8"/>' +
-      '</g>' +
-      // rim light from the floodlights (off)
+      '<path d="M154 82 C166 80 176 88 178 98 L166 106 C162 100 156 94 150 91 Z" fill="' + jc + '"/><path d="M178 98 L166 106" stroke="' + trim + '" stroke-width="2.6"/>' +
+      '<path d="M97 98 C97 88 104 83 114 83 L116 95 C110 97 104 101 100 106 Z" fill="' + jd + '"/>' +
+      // hitting arm on top, hand cocked open
+      armHit + hand(167, 25, -22, skin) +
+      // neck, head from behind (ear and jaw only), short hair
+      '<path d="M126 70 L124 84 C130 88 140 88 144 82 L142 68 Z" fill="' + skinD + '"/>' +
+      '<ellipse cx="134" cy="58" rx="13.5" ry="15" fill="url(#' + g + 'k)"/>' +
+          '<ellipse cx="146" cy="60" rx="3" ry="4.5" fill="' + skinD + '"/>' +
+      '<path d="M120.5 67 C115 52 121 38 134 37.5 C145 37 151.5 44 150.5 53 C148 53 145.5 56 144.5 61 C143 67 140.5 72 136 74.5 C129.5 76 124 73 120.5 67 Z" fill="url(#' + g + 'h)"/>' +
+      '<path d="M124 70 C128 73 133 74 137 73" fill="none" stroke="' + tone(hair.length === 7 ? hair : '#2a2233', -0.4) + '" stroke-width="1.2" opacity=".6"/>' +
+      '<path d="M126 43 C132 40 140 40 145 44" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.6" stroke-linecap="round"/>' +
+      '<path d="M147.5 50 C150 54 150 62 147.5 68" fill="none" stroke="' + rim + '" stroke-width="1.4" stroke-linecap="round"/>' +
       '</svg>';
   }
 
@@ -144,7 +198,7 @@
     var t = SR.teamById(data().settings.team);
     var k = SR.kitTeam ? SR.kitTeam(t) : t;
     var key = k.color + k.trim + p.avatar;
-    if ($('h-art') && $('h-art').dataset.k !== key) { $('h-art').dataset.k = key; $('h-art').innerHTML = spiker(k); }
+    if ($('h-art') && !$('h-art').classList.contains('h-photo') && $('h-art').dataset.k !== key) { $('h-art').dataset.k = key; $('h-art').innerHTML = spiker(k); }
     teamStrip();
     settingsCard();
   }
