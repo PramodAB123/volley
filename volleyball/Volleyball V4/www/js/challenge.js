@@ -125,7 +125,7 @@
     $('chal-card').innerHTML =
       '<span class="chal-big" aria-hidden="true">' + TARGET + '</span>' +
       '<div class="chal-goal"><small>' + T('Today\'s goal') + '</small><b>' + goalText(c) + '</b>' +
-      '<span class="chal-tags">' + diffPill(c.diff) + '<span class="chal-prize">★ +' + c.stars + '</span></span></div>' +
+      '<span class="chal-tags">' + diffPill(c.diff) + '<span class="chal-prize">' + SR.GEM + ' +' + c.stars + ' · ' + SR.COIN + ' +' + SR.COINS.challenge + '</span></span></div>' +
       (p.done ? '<span class="chal-done" aria-label="' + T('Completed') + '">✓</span>' : '');
     $('chal-card').classList.toggle('done', p.done);
     $('chal-match').innerHTML =
@@ -137,10 +137,10 @@
     play.classList.toggle('ghost', p.done);
     play.classList.toggle('daily-claim', !p.done);
     var st = p.done ? T('Done! Come back tomorrow for a new challenge.')
-      : p.tries ? T('Tries today: {n}. Keep going!', { n: p.tries }) : T('Beat it once today to win the stars.');
+      : p.tries ? T('Tries today: {n}. Keep going!', { n: p.tries }) : T('Beat it once today to win the diamonds.');
     $('chal-status').textContent = st;
-    $('chal-streak').innerHTML = s ? '🔥 ' + T(s === 1 ? 'Streak: {n} day' : 'Streak: {n} days', { n: s }).replace(/(\d+)/, '<b>$1</b>') + ' · ' + T('every 7 days in a row: +{n} ★', { n: SR.CHALLENGE.streakBonus })
-      : T('Win challenges on days in a row: every 7 days gives +{n} ★', { n: SR.CHALLENGE.streakBonus });
+    $('chal-streak').innerHTML = s ? '🔥 ' + T(s === 1 ? 'Streak: {n} day' : 'Streak: {n} days', { n: s }).replace(/(\d+)/, '<b>$1</b>') + ' · ' + T('every 7 days in a row: +{n} ', { n: SR.CHALLENGE.streakBonus }) + SR.GEM
+      : T('Win challenges on days in a row: every 7 days gives +{n} ', { n: SR.CHALLENGE.streakBonus }) + SR.GEM;
     tick();
   }
 
@@ -157,13 +157,16 @@
     var el = $('home-chal');
     if (!el) return;
     var c = current(), p = prog();
-    el.innerHTML = '<span class="ct-ico" aria-hidden="true">' + TARGET + '</span>' +
-      '<span class="dt-txt"><b>' + T('Daily challenge') + (p.done ? ' ✓' : '') + '</b><small>' + goalText(c) + ' · ' +
-      (p.done ? T('Done for today') : '★ +' + c.stars) + '</small></span><span class="dt-go" aria-hidden="true">›</span>';
+    el.innerHTML = '<span class="ct-ico" aria-hidden="true">' + CLIP + '</span>' +
+      '<span class="dt-txt"><b>' + T('Daily Challenge') + (p.done ? ' ✓' : '') + '</b><small>' + goalText(c) + ' <span class="cs-prize">' +
+      (p.done ? T('Done for today') : SR.GEM + ' +' + c.stars) + '</span></small></span>' +
+      '<span class="cs-prog"><i style="width:' + (p.done ? 100 : 0) + '%"></i><b>' + (p.done ? 1 : 0) + ' / 1</b></span><span class="dt-go" aria-hidden="true">›</span>';
     el.classList.toggle('ready', !p.done);
     el.classList.toggle('done', p.done);
     el.classList.remove('hidden');
   }
+  var CLIP = '<svg viewBox="0 0 48 48"><rect x="9" y="8" width="30" height="36" rx="4" fill="#d9fbff" stroke="#0b5a63" stroke-width="2"/><rect x="17" y="4" width="14" height="8" rx="2.5" fill="#53e0f0" stroke="#0b5a63" stroke-width="2"/>' +
+    '<path d="M16 27l6 6 11-12" fill="none" stroke="#12a594" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   function open() {
     var cur = SR.ui.current();
@@ -220,7 +223,7 @@
       out.notes.push(T('Daily challenge complete!'));
       if (p.streak % 7 === 0) {
         out.stars += SR.CHALLENGE.streakBonus;
-        out.notes.push(T('{n} days in a row: +{b} ★ bonus!', { n: p.streak, b: SR.CHALLENGE.streakBonus }));
+        out.notes.push(T('{n} days in a row: +{b} bonus diamonds!', { n: p.streak, b: SR.CHALLENGE.streakBonus }));
       }
       if (SR.audio) setTimeout(function () { SR.audio.play('reward'); }, 300);
     } else {

@@ -804,6 +804,10 @@
       var wx = d > 0.002 ? dx / d * want : 0, wy = d > 0.002 ? dy / d * want : 0;
       var mx = p.mvx || 0, my = p.mvy || 0, ex = wx - mx, ey = wy - my, el = Math.sqrt(ex * ex + ey * ey), dv = acc * dt;
       if (el > dv) { mx += ex / el * dv; my += ey / el * dv; } else { mx = wx; my = wy; }
+      // Smoothed acceleration (m/s^2) for the body lean: into a sprint, back when braking, banking in turns.
+      var iax = (mx - (p.mvx || 0)) / Math.max(dt, 1e-3), iay = (my - (p.mvy || 0)) / Math.max(dt, 1e-3), ak = Math.min(1, dt * 10);
+      p.ax = (p.ax || 0) + (clamp(iax, -40, 40) - (p.ax || 0)) * ak;
+      p.ay = (p.ay || 0) + (clamp(iay, -40, 40) - (p.ay || 0)) * ak;
       p.mvx = mx; p.mvy = my;
       var stx = mx * dt, sty = my * dt;
       if (stx * stx + sty * sty >= d * d && stx * dx + sty * dy > 0) { p.x = p.tx; p.y = p.ty; } else { p.x += stx; p.y += sty; }

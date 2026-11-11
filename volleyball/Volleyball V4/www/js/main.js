@@ -214,6 +214,7 @@
     part('custom', function () { if (SR.custom) SR.custom.init(); });
     part('daily', function () { if (SR.daily) SR.daily.init(q); });
     part('challenge', function () { if (SR.challenge) SR.challenge.init(); });
+    part('profile', function () { if (SR.profile) SR.profile.init(); });
     part('android', function () { if (SR.app) SR.app.init(); });
     window.requestAnimationFrame(frame);
   });

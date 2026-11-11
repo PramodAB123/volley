@@ -7,6 +7,9 @@
     document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('hidden', s.id !== id); });
     current = id;
     $('hud').classList.toggle('hidden', id !== null);
+    // The home screen has its own full-screen background.
+    $('app').classList.toggle('at-home', id === 'scr-menu');
+    if (id === 'scr-menu' && SR.profile) SR.profile.refresh();
     if (id === 'scr-menu' && SR.daily) SR.daily.onMenu();
     if (id === 'scr-menu' && SR.challenge) SR.challenge.teaser();
   }
@@ -15,8 +18,10 @@
   function data() { return SR.save.data; }
   function team(id) { return SR.teamById(id); }
 
+  // Diamonds (saved as `stars`) and coins on every badge.
   function refreshStars() {
-    document.querySelectorAll('[data-stars]').forEach(function (el) { el.textContent = data().stars; });
+    document.querySelectorAll('[data-stars]').forEach(function (el) { el.textContent = SR.fmtNum(data().stars); });
+    document.querySelectorAll('[data-coins]').forEach(function (el) { el.textContent = SR.fmtNum(data().coins); });
   }
 
   function chip(t) {
@@ -226,32 +231,56 @@
   }
 
   function finishMatch(game) {
-    var m = game.match, won = m.winner === 0, st = data().stats, stars = 0;
+    var m = game.match, won = m.winner === 0, st = data().stats, stars = 0, coins = 0, my = m.stats[0];
     st.matches++;
     if (won) st.wins++;
-    m.history.forEach(function (s) { st.points += s[0]; });
-    st.aces += m.stats[0].aces; st.kills += m.stats[0].kills; st.blocks += m.stats[0].blocks;
+    m.history.forEach(function (s) { st.points += s[0]; if (s[0] > s[1]) st.sets++; });
+    st.aces += my.aces; st.kills += my.kills; st.blocks += my.blocks; st.errors += my.errors || 0;
+    st.streak = won ? st.streak + 1 : 0;
+    st.best = Math.max(st.best, st.streak);
+    var t0 = m.teams[0], tid = t0.custom ? 'custom' : SR.TEAMS.some(function (t) { return t.id === t0.id; }) ? t0.id : null;
+    if (tid) { var bt = st.byTeam[tid] = st.byTeam[tid] || { m: 0, w: 0 }; bt.m++; if (won) bt.w++; }
     var notes = [], prevPick = careerPick;
     var result = { winner: m.winner, sets: m.sets.slice(), scores: m.history.slice() };
 
     if (mode === 'quick') { if (won) stars += SR.STARS.quickWin; }
-    else if (mode === 'league') { var r = leagueRecord(result); stars += r.stars; notes = r.notes; }
-    else if (mode === 'cup') { var c = cupRecord(result); stars += c.stars; notes = c.notes; }
-    else if (mode === 'career') { var k = careerRecord(won); stars += k.stars; notes = k.notes; }
-    else if (mode === 'daily' && SR.challenge) { var dc = SR.challenge.record(m, won); stars += dc.stars; notes = dc.notes; }
+    else if (mode === 'league') { var r = leagueRecord(result); stars += r.stars; coins += r.coins || 0; notes = r.notes; }
+    else if (mode === 'cup') { var c = cupRecord(result); stars += c.stars; coins += c.coins || 0; notes = c.notes; }
+    else if (mode === 'career') { var k = careerRecord(won); stars += k.stars; coins += k.coins || 0; notes = k.notes; }
+    else if (mode === 'daily' && SR.challenge) { var dc = SR.challenge.record(m, won); stars += dc.stars; if (dc.stars) coins += SR.COINS.challenge; notes = dc.notes; }
+    // Every match pays coins and XP; XP can level you up (more diamonds and coins).
+    var loot = SR.profile.matchLoot(my, won, mode), pf = data().profile, before = { level: pf.level, xp: pf.xp };
+    coins += loot.coins;
     data().stars += stars;
+    data().coins += coins;
+    var ups = SR.profile.addXp(loot.xp);
     save();
 
     $('result-title').textContent = won ? 'Victory!' : 'Defeat';
     $('result-title').className = won ? 'win' : 'loss';
     $('result-sub').textContent = m.teams[0].name + ' ' + m.sets[0] + ' - ' + m.sets[1] + ' ' + m.teams[1].name;
     $('result-sets').textContent = m.history.map(function (s) { return s[0] + '-' + s[1]; }).join('   ');
-    $('result-stats').textContent = 'Aces ' + m.stats[0].aces + ' · Kills ' + m.stats[0].kills + ' · Blocks ' + m.stats[0].blocks + ' · Errors ' + m.stats[0].errors;
-    $('result-stars').textContent = stars ? '+' + stars + ' star' + (stars > 1 ? 's' : '') : 'No stars this time';
+    $('result-stats').textContent = 'Aces ' + my.aces + ' · Kills ' + my.kills + ' · Blocks ' + my.blocks + ' · Errors ' + my.errors;
+    resultLoot(stars, coins, loot.xp, before, ups);
     $('result-notes').textContent = notes.join(' ');
     resultButtons(nextAction(won, prevPick));
     stopMatch();
     show('scr-result');
+  }
+
+  // Result screen: what the match paid, and the XP bar filling up (with a
+  // banner for every level reached).
+  function resultLoot(stars, coins, xp, before, ups) {
+    $('result-stars').innerHTML = (stars ? '<span class="loot gem-loot">' + SR.GEM + '<b>+' + stars + '</b></span>' : '') +
+      '<span class="loot coin-loot">' + SR.COIN + '<b>+' + SR.fmtNum(coins) + '</b></span>' +
+      '<span class="loot xp-loot"><em>XP</em><b>+' + xp + '</b></span>';
+    var pf = data().profile, need = SR.XP.need(pf.level), lvUp = ups.length > 0;
+    var from = lvUp ? 0 : Math.round(before.xp / need * 100), to = Math.round(pf.xp / need * 100);
+    $('result-xp').innerHTML = '<div class="rx-row"><span class="rx-lv">Lv. ' + pf.level + '</span><span class="xp-bar big"><i style="width:' + from + '%"></i></span><span class="rx-num">' + SR.fmtNum(pf.xp) + ' / ' + SR.fmtNum(need) + '</span></div>' +
+      ups.map(function (u) { return '<div class="rx-up"><b>Level up! Level ' + u.level + '</b><span>' + SR.GEM + ' +' + u.gems + ' · ' + SR.COIN + ' +' + SR.fmtNum(u.coins) + '</span></div>'; }).join('');
+    var bar = $('result-xp').querySelector('.xp-bar i');
+    setTimeout(function () { if (bar) bar.style.width = to + '%'; }, 350);
+    if (lvUp) setTimeout(function () { SR.audio.play('reward'); }, 500);
   }
 
   // ---- league -------------------------------------------------------------
@@ -316,13 +345,13 @@
     if (L.round >= L.rounds.length) {
       L.done = true;
       var order = standings(L), top = order[0], pos = order.indexOf(L.me) + 1, T = trophies();
-      if (pos === 1) T.league++;
+      if (pos === 1) { T.league++; T.lw[L.lid || 0] = (T.lw[L.lid || 0] || 0) + 1; out.coins = SR.COINS.leagueTitle; }
       if (pos === 1 && L.table[L.me].w === L.rounds.length) T.unbeaten++;
       if (pos === 2) T.silver++;
       if (pos === 3) T.bronze++;
       T.seasons.unshift({ team: L.me, pos: pos, pts: L.table[L.me].pts });
       T.seasons.length = Math.min(T.seasons.length, 8);
-      if (top === L.me) { out.stars += LG.title; out.notes.push(LG.name + ' champions! +' + LG.title + ' bonus stars.'); }
+      if (top === L.me) { out.stars += LG.title; out.notes.push(LG.name + ' champions! +' + LG.title + ' bonus diamonds and ' + SR.COINS.leagueTitle + ' coins.'); }
       else out.notes.push(LG.name + ' finished. ' + team(top).name + ' took the title.');
       // The League map: best finish here, and promotion opens the next league.
       var P = data().leagueMap, li = L.lid || 0, up = SR.LEAGUES[li + 1];
@@ -423,11 +452,11 @@
           crest(tm, 'lg-shield') + '<b>' + tm.short + '</b><span class="lg-block"><i>' + place + '</i><small>' + L.table[id].pts + ' pts</small></span></div>';
       }).join('');
       stage = '<div class="lg-card lg-stage over' + (champ ? ' won' : '') + '"><h3>' + (champ ? 'Champions!' : 'Final podium') + '</h3><div class="lg-podium">' + pod + '</div>' +
-        '<p class="lg-cap">' + (champ ? me.name + ' lift the ' + LG.name + ' Shield · ★ +' + LG.title : team(top).name + ' took the Shield. You finished ' + leagueOrdinal(pos) + '.') + '</p></div>';
+        '<p class="lg-cap">' + (champ ? me.name + ' lift the ' + LG.name + ' Shield · ' + SR.GEM + ' +' + LG.title : team(top).name + ' took the Shield. You finished ' + leagueOrdinal(pos) + '.') + '</p></div>';
     } else {
       var left = n - played, gap = lead, can = gap <= left * 3;
       stage = '<div class="lg-card lg-stage"><h3>Season prize</h3><div class="lg-plinth">' + lgTrophy('shield', 'lg-big') + '</div>' +
-        '<b class="lg-prize">' + LG.name + ' Shield</b><p class="lg-cap">Finish top after ' + n + ' rounds · ★ +' + LG.title + ' bonus' +
+        '<b class="lg-prize">' + LG.name + ' Shield</b><p class="lg-cap">Finish top after ' + n + ' rounds · ' + SR.GEM + ' +' + LG.title + ' bonus' +
         (SR.LEAGUES[(L.lid || 0) + 1] ? ' · Top ' + SR.LEAGUE_PROMOTE + ' go up to the ' + SR.LEAGUES[(L.lid || 0) + 1].name : '') + '</p>' +
         '<p class="lg-race ' + (pos === 1 ? 'up' : can ? 'on' : 'off') + '">' + (pos === 1 ? (played ? 'You hold the Shield. Keep it!' : 'Every team starts on 0 pts.') : can ? (lead ? lead + ' pt' + (lead === 1 ? '' : 's') + ' to catch ' : 'Level on points with ') + team(top).name : 'The Shield is out of reach this season') + '</p></div>';
     }
@@ -473,7 +502,7 @@
       nx.className = 'cup-next';
       nx.innerHTML = '<div class="cup-vs"><span class="cv me">' + crest(me, 'lg-shield') + '<b>' + me.short + '</b></span><span class="cv-x">VS</span><span class="cv">' + crest(o, 'lg-shield') + '<b>' + o.short + '</b></span></div>' +
         '<span class="cpick-thumb">' + thumbImg(vid) + '</span>' +
-        '<span class="venue-text"><small>Round ' + (played + 1) + ' of ' + n + ' · vs ' + o.name + '</small><b>' + (a ? a.name : '') + '</b><span>' + host + ' · <i class="cwin">Win ★ ' + LG.win + (played === n - 1 ? ' · Title ★ +' + LG.title : '') + '</i></span></span>' +
+        '<span class="venue-text"><small>Round ' + (played + 1) + ' of ' + n + ' · vs ' + o.name + '</small><b>' + (a ? a.name : '') + '</b><span>' + host + ' · <i class="cwin">Win ' + SR.GEM + ' ' + LG.win + (played === n - 1 ? ' · Title ' + SR.GEM + ' +' + LG.title : '') + '</i></span></span>' +
         '<button id="btn-league-play" type="button" class="btn primary">Play</button>';
       on('btn-league-play', function () { startMatch(me, o, vid, LG.diff); });
       thumbQueue.push(vid);
@@ -483,7 +512,7 @@
       nx.className = 'cup-next over' + (champ ? ' won' : '');
       nx.innerHTML = '<span class="cup-end-ico">' + (champ ? lgTrophy('shield', 'cup-trophy') : pos <= 3 ? lgTrophy(pos === 2 ? 'silver' : 'bronze', 'cup-trophy') : crest(team(top), 'lg-shield')) + '</span>' +
         '<span class="venue-text"><small>Season complete' + (up ? ' · Promoted!' : '') + '</small><b>' + (champ ? 'You won the ' + LG.name + '!' : 'You finished ' + leagueOrdinal(pos)) + '</b><span>' +
-        (champ ? me.name + ' · ' + L.table[L.me].pts + ' pts · ★ +' + LG.title + ' bonus.' : team(top).name + ' won with ' + L.table[top].pts + ' pts.') +
+        (champ ? me.name + ' · ' + L.table[L.me].pts + ' pts · ' + SR.GEM + ' +' + LG.title + ' bonus.' : team(top).name + ' won with ' + L.table[top].pts + ' pts.') +
         (up ? ' The ' + up.name + ' is open.' : champ ? '' : ' Top ' + SR.LEAGUE_PROMOTE + ' go up. Go again?') + '</span></span>' +
         (up ? '<button id="btn-league-up" type="button" class="btn primary">Next league</button>' : '<button id="btn-league-new" type="button" class="btn primary">' + (champ ? 'New season' : 'Try again') + '</button>');
       if (up) on('btn-league-up', function () { wPick.league = lid + 1; openWorld('league'); });
@@ -533,7 +562,12 @@
     else T.out = true;
     advanceCup(T);
     while (T.out && !T.champion) advanceCup(T);
-    if (T.champion === T.me) { trophies().cup++; out.stars += CP.title; out.notes.push(CP.name + ' winners! +' + CP.title + ' bonus stars.'); }
+    if (T.champion === T.me) {
+      var TR = trophies(), ci0 = T.cid || 0;
+      TR.cup++; TR.cw[ci0] = (TR.cw[ci0] || 0) + 1;
+      out.stars += CP.title; out.coins = SR.COINS.cupTitle;
+      out.notes.push(CP.name + ' winners! +' + CP.title + ' bonus diamonds and ' + SR.COINS.cupTitle + ' coins.');
+    }
     else if (T.out) out.notes.push((T.rounds.length === 3 && T.rounds[2][0].w && (T.rounds[2][0].a === T.me || T.rounds[2][0].b === T.me) ? 'Runners-up. ' : 'Knocked out. ') + team(T.champion).name + ' won the ' + CP.name + '.');
     if (T.champion) {
       // The Tournament map: furthest stage here; reaching the final opens the next cup.
@@ -642,7 +676,7 @@
       nx.className = 'cup-next';
       nx.innerHTML = '<div class="cup-vs"><span class="cv me">' + crest(me) + '<b>' + me.short + '</b></span><span class="cv-x">VS</span><span class="cv">' + crest(opp) + '<b>' + opp.short + '</b></span></div>' +
         '<span class="cpick-thumb">' + thumbImg(vid) + '</span>' +
-        '<span class="venue-text"><small>' + CUP_ONE[T.round] + ' · vs ' + opp.name + '</small><b>' + (a ? a.name : '') + '</b><span>' + host + ' · <i class="cwin">Win ★ ' + CP.win + (T.round === 2 ? ' + ' + CP.title : '') + '</i></span></span>' +
+        '<span class="venue-text"><small>' + CUP_ONE[T.round] + ' · vs ' + opp.name + '</small><b>' + (a ? a.name : '') + '</b><span>' + host + ' · <i class="cwin">Win ' + SR.GEM + ' ' + CP.win + (T.round === 2 ? ' + ' + CP.title : '') + '</i></span></span>' +
         '<button id="btn-cup-play" type="button" class="btn primary">Play</button>';
       on('btn-cup-play', function () { startMatch(me, opp, vid, CP.diff); });
       thumbQueue.push(vid);
@@ -652,7 +686,7 @@
       nx.className = 'cup-next over' + (won ? ' won' : '');
       nx.innerHTML = '<span class="cup-end-ico">' + (won ? TROPHY : crest(champ)) + '</span>' +
         '<span class="venue-text"><small>' + (won ? 'Cup winners' : lost === 2 ? 'Runners-up' : 'Knocked out') + '</small><b>' + (won ? 'You lifted the ' + CP.name + '!' : champ.name + ' won the cup') + '</b><span>' +
-        (won ? me.name + ' beat everyone · ★ +' + CP.title + ' bonus' : 'Better luck next time.') + (upC ? ' The ' + upC.name + ' is open.' : won ? '' : ' Reach the final to unlock the next cup.') + '</span></span>' +
+        (won ? me.name + ' beat everyone · ' + SR.GEM + ' +' + CP.title + ' bonus' : 'Better luck next time.') + (upC ? ' The ' + upC.name + ' is open.' : won ? '' : ' Reach the final to unlock the next cup.') + '</span></span>' +
         (upC ? '<button id="btn-cup-up" type="button" class="btn primary">Next cup</button>' : '<button id="btn-cup-new" type="button" class="btn primary">' + (won ? 'Play again' : 'Try again') + '</button>');
       if (upC) on('btn-cup-up', function () { wPick.cup = cid + 1; openWorld('cup'); });
       else on('btn-cup-new', function () { pendingTier.cup = cid; data().tournament = null; save(); openTeams('cup'); });
@@ -826,7 +860,9 @@
       LM.unlocked || tr.league ? (LM.unlocked + 1) + ' / ' + nl + ' leagues open' : nl + ' leagues to climb';
     if ($('cup-prog')) $('cup-prog').textContent = T && !T.champion ? curCup().name.replace(' Cup', '') + ' · ' + CUP_ONE[T.round] :
       CM.unlocked || tr.cup ? (CM.unlocked + 1) + ' / ' + nc + ' cups open' : nc + ' cups to win';
-    if ($('shop-prog')) $('shop-prog').textContent = '★ ' + data().stars + ' to spend';
+    if ($('shop-prog')) $('shop-prog').textContent = 'Balls, courts, kits and more';
+    if ($('career-new')) $('career-new').classList.toggle('hidden', !!C);
+    if ($('career-prog') && !C) $('career-prog').textContent = 'Conquer ' + n + ' islands and become a champion!';
   }
 
   function openCareer() {
@@ -924,7 +960,7 @@
   function careerInfo(i) {
     var C = data().career, a = careerCourt(i), st = SR.CAREER[i], opp = careerOpp(i), locked = i > C.unlocked, isles = careerIsles(C);
     var what = locked ? 'Locked · win on ' + isles[i - 1] + ' to sail here' :
-      i < C.unlocked ? 'Won · replay for ★ ' + SR.STARS.quickWin : (i < SR.CAREER.length - 1 ? 'Win to unlock ' + isles[i + 1] : 'Win the final island') + ' · ★ ' + careerReward(i);
+      i < C.unlocked ? 'Won · replay for ' + SR.GEM + ' ' + SR.STARS.quickWin : (i < SR.CAREER.length - 1 ? 'Win to unlock ' + isles[i + 1] : 'Win the final island') + ' · ' + SR.GEM + ' ' + careerReward(i);
     $('career-pick').innerHTML = '<span class="cpick-thumb">' + thumbImg(st.court) + '</span>' +
       '<span class="venue-text"><small>Island ' + (i + 1) + ' · ' + isles[i] + '</small><b>' + a.name + '</b>' +
       '<span>vs ' + chip(opp) + opp.name + ' · ' + SR.DIFFICULTY[st.diff].label + '</span><span class="cwhat">' + what + '</span></span>' +
@@ -939,6 +975,7 @@
     var first = i === C.unlocked, isles = careerIsles(C);
     if (won && first) {
       out.stars += careerReward(i);
+      out.coins = SR.COINS.island;
       C.unlocked = i + 1;
       if (i + 1 < n) { justUnlocked = careerPick = i + 1; out.notes.push('New island unlocked: ' + isles[i + 1] + ' (' + careerCourt(i + 1).name + ')!'); }
       else out.notes.push('Career complete! You won every island.');
@@ -1159,7 +1196,7 @@
     var locked = i > P.unlocked, best = P.best[i] || 0, prev = list[i - 1], next = list[i + 1], diff = SR.DIFFICULTY[it.diff].label;
     var info = isL ? it.teams + ' teams · ' + (it.teams - 1) + ' rounds · ' + diff : '8 teams · knockout · ' + diff + ' · Final: ' + SR.courtById(it.final).name;
     var what = locked ? 'Locked · ' + (isL ? 'finish top ' + SR.LEAGUE_PROMOTE + ' in the ' + prev.name : 'reach the final of the ' + prev.name) + ' to open' :
-      'Win ★ ' + it.win + ' · Title ★ +' + it.title + (best ? ' · Best: ' + (isL ? leagueOrdinal(best) : CUP_STAGE[best]) : '') +
+      'Win ' + SR.GEM + ' ' + it.win + ' · Title ' + SR.GEM + ' +' + it.title + (best ? ' · Best: ' + (isL ? leagueOrdinal(best) : CUP_STAGE[best]) : '') +
       (next && i === P.unlocked && act !== i ? ' · ' + (isL ? 'Top ' + SR.LEAGUE_PROMOTE + ' opens ' : 'Final opens ') + next.name : '');
     var warn = !locked && act >= 0 && act !== i ? '<span class="wwarn">Starting here ends your ' + list[act].name + (isL ? ' season' : ' run') + '</span>' : '';
     var label = locked ? 'Locked' : act === i ? 'Continue' : 'Play';
@@ -1190,22 +1227,23 @@
       if (!box) return;
       box.innerHTML = '';
       SR.SHOP[kind].forEach(function (it) {
-        var owned = data().owned[kind].indexOf(it.id) >= 0, eq = data().equipped[key] === it.id;
+        var owned = data().owned[kind].indexOf(it.id) >= 0, eq = data().equipped[key] === it.id, coin = !!it.coins;
+        var price = coin ? it.coins : it.price;
         var b = document.createElement('button');
-        b.className = 'shop-item' + (eq ? ' equipped' : '') + (it.daily && !owned ? ' gift' : '');
+        b.className = 'shop-item' + (eq ? ' equipped' : '') + (it.daily && !owned ? ' gift' : '') + (coin && !owned ? ' coin-item' : '');
         var sw = kind === 'balls'
           ? '<span class="swatch ball" style="background:radial-gradient(circle at 35% 35%,' + it.main + ' 55%,' + it.stripe + ' 56%)"></span>'
           : kind === 'kits' ? SR.daily.jersey(it.color ? it : team(data().settings.team), 'swatch kit')
           : it.motif ? courtSwatch(it) : '<span class="swatch" style="background:linear-gradient(135deg,' + it.court + ' 50%,' + it.floor + ' 50%);border-color:' + it.line + '"></span>';
         b.innerHTML = sw + '<span class="iname">' + it.name + '</span><span class="iprice">' +
-          (eq ? 'Equipped' : owned ? 'Equip' : it.daily ? 'Daily reward' : '★ ' + it.price) + '</span>';
+          (eq ? 'Equipped' : owned ? 'Equip' : it.daily ? 'Daily reward' : (coin ? SR.COIN : SR.GEM) + ' ' + SR.fmtNum(price)) + '</span>';
         b.addEventListener('click', function () {
           if (!owned && it.daily) { SR.audio.play('click'); SR.daily.open(); return; }
           if (!owned) {
-            if (data().stars < it.price) { b.classList.add('shake'); setTimeout(function () { b.classList.remove('shake'); }, 400); }
-            // Ask Yes / No before spending stars; buying equips it.
+            if (data()[coin ? 'coins' : 'stars'] < price) { b.classList.add('shake'); setTimeout(function () { b.classList.remove('shake'); }, 400); }
+            // Ask Yes / No before spending; buying equips it.
             var noun = { balls: ' ball', courts: ' court', kits: ' jersey' }[kind];
-            SR.confirmBuy({ name: it.name + noun, price: it.price, art: sw, what: 'It is equipped as soon as you buy it.',
+            SR.confirmBuy({ name: it.name + noun, price: price, coins: coin, art: sw, what: 'It is equipped as soon as you buy it.',
               onBuy: function () {
                 data().owned[kind].push(it.id);
                 data().equipped[key] = it.id;
@@ -1223,12 +1261,82 @@
         box.appendChild(b);
       });
     });
+    // Coins for diamonds.
+    var ex = $('shop-exchange');
+    if (ex) {
+      ex.innerHTML = '';
+      SR.COINS.exchange.forEach(function (pk, i) {
+        var b = document.createElement('button');
+        b.className = 'shop-item ex-item' + (i === SR.COINS.exchange.length - 1 ? ' best' : '');
+        var art = '<span class="ex-art">' + SR.GEM + (pk.gems >= 5 ? SR.GEM : '') + (pk.gems >= 12 ? SR.GEM : '') + '</span>';
+        b.innerHTML = art + '<span class="iname">' + pk.gems + ' diamond' + (pk.gems > 1 ? 's' : '') + '</span><span class="iprice">' + SR.COIN + ' ' + SR.fmtNum(pk.coins) + '</span>' +
+          (i ? '<span class="ex-tag">' + (i === 1 ? 'Save 12%' : 'Best deal') + '</span>' : '');
+        b.addEventListener('click', function () {
+          SR.confirmBuy({ name: pk.gems + ' diamond' + (pk.gems > 1 ? 's' : ''), verb: 'Get', yes: 'Yes, swap', price: pk.coins, coins: true, art: art,
+            what: 'Your coins become diamonds.',
+            onBuy: function () { data().stars += pk.gems; SR.audio.play('reward'); save(); renderShop(); } });
+        });
+        ex.appendChild(b);
+      });
+    }
   }
 
+  // The Shop, opened from the home screen's coin / diamond counters, can
+  // scroll straight to a section.
+  function openShop(scrollTo) {
+    renderShop();
+    show('scr-shop');
+    var p = document.querySelector('#scr-shop .panel'), el = scrollTo && $(scrollTo);
+    if (p) p.scrollTop = 0;
+    if (p && el) setTimeout(function () { p.scrollTop = Math.max(0, el.offsetTop - 90); }, 30);
+  }
+
+  // ---- stats ----------------------------------------------------------------
+
+  function esc(v) { return String(v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
   function renderStats() {
-    var s = data().stats, pct = s.matches ? Math.round(s.wins / s.matches * 100) : 0;
-    var rows = [['Matches', s.matches], ['Wins', s.wins + ' (' + pct + '%)'], ['Points won', s.points], ['Aces', s.aces], ['Kills', s.kills], ['Blocks', s.blocks], ['Stars', data().stars]];
-    $('stats-list').innerHTML = rows.map(function (r) { return '<div class="stat"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('');
+    var s = data().stats, pct = s.matches ? Math.round(s.wins / s.matches * 100) : 0, pf = data().profile, need = SR.XP.need(pf.level);
+    $('stats-profile').innerHTML = '<span class="avatar big">' + SR.profile.avatar(pf.avatar) + '</span>' +
+      '<span class="sp-who"><b>' + esc(pf.name || 'Player') + '</b><span class="h-lvl"><em>Lv. ' + pf.level + '</em><span class="xp-bar"><i style="width:' + Math.round(pf.xp / need * 100) + '%"></i></span></span>' +
+      '<small>' + SR.fmtNum(pf.xp) + ' / ' + SR.fmtNum(need) + ' XP · ' + SR.fmtNum(pf.total) + ' XP in total</small></span>' +
+      '<span class="st-cur">' + SR.gems(data().stars) + SR.coinsHtml(data().coins) + '</span>';
+    var rows = [['Matches', s.matches, 'm'], ['Wins', s.wins + ' <small>(' + pct + '%)</small>', 'w'], ['Sets won', s.sets, 's'], ['Points won', SR.fmtNum(s.points), 'p'],
+      ['Kills', s.kills, 'k'], ['Aces', s.aces, 'a'], ['Blocks', s.blocks, 'b'], ['Best win streak', s.best, 'r']];
+    $('stats-list').innerHTML = rows.map(function (r) { return '<div class="stat st-' + r[2] + '"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('');
+    // Matches with each team you have played as.
+    var bt = s.byTeam || {}, ids = Object.keys(bt).filter(function (id) { return bt[id].m > 0 && (id !== 'custom' || SR.customTeam()); });
+    ids.sort(function (a, b) { return bt[b].m - bt[a].m; });
+    $('stats-teams').innerHTML = ids.length ? '<div class="stt-head"><span>Your teams</span><span>Played</span><span>Won</span><span>Win %</span></div>' + ids.map(function (id) {
+      var t = team(id), r = bt[id], wp = Math.round(r.w / r.m * 100);
+      return '<div class="stt-row"><span class="stt-name"><span class="jersey" style="background:' + t.color + ';color:' + t.trim + '">' + esc(t.short) + '</span>' + esc(t.name) + '</span>' +
+        '<span>' + r.m + '</span><span>' + r.w + '</span><span class="stt-pct"><i style="width:' + wp + '%"></i><b>' + wp + '%</b></span></div>';
+    }).join('') : '<p class="muted small">Play a match to see stats for each team you use.</p>';
+    renderTrophies();
+  }
+
+  // The trophy cabinet: one trophy for each league and cup, lit up once won.
+  function renderTrophies() {
+    var T = trophies(), C = data().career, ch = data().challenge, won = 0, total = 0;
+    function tile(art, name, sub, n, place) {
+      total++;
+      if (n) won++;
+      return '<div class="trophy' + (n ? ' won' : ' locked') + '"><span class="tr-art">' + art + (n ? '' : '<span class="tr-lock" aria-hidden="true"></span>') + (n > 1 ? '<em class="tr-x">×' + n + '</em>' : '') + '</span>' +
+        '<b>' + name + '</b><small>' + (n ? (place ? place + ' · ' : '') + 'Won ' + (n === 1 ? 'once' : n + ' times') : sub) + '</small></div>';
+    }
+    var lg = SR.LEAGUES.map(function (L, i) { return tile(SR.trophyArt('league', i), L.name + ' Shield', 'Win the ' + L.name, T.lw[i] || 0, L.place); }).join('');
+    var cp = SR.CUPS.map(function (c, i) { return tile(SR.trophyArt('cup', i), c.name, 'Win the ' + c.name, T.cw[i] || 0, c.place); }).join('');
+    var careerDone = C && C.unlocked >= SR.CAREER.length ? 1 : 0;
+    var sp = [careerDone, T.unbeaten, (ch.best || 0) >= 7 ? 1 : 0].map(function (n, i) {
+      var d = SR.SPECIAL_TROPHIES[i];
+      return tile(SR.trophyArt('special', i), d.name, d.how, n, '');
+    }).join('');
+    var medals = '<div class="tr-medals"><span class="md md-g"><i></i>League titles <b>' + T.league + '</b></span><span class="md md-s"><i></i>2nd place <b>' + T.silver + '</b></span><span class="md md-b"><i></i>3rd place <b>' + T.bronze + '</b></span><span class="md md-c"><i></i>Cups <b>' + T.cup + '</b></span></div>';
+    $('stats-trophies').innerHTML = medals +
+      '<h4>Leagues</h4><div class="trophy-grid">' + lg + '</div>' +
+      '<h4>Tournaments</h4><div class="trophy-grid">' + cp + '</div>' +
+      '<h4>Special</h4><div class="trophy-grid">' + sp + '</div>';
+    $('trophy-count').textContent = won + ' / ' + total;
   }
 
   function fillSettings() {
@@ -1244,6 +1352,7 @@
     $('set-diff').value = s.difficulty;
     $('set-sound').checked = !!s.sound;
     $('set-music').checked = s.music !== false;
+    if (SR.profile) SR.profile.refresh();
   }
 
   // ---- pause --------------------------------------------------------------
@@ -1278,7 +1387,8 @@
     $('result-sub').textContent = r.me.name + ' ' + r.mySets + ' - ' + r.oppSets + ' ' + r.opp.name + ' (online)';
     $('result-sets').textContent = r.history.map(function (x) { return x[0] + '-' + x[1]; }).join('   ');
     $('result-stats').textContent = 'Aces ' + r.stats.aces + ' · Kills ' + r.stats.kills + ' · Blocks ' + r.stats.blocks + ' · Errors ' + r.stats.errors;
-    $('result-stars').textContent = stars ? '+' + stars + ' star' : 'No stars this time';
+    $('result-stars').innerHTML = stars ? '<span class="loot gem-loot">' + SR.GEM + '<b>+' + stars + '</b></span>' : '';
+    $('result-xp').innerHTML = '';
     $('result-notes').textContent = '';
     resultButtons(null);
     stopMatch();
@@ -1302,6 +1412,7 @@
     onlineResult: onlineResult,
     save: save,
     renderShop: renderShop,
+    openShop: openShop,
     // Back to "Choose your team" in the same mode (the custom team builder).
     teams: function () { renderTeams(); show('scr-teams'); },
     // Start a match in a given mode (the daily challenge uses 'daily').
@@ -1325,7 +1436,7 @@
       on('btn-cup', function () { openWorld('cup'); });
       on('btn-league-back', function () { openWorld('league'); });
       on('btn-cup-back', function () { openWorld('cup'); });
-      on('btn-shop', function () { renderShop(); show('scr-shop'); });
+      on('btn-shop', function () { openShop(); });
       on('btn-stats', function () { renderStats(); show('scr-stats'); });
       on('btn-settings', function () { fillSettings(); show('scr-settings'); });
       on('btn-help', function () { show('scr-help'); });
@@ -1362,6 +1473,8 @@
         if (!armed) { armed = true; b.textContent = 'Click again to erase everything'; setTimeout(function () { armed = false; b.textContent = 'Reset progress'; }, 3000); return; }
         armed = false; b.textContent = 'Reset progress';
         SR.save.reset(); renderStats(); refreshStars(); refreshCareer();
+        // Back to the very first launch: ask the name again.
+        if (SR.profile) SR.profile.ask(true);
       });
       // The map's curve depends on its width.
       var lastW = 0;

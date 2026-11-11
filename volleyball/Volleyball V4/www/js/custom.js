@@ -1,6 +1,7 @@
 // Custom team: your own club with its name, short code, jersey colours,
-// pattern and skill points. Unlocked once for SR.CUSTOM.price stars from the
-// team picker or the Shop. Every star purchase asks Yes / No first
+// pattern and skill points. Unlocked once for SR.CUSTOM.price diamonds from
+// the home screen, the team picker or the Shop, then levelled up with coins
+// (more skill points, higher caps). Every purchase asks Yes / No first
 // (SR.confirmBuy, also used by the Shop). Offline modes only.
 (function () {
   var $ = function (id) { return document.getElementById(id); };
@@ -39,23 +40,26 @@
     if (yes && o.onYes) o.onYes(); else if (!yes && o.onNo) o.onNo();
   }
 
-  // A star purchase: Yes / No with the price and what is left after it, or a
-  // notice when there aren't enough stars. onBuy runs after the stars are
-  // taken (and saved by the caller).
+  // A purchase: Yes / No with the price and what is left after it, or a
+  // notice when there isn't enough. o.coins = priced in coins (default:
+  // diamonds). onBuy runs after the price is taken (saved by the caller).
   function confirmBuy(o) {
-    var have = data().stars, art = o.art || '';
+    var coin = !!o.coins, key = coin ? 'coins' : 'stars', have = data()[key], art = o.art || '';
+    var ic = coin ? SR.COIN : SR.GEM, cls = coin ? 'cf-coin' : 'cf-star', f = SR.fmtNum;
+    var money = function (n) { return '<b class="' + cls + '">' + ic + ' ' + f(n) + '</b>'; };
     SR.audio.play('click');
     if (have < o.price) {
-      ask({ title: 'Not enough stars', art: art, no: false, yes: 'OK',
-        text: '<b>' + esc(o.name) + '</b> costs <b class="cf-star">★ ' + o.price + '</b>. You have <b class="cf-star">★ ' + have + '</b>, so you need <b>' + (o.price - have) + ' more</b>.<br><span class="muted small">Win matches, play the daily challenge and open your daily gift to earn stars.</span>' });
+      ask({ title: coin ? 'Not enough coins' : 'Not enough diamonds', art: art, no: false, yes: 'OK',
+        text: '<b>' + esc(o.name) + '</b> costs ' + money(o.price) + '. You have ' + money(have) + ', so you need <b>' + f(o.price - have) + ' more</b>.<br><span class="muted small">' +
+          (coin ? 'Every match you play earns coins, and more when you win.' : 'Win matches, level up, play the daily challenge and open your daily gift to earn diamonds. You can also swap coins for diamonds in the Shop.') + '</span>' });
       return;
     }
-    ask({ title: 'Buy ' + o.name + '?', art: art, yes: 'Yes, buy', no: 'No',
-      text: 'This costs <b class="cf-star">★ ' + o.price + '</b>.' + (o.what ? ' ' + o.what : '') +
-        '<span class="cf-bal"><span>You have <b>★ ' + have + '</b></span><span>After buying <b>★ ' + (have - o.price) + '</b></span></span>',
+    ask({ title: (o.verb || 'Buy') + ' ' + o.name + '?', art: art, yes: o.yes || 'Yes, buy', no: 'No',
+      text: 'This costs ' + money(o.price) + '.' + (o.what ? ' ' + o.what : '') +
+        '<span class="cf-bal"><span>You have ' + money(have) + '</span><span>After buying ' + money(have - o.price) + '</span></span>',
       onYes: function () {
-        if (data().stars < o.price) return;
-        data().stars -= o.price;
+        if (data()[key] < o.price) return;
+        data()[key] -= o.price;
         o.onBuy();
       } });
   }
@@ -107,7 +111,7 @@
       el.innerHTML = '<button type="button" class="ct-main">' +
         '<span class="ct-crest">' + BLANK + '</span>' +
         '<span class="ct-txt"><span class="tname">Custom team</span><span class="tstats">Your own name, colours and skill points</span></span>' +
-        '<span class="ct-price"><span class="ct-lock">' + LOCK + '</span>Unlock <b>★ ' + C.price + '</b></span></button>';
+        '<span class="ct-price"><span class="ct-lock">' + LOCK + '</span>Unlock <b>' + SR.GEM + ' ' + C.price + '</b></span></button>';
       el.querySelector('.ct-main').addEventListener('click', function () { unlock(teamsBack); });
       return el;
     }
@@ -131,8 +135,8 @@
     box.innerHTML = '<div class="ct-shop' + (t ? '' : ' locked') + '">' +
       '<span class="ct-crest big">' + (t ? shield(t, 'ct-shield') : BLANK) + '</span>' +
       '<span class="ct-txt"><b>' + (t ? esc(t.name) : 'Custom team') + '</b>' +
-      '<span class="muted small">' + (t ? (mine ? 'Your team. ' : '') + 'Change the name, colours and skill points any time.' : 'Build your own club and play it in every offline mode.') + '</span></span>' +
-      '<button type="button" class="btn ' + (t ? 'ghost' : 'primary') + ' ct-shop-btn">' + (t ? PEN + ' Edit team' : LOCK + ' Unlock ★ ' + C.price) + '</button></div>';
+      '<span class="muted small">' + (t ? (mine ? 'Your team. ' : '') + 'Level ' + (SR.customCaps(cfg().lvl).lvl + 1) + '. Change the name, colours and skill points any time, and upgrade it with coins.' : 'Build your own club and play it in every offline mode. Upgrade it with coins.') + '</span></span>' +
+      '<button type="button" class="btn ' + (t ? 'ghost' : 'primary') + ' ct-shop-btn">' + (t ? PEN + ' Customise' : LOCK + ' Unlock ' + SR.GEM + ' ' + C.price) + '</button></div>';
     box.querySelector('.ct-shop-btn').addEventListener('click', function () {
       if (t) { SR.audio.play('click'); open(shopBack); } else unlock(shopBack);
     });
@@ -157,7 +161,8 @@
     SR.ui.show('scr-custom');
   }
 
-  function left() { return C.total - C.stats.reduce(function (s, st) { return s + draft.r[st[0]]; }, 0); }
+  function cap() { return SR.customCaps(cfg().lvl); }
+  function left() { return cap().total - C.stats.reduce(function (s, st) { return s + draft.r[st[0]]; }, 0); }
 
   function render() {
     var t = { id: 'custom', name: draft.name, short: draft.short, color: draft.color, trim: draft.trim, pattern: draft.pattern };
@@ -193,27 +198,55 @@
   }
 
   function renderStats() {
-    var free = left();
+    var free = left(), mx = cap().max;
+    upgradeBox();
     $('ct-left').textContent = free + ' point' + (free === 1 ? '' : 's') + ' left';
     $('ct-left').classList.toggle('zero', free === 0);
     $('ct-stats').innerHTML = C.stats.map(function (st) {
       var v = draft.r[st[0]];
       return '<div class="ct-stat"><span class="ct-sn">' + st[1] + '</span>' +
         '<button type="button" class="ct-pm" data-k="' + st[0] + '" data-d="-1" aria-label="Less ' + st[1] + '"' + (v - C.step < C.min ? ' disabled' : '') + '>−</button>' +
-        '<span class="ct-bar"><i style="width:' + Math.round((v - C.min) / (C.max - C.min) * 100) + '%"></i></span>' +
+        '<span class="ct-bar"><i style="width:' + Math.round((v - C.min) / (C.max + C.levels - C.min) * 100) + '%"></i><u style="left:' + Math.round((mx - C.min) / (C.max + C.levels - C.min) * 100) + '%"></u></span>' +
         '<b class="ct-sv">' + v + '</b>' +
-        '<button type="button" class="ct-pm" data-k="' + st[0] + '" data-d="1" aria-label="More ' + st[1] + '"' + (v + C.step > C.max || free < C.step ? ' disabled' : '') + '>+</button></div>';
+        '<button type="button" class="ct-pm" data-k="' + st[0] + '" data-d="1" aria-label="More ' + st[1] + '"' + (v + C.step > mx || free < C.step ? ' disabled' : '') + '>+</button></div>';
     }).join('');
     $('ct-stats').querySelectorAll('.ct-pm').forEach(function (b) {
       b.addEventListener('click', function () {
         var k = b.getAttribute('data-k'), d = +b.getAttribute('data-d') * C.step, v = draft.r[k] + d;
-        if (v < C.min || v > C.max || (d > 0 && left() < d)) return;
+        if (v < C.min || v > cap().max || (d > 0 && left() < d)) return;
         draft.r[k] = v;
         SR.audio.play('click');
         render();
       });
     });
   }
+
+  // Team level: coins buy more skill points and a higher cap for every skill.
+  function upgradeBox() {
+    var box = $('ct-upgrade');
+    if (!box) return;
+    var cp = cap(), lv = cp.lvl, full = lv >= C.levels, cost = C.upgradeCost(lv), pips = '';
+    for (var i = 0; i < C.levels; i++) pips += '<i class="' + (i < lv ? 'on' : '') + '"></i>';
+    box.innerHTML = '<div class="ug-head"><b>Team level ' + (lv + 1) + '</b><span class="ug-pips" aria-label="Level ' + (lv + 1) + ' of ' + (C.levels + 1) + '">' + pips + '</span></div>' +
+      '<p class="muted small">' + (full ? 'Max level! Every skill can reach ' + cp.max + '.' : 'Next level: +' + C.perLevel + ' skill points to share and every skill can go to ' + (cp.max + 1) + '.') + '</p>' +
+      (full ? '' : '<button id="btn-ct-upgrade" type="button" class="btn ug-btn">Upgrade for ' + SR.COIN + ' <b>' + SR.fmtNum(cost) + '</b></button>');
+    var b = $('btn-ct-upgrade');
+    if (b) b.addEventListener('click', function () {
+      confirmBuy({ name: 'Team level ' + (lv + 2), verb: 'Get', yes: 'Yes, upgrade', price: cost, coins: true, art: shield(draftTeam(), 'ct-shield'),
+        what: 'You get ' + C.perLevel + ' more skill points to share out.',
+        onBuy: function () {
+          cfg().lvl = lv + 1;
+          draft.lvl = lv + 1;
+          var sv = JSON.parse(saved); sv.lvl = lv + 1; saved = JSON.stringify(sv);
+          SR.ui.save();
+          SR.audio.play('reward');
+          render();
+          var e = $('ct-left');
+          if (e) { e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); }
+        } });
+    });
+  }
+  function draftTeam() { return { id: 'custom', name: draft.name, short: draft.short, color: draft.color, trim: draft.trim, pattern: draft.pattern }; }
 
   function readText() {
     var n = SR.customName($('ct-name').value);
@@ -226,6 +259,8 @@
     readText();
     var c = cfg();
     ['name', 'short', 'color', 'trim', 'pattern'].forEach(function (k) { c[k] = draft[k]; });
+    // Upgrades are bought (and saved) at once, so the draft never undoes them.
+    draft.lvl = c.lvl;
     c.r = Object.assign({}, draft.r);
     data().settings.team = 'custom';
     SR.ui.save();
@@ -237,6 +272,7 @@
   function leave() {
     if (!draft) return;
     readText();
+    draft.lvl = cfg().lvl;
     if (JSON.stringify(draft) === saved) { var go = backTo; draft = null; SR.audio.play('click'); go(); return; }
     ask({ title: 'Leave without saving?', text: 'Your changes to <b>' + esc(draft.name) + '</b> will be lost.', yes: 'Yes, leave', no: 'No, keep editing',
       onYes: function () { var g = backTo; draft = null; g(); } });
@@ -279,6 +315,13 @@
     shopCard: shopCard,
     open: function (back) { open(back); },
     unlock: unlock,
+    shield: shield,
+    blank: function () { return BLANK; },
+    // The home screen's "My team" strip.
+    fromHome: function () {
+      var back = function () { SR.ui.show('scr-menu'); };
+      if (unlocked()) open(back); else unlock(back);
+    },
     ask: ask,
     isOpen: function () { return !!dlg; }
   };

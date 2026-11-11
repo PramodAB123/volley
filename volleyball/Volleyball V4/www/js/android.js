@@ -22,7 +22,9 @@
   var lastBack = 0;
   function onBack() {
     var ui = SR.ui, g = SR.game, cur = ui ? ui.current() : null;
-    // A Yes / No dialog (star purchase, leave the team builder): Back says No.
+    // The name dialog: Back closes it (not on first launch, the name is needed).
+    if (SR.profile && SR.profile.isOpen()) { SR.profile.back(); return; }
+    // A Yes / No dialog (a purchase, leave the team builder): Back says No.
     if (SR.custom && SR.custom.isOpen()) { if (!click('confirm-no')) click('confirm-yes'); return; }
     // How to play demo: Back closes it.
     if (SR.demo && SR.demo.active) { SR.demo.stop(); return; }

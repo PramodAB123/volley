@@ -5,13 +5,18 @@
 
   function defaults() {
     return {
+      // Diamonds. Still saved as `stars` (their old name) so every save keeps them.
       stars: 0,
+      coins: 0,
+      // The player: name asked on first launch, avatar, level and XP into it.
+      profile: { name: '', avatar: 'a1', level: 1, xp: 0, total: 0 },
       owned: { balls: ['classic'], courts: ['maple'], kits: ['team'] },
       equipped: { ball: 'classic', court: 'maple', kit: 'team' },
       settings: { format: 'standard', difficulty: 'normal', sound: true, music: true, team: 'hawks' },
-      stats: { matches: 0, wins: 0, points: 0, aces: 0, kills: 0, blocks: 0 },
+      stats: { matches: 0, wins: 0, points: 0, aces: 0, kills: 0, blocks: 0, errors: 0, sets: 0, best: 0, streak: 0, byTeam: {} },
       // The League screen's trophy cabinet; seasons = last finishes, newest first.
-      trophies: { league: 0, unbeaten: 0, silver: 0, bronze: 0, cup: 0, seasons: [] },
+      // lw[i] / cw[i] = titles won in league i / cup i (each has its own trophy).
+      trophies: { league: 0, unbeaten: 0, silver: 0, bronze: 0, cup: 0, seasons: [], lw: SR.LEAGUES.map(function () { return 0; }), cw: SR.CUPS.map(function () { return 0; }) },
       league: null,
       tournament: null,
       career: null,
@@ -33,7 +38,9 @@
     Object.keys(base).forEach(function (k) {
       if (!(k in extra)) return;
       var b = base[k], e = extra[k];
-      if (b && typeof b === 'object' && !Array.isArray(b) && e && typeof e === 'object') base[k] = merge(b, e);
+      // An empty default object (a map such as stats.byTeam) takes the saved one whole.
+      if (b && typeof b === 'object' && !Array.isArray(b) && !Object.keys(b).length) base[k] = e;
+      else if (b && typeof b === 'object' && !Array.isArray(b) && e && typeof e === 'object') base[k] = merge(b, e);
       else base[k] = e;
     });
     return base;
@@ -99,12 +106,15 @@
     if (!hex.test(c.color)) c.color = b.color;
     if (!hex.test(c.trim)) c.trim = b.trim;
     if (!C.patterns.some(function (p) { return p[0] === c.pattern; })) c.pattern = b.pattern;
-    var r = obj(c.r) ? c.r : {}, sum = 0, ok = true;
+    // Ratings: each between min and the level's max, adding up to no more
+    // than the level's points budget; otherwise they go back to even.
+    c.lvl = Math.min(num(c.lvl), C.levels);
+    var cap = SR.customCaps(c.lvl), r = obj(c.r) ? c.r : {}, sum = 0, ok = true;
     C.stats.forEach(function (st) {
       var v = Number(r[st[0]]);
-      if (!isFinite(v) || v < C.min || v > C.max) ok = false; else sum += Math.round(v);
+      if (!isFinite(v) || v < C.min || v > cap.max) ok = false; else sum += Math.round(v);
     });
-    if (!ok || sum > C.total) r = Object.assign({}, b.r);
+    if (!ok || sum > cap.total) r = Object.assign({}, b.r);
     else C.stats.forEach(function (st) { r[st[0]] = Math.round(r[st[0]]); });
     c.r = {};
     C.stats.forEach(function (st) { c.r[st[0]] = r[st[0]]; });
@@ -114,6 +124,14 @@
   function clean(d) {
     var def = defaults();
     d.stars = num(d.stars);
+    d.coins = num(d.coins);
+    if (!obj(d.profile)) d.profile = def.profile;
+    var pf = d.profile;
+    pf.name = SR.playerName(pf.name);
+    if (!SR.AVATARS.some(function (a) { return a.id === pf.avatar; })) pf.avatar = def.profile.avatar;
+    pf.level = Math.max(1, Math.min(num(pf.level, 1), 999));
+    pf.xp = Math.min(num(pf.xp), SR.XP.need(pf.level) - 1);
+    pf.total = num(pf.total);
     d.custom = cleanCustom(d.custom);
     customOn = d.custom.unlocked;
     ['owned', 'equipped', 'settings', 'stats', 'trophies', 'daily', 'challenge', 'leagueMap', 'cupMap'].forEach(function (k) { if (!obj(d[k])) d[k] = def[k]; });
@@ -134,8 +152,13 @@
     if (typeof s.sound !== 'boolean') s.sound = s.sound !== false && s.sound !== 'false';
     if (typeof s.music !== 'boolean') s.music = s.music !== false && s.music !== 'false';
     if ('lang' in def.settings && typeof s.lang !== 'string') s.lang = def.settings.lang;
-    Object.keys(def.stats).forEach(function (k) { d.stats[k] = num(d.stats[k]); });
-    Object.keys(def.trophies).forEach(function (k) { if (k !== 'seasons') d.trophies[k] = num(d.trophies[k]); });
+    Object.keys(def.stats).forEach(function (k) { if (k !== 'byTeam') d.stats[k] = num(d.stats[k]); });
+    var bt = obj(d.stats.byTeam) ? d.stats.byTeam : {};
+    d.stats.byTeam = {};
+    Object.keys(bt).forEach(function (id) {
+      if ((id === 'custom' || SR.TEAMS.some(function (t) { return t.id === id; })) && obj(bt[id])) d.stats.byTeam[id] = { m: num(bt[id].m), w: num(bt[id].w) };
+    });
+    Object.keys(def.trophies).forEach(function (k) { if (k !== 'seasons' && k !== 'lw' && k !== 'cw') d.trophies[k] = num(d.trophies[k]); });
     if (!Array.isArray(d.trophies.seasons)) d.trophies.seasons = [];
     d.trophies.seasons = d.trophies.seasons.filter(function (x) { return obj(x) && isTeam(x.team); }).slice(0, 8);
     if (d.league != null && !okLeague(d.league)) d.league = null;
@@ -146,6 +169,13 @@
       if (!obj(m)) m = d[e[0]] = { unlocked: 0, best: [] };
       m.unlocked = Math.min(num(m.unlocked), n - 1);
       m.best = Array.isArray(m.best) ? m.best.slice(0, n).map(function (v) { return num(v); }) : [];
+    });
+    // Titles per league / cup. Saves from before them count one title for
+    // every league or cup already won on the maps.
+    [['lw', 'leagueMap', SR.LEAGUES, 1], ['cw', 'cupMap', SR.CUPS, 4]].forEach(function (e) {
+      var n = e[2] ? e[2].length : 0, list = Array.isArray(d.trophies[e[0]]) ? d.trophies[e[0]] : [], out = [];
+      for (var i = 0; i < n; i++) out.push(Math.max(num(list[i]), d[e[1]].best[i] === e[3] ? 1 : 0));
+      d.trophies[e[0]] = out;
     });
     // Saves from before the maps: a league or cup already won opens tier 2.
     if (d.trophies.league + d.trophies.silver > 0) d.leagueMap.unlocked = Math.max(d.leagueMap.unlocked, 1);

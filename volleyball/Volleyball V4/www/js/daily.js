@@ -45,7 +45,7 @@
 
   // What day i of the current week gives: stars, and maybe an item.
   function reward(i) {
-    var def = SR.DAILY.days[i], week = daily().week, out = { stars: def.stars || 0, item: null };
+    var def = SR.DAILY.days[i], week = daily().week, out = { stars: def.stars || 0, coins: SR.DAILY.coins ? SR.DAILY.coins[i] || 0 : 0, item: null };
     if (def.item) {
       var it = def.item === 'ball' ? nextItem(SR.DAILY.balls, 'balls', week)
         : def.item === 'kit' ? nextItem(SR.DAILY.kits, 'kits', week)
@@ -74,7 +74,7 @@
 
   function coins(n) {
     var c = n >= 10 ? 3 : n >= 5 ? 2 : 1, h = '';
-    for (var i = 0; i < c; i++) h += '<i style="--i:' + i + '">★</i>';
+    for (var i = 0; i < c; i++) h += '<i class="gem-coin" style="--i:' + i + '"></i>';
     return '<span class="coin-art c' + c + '">' + h + '</span>';
   }
 
@@ -93,12 +93,13 @@
   function label(r, i) {
     if (i === 6) return 'Mega chest';
     if (r.item) return item(r.item.kind, r.item.id).name + (r.item.kind === 'balls' ? ' ball' : ' jersey');
-    return '+' + r.stars + ' ★';
+    return '+' + r.stars + '&nbsp;' + SR.GEM;
   }
 
   function prizeText(r) {
     var parts = [];
-    if (r.stars) parts.push('+' + r.stars + ' stars');
+    if (r.stars) parts.push('+' + r.stars + ' diamonds');
+    if (r.coins) parts.push(SR.fmtNum(r.coins) + ' coins');
     if (r.item) parts.push('the ' + item(r.item.kind, r.item.id).name + (r.item.kind === 'balls' ? ' ball' : ' jersey'));
     return parts.join(' and ');
   }
@@ -113,7 +114,7 @@
     list.innerHTML = SR.DAILY.days.map(function (def, i) {
       var r = reward(i), st = i < s.done ? 'done' : (s.ready && i === s.index) ? 'today' : 'locked';
       var extra = i === 6 && r.item ? '<span class="dd-plus">+ ' + item(r.item.kind, r.item.id).name + (r.item.kind === 'balls' ? ' ball' : ' jersey') + '</span>' : '';
-      var what = i === 6 ? '+' + r.stars + ' ★' : label(r, i);
+      var what = (i === 6 ? '+' + r.stars + '&nbsp;' + SR.GEM : label(r, i)) + (r.coins ? '<span class="dd-coins">' + SR.COIN + ' +' + r.coins + '</span>' : '');
       return '<li class="dday ' + st + (i === 6 ? ' big' : '') + (r.item && i !== 6 ? ' item' : '') + '" style="--d:' + i + '">' +
         '<span class="dd-day">Day ' + (i + 1) + '</span>' +
         '<span class="dd-art">' + art(r, i) + '</span>' +
@@ -141,21 +142,30 @@
   // today's gift while it waits, then tomorrow's, as a reason to come back.
   function shortPrize(r) {
     var p = [];
-    if (r.stars) p.push('+' + r.stars + ' ★');
+    if (r.stars) p.push('+' + r.stars + ' ' + SR.GEM);
+    if (r.coins) p.push('+' + r.coins + ' ' + SR.COIN);
     if (r.item) p.push(item(r.item.kind, r.item.id).name + (r.item.kind === 'balls' ? ' ball' : ' jersey'));
-    return p.join(' + ');
+    return p.join(' ');
   }
   var GIFT = '<span class="dt-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="9" width="17" height="11.5" rx="2"/><path d="M2.5 9h19v-3h-19zM12 6v14.5"/>' +
     '<path d="M12 6c-1.6-3.4-6-3.6-5.4-.9C6.9 6.3 9.6 6.1 12 6zM12 6c1.6-3.4 6-3.6 5.4-.9-.3 1.2-3 1-5.4.9z"/></svg></span>';
   function teaser(el) {
     if (!el) return;
-    var s = state(), i = s.ready ? s.index : daily().streak % 7;
-    var title = (s.ready ? 'Day ' : 'Tomorrow: Day ') + (i + 1) + (s.ready ? ' gift ready' : ' gift');
-    var sub = (i === 6 ? 'Mega chest · ' : '') + shortPrize(reward(i)) + ' · ' + (s.ready ? 'Tap to claim' : 'Come back to keep your streak');
-    el.innerHTML = GIFT + '<span class="dt-txt"><b>' + title + '</b><small>' + sub + '</small></span><span class="dt-go" aria-hidden="true">›</span>';
+    var s = state(), i = s.ready ? s.index : daily().streak % 7, r = reward(i);
+    var title = s.ready ? 'Day ' + (i + 1) + ' Gift Ready!' : 'Tomorrow: Day ' + (i + 1) + ' gift';
+    var sub = (i === 6 ? 'Mega chest · ' : '') + shortPrize(r) + ' · ' + (s.ready ? 'Claim your daily reward' : 'Come back to keep your streak');
+    el.innerHTML = '<span class="dt-ico gift-ico" aria-hidden="true">' + GIFT_ART + (s.ready ? '<i class="gs-badge">1</i>' : '') + '</span>' +
+      '<span class="dt-txt"><b>' + title + '</b><small>' + sub + '</small></span>' +
+      (s.ready ? '<span class="gs-claim">Claim</span>' : '<span class="dt-go" aria-hidden="true">›</span>');
     el.classList.toggle('ready', !!s.ready);
     el.classList.remove('hidden');
   }
+  // A shiny 3D-ish present for the home strip.
+  var GIFT_ART = '<svg viewBox="0 0 48 48"><path d="M7 20h34v22a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3z" fill="#ff7a1a" stroke="#7a2e00" stroke-width="1.6"/>' +
+    '<path d="M7 20h34v6H7z" fill="#c2410c" opacity=".55"/><rect x="4" y="13" width="40" height="9" rx="2" fill="#ff9f43" stroke="#7a2e00" stroke-width="1.6"/>' +
+    '<path d="M20 13h8v32h-8z" fill="#ffd23f" stroke="#8a5a00" stroke-width="1.2"/>' +
+    '<path d="M24 13c-4-9-14-10-13-4 1 4 8 4 13 4zM24 13c4-9 14-10 13-4-1 4-8 4-13 4z" fill="#ffd23f" stroke="#8a5a00" stroke-width="1.4"/>' +
+    '<path d="M10 24v14" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".45"/></svg>';
 
   function refreshDot() {
     var b = $('btn-daily');
@@ -169,6 +179,7 @@
     if (!s.ready) return;
     var d = daily(), r = reward(s.index);
     data().stars += r.stars;
+    data().coins += r.coins || 0;
     if (r.item) data().owned[r.item.kind].push(r.item.id);
     d.streak = s.index + 1;
     if (s.index === 6) d.week++;
@@ -227,9 +238,9 @@
     // A brand-new player goes straight to their first match; the calendar
     // waits until they come back to the menu after it.
     onMenu: function () {
-      if (!autoPending || !state().ready || !data().stats.matches) return;
+      if (!autoPending || !state().ready || !data().stats.matches || (SR.profile && SR.profile.isOpen())) return;
       autoPending = false;
-      setTimeout(function () { if (SR.ui.current() === 'scr-menu' && !SR.game) open(); }, 700);
+      setTimeout(function () { if (SR.ui.current() === 'scr-menu' && !SR.game && !(SR.profile && SR.profile.isOpen())) open(); else if (SR.profile && SR.profile.isOpen()) autoPending = true; }, 700);
     },
     init: function (q) {
       on('btn-daily', open);

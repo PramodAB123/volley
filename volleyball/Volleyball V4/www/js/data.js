@@ -57,7 +57,11 @@ SR.CUSTOM = {
   colors: ['#e5484d', '#ff6b35', '#f5a524', '#e0b100', '#7cc142', '#2f9e44', '#12a594', '#1fb6d6', '#2f6fe0', '#3b3fbf', '#7c5cd6', '#d9468f', '#607086', '#1f2633', '#f4f4f4'],
   trims: ['#ffffff', '#111827', '#ffd23f', '#ff6b35', '#e5484d', '#7cc4ff', '#3bf0a0'],
   patterns: [['stripes', 'Stripes'], ['hoops', 'Hoops'], ['split', 'Half']],
-  base: { unlocked: false, name: 'My Club', short: 'MYC', color: '#ff6b35', trim: '#ffffff', pattern: 'stripes', r: { attack: 78, block: 78, pass: 78, serve: 78, speed: 78 } }
+  // Team level (bought with coins): each level adds `perLevel` skill points
+  // to share out and lets every skill go one point higher (max + level).
+  levels: 10, perLevel: 5,
+  upgradeCost: function (lvl) { return 150 + 100 * lvl; },
+  base: { unlocked: false, lvl: 0, name: 'My Club', short: 'MYC', color: '#ff6b35', trim: '#ffffff', pattern: 'stripes', r: { attack: 78, block: 78, pass: 78, serve: 78, speed: 78 } }
 };
 // Names are shown inside menus, so only letters, digits, spaces and a few
 // marks are kept. Short codes are 2-3 capital letters or digits.
@@ -72,10 +76,18 @@ var NAME_JUNK = (function () {
 SR.customName = function (v) {
   return typeof v === 'string' ? v.replace(/<[^>]*>/g, '').replace(NAME_JUNK, '').replace(/\s+/g, ' ').trim().slice(0, 18).replace(/'/g, '\u2019') : '';
 };
+// The player's name (asked on first launch): same rules, up to 16 characters.
+SR.playerName = function (v) {
+  return typeof v === 'string' ? v.replace(/<[^>]*>/g, '').replace(NAME_JUNK, '').replace(/\s+/g, ' ').trim().slice(0, 16).replace(/'/g, '\u2019') : '';
+};
 SR.customShort = function (v) {
   if (typeof v !== 'string') return '';
   var s = v.toUpperCase().replace(/[^A-Z0-9]/g, '');
   return s.length >= 2 ? s.slice(0, 3) : '';
+};
+SR.customCaps = function (lvl) {
+  var C = SR.CUSTOM, l = Math.max(0, Math.min(C.levels, Math.floor(Number(lvl) || 0)));
+  return { lvl: l, max: C.max + l, total: C.total + l * C.perLevel };
 };
 SR.customTeam = function () {
   var c = SR.save && SR.save.data && SR.save.data.custom;
@@ -129,6 +141,10 @@ SR.SHOP = {
     { id: 'sunset',  name: 'Sunset',   price: 3, main: '#ff8a3d', stripe: '#ffffff' },
     { id: 'neon',    name: 'Neon',     price: 5, main: '#b6ff3b', stripe: '#ff3bb0' },
     { id: 'mono',    name: 'Mono',     price: 8, main: '#f5f5f5', stripe: '#1d1d1d' },
+    // Bought with coins (earned in every match) instead of diamonds.
+    { id: 'aqua',    name: 'Aqua',     coins: 300, main: '#5ee7ff', stripe: '#1452a8' },
+    { id: 'berry',   name: 'Berry',    coins: 450, main: '#d9468f', stripe: '#ffe14d' },
+    { id: 'lime',    name: 'Lime',     coins: 600, main: '#c6ff3b', stripe: '#1d6b2a' },
     // Daily reward balls: not for sale, only won on the reward calendar.
     { id: 'ember',   name: 'Ember',    daily: true, main: '#ff4d2e', stripe: '#ffd23f' },
     { id: 'frost',   name: 'Frost',    daily: true, main: '#c8ecff', stripe: '#2f6fe0' },
@@ -144,7 +160,12 @@ SR.SHOP = {
     { id: 'ice',      name: 'Ice',      daily: true, color: '#7fd4ff', trim: '#ffffff', pattern: 'hoops' },
     { id: 'midnight', name: 'Midnight', daily: true, color: '#1d1f33', trim: '#53f3ff', pattern: 'split' },
     { id: 'champion', name: 'Champion', daily: true, color: '#e0a800', trim: '#ffffff', pattern: 'stripes' },
-    { id: 'royal',    name: 'Royal',    daily: true, color: '#5b2bd6', trim: '#ffd75e', pattern: 'hoops' }
+    { id: 'royal',    name: 'Royal',    daily: true, color: '#5b2bd6', trim: '#ffd75e', pattern: 'hoops' },
+    // Bought with coins.
+    { id: 'ocean',    name: 'Ocean',    coins: 400, color: '#1fb6d6', trim: '#ffffff', pattern: 'hoops' },
+    { id: 'forest',   name: 'Forest',   coins: 550, color: '#1f6b3a', trim: '#c6ff3b', pattern: 'stripes' },
+    { id: 'sunrise',  name: 'Sunrise',  coins: 700, color: '#ff8a3d', trim: '#2a1a08', pattern: 'split' },
+    { id: 'shadow',   name: 'Shadow',   coins: 900, color: '#1f2633', trim: '#ff3bd4', pattern: 'stripes' }
   ],
   courts: [
     { id: 'maple', name: 'Arena',  price: 0, floor: '#2e7a4f', court: '#f28a3a', zone: '#ec7c2b', line: '#ffffff', wall: '#10261b', seat: '#ef7d2d', riser: '#173324' },
@@ -197,7 +218,9 @@ SR.DAILY = {
   balls: ['ember', 'frost', 'jungle'],
   kits: ['flame', 'ice', 'midnight'],
   legends: [['balls', 'golden'], ['kits', 'champion'], ['balls', 'cosmic'], ['kits', 'royal']],
-  owned: { ball: 6, kit: 8, legend: 15 }
+  owned: { ball: 6, kit: 8, legend: 15 },
+  // Coins on top of each day's gift.
+  coins: [50, 75, 100, 125, 150, 200, 500]
 };
 
 // The team you control, dressed in the jersey equipped in the Shop. Keeps the
@@ -235,6 +258,33 @@ SR.CHALLENGE = {
     { id: 'clean',  text: 'Win 2-0 without losing a set', format: 'p11s3', diffs: ['easy', 'normal', 'hard'] }
   ]
 };
+
+// Currencies. Diamonds (stored as `stars`, the old name, so saves carry
+// over) buy balls, courts and the custom team. Coins come from every match
+// and buy coin items, team upgrades and diamonds.
+SR.GEM = '<i class="gem" aria-hidden="true"></i>';
+SR.COIN = '<i class="coin" aria-hidden="true"></i>';
+SR.gems = function (n) { return '<span class="cur cur-gem">' + SR.GEM + '<b>' + n + '</b></span>'; };
+SR.coinsHtml = function (n) { return '<span class="cur cur-coin">' + SR.COIN + '<b>' + SR.fmtNum(n) + '</b></span>'; };
+SR.fmtNum = function (n) { n = Math.floor(Number(n) || 0); return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+// Coins for a match: something for playing, more for winning and for big plays.
+SR.COINS = { play: 15, win: 35, kill: 1, ace: 3, block: 2, mode: 10, leagueTitle: 150, cupTitle: 200, challenge: 60, island: 30,
+  exchange: [{ gems: 1, coins: 250 }, { gems: 5, coins: 1100 }, { gems: 12, coins: 2400 }] };
+// Player level: XP from every match; need(L) XP to go from level L to L+1.
+SR.XP = {
+  play: 25, win: 35, kill: 2, ace: 4, block: 3, mode: 10,
+  need: function (l) { return 100 + 40 * (l - 1); },
+  // Reward for reaching level l.
+  reward: function (l) { return { gems: l % 5 === 0 ? 5 : 2, coins: 100 + 20 * l }; }
+};
+SR.AVATARS = [
+  { id: 'a1', skin: '#f2c7a5', hair: '#2b1d14', style: 'spiky', bg: ['#ff8a3d', '#d9468f'], band: '#ffd23f' },
+  { id: 'a2', skin: '#c68a5c', hair: '#111827', style: 'afro', bg: ['#2f6fe0', '#12a594'], band: '#ffffff' },
+  { id: 'a3', skin: '#f6d2b8', hair: '#e0a800', style: 'ponytail', bg: ['#7c5cd6', '#2f6fe0'], band: '#ff6b6b' },
+  { id: 'a4', skin: '#8d5a3b', hair: '#1b1410', style: 'buzz', bg: ['#2f9e44', '#1fb6d6'], band: '#ff8a3d' },
+  { id: 'a5', skin: '#efc19b', hair: '#b4412c', style: 'swoop', bg: ['#e5484d', '#ff8a3d'], band: '#7cc4ff' },
+  { id: 'a6', skin: '#d9a77c', hair: '#3a2a6b', style: 'bun', bg: ['#d9468f', '#7c5cd6'], band: '#3bf0a0' }
+];
 
 SR.STARS = { quickWin: 1, leagueWin: 1, leagueTitle: 3, cupWin: 1, cupTitle: 5, careerStage: 2, careerFinal: 5 };
 

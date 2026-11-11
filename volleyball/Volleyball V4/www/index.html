@@ -54,40 +54,69 @@
       </div>
     </aside>
 
-    <section id="scr-menu" class="screen">
-      <div class="panel menu home">
-        <div class="home-head">
-          <h1>Spike <span>Rally</span></h1>
-          <div class="home-badges">
-            <button id="btn-daily" class="daily-btn" type="button" aria-label="Daily rewards" title="Daily rewards">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="9" width="17" height="11.5" rx="2"/><path d="M2.5 9h19v-3h-19zM12 6v14.5"/><path d="M12 6c-1.6-3.4-6-3.6-5.4-.9C6.9 6.3 9.6 6.1 12 6zM12 6c1.6-3.4 6-3.6 5.4-.9-.3 1.2-3 1-5.4.9z"/></svg>
+    <section id="scr-menu" class="screen home-scr">
+      <div class="home-bg" aria-hidden="true"><i class="hb-glow"></i><i class="hb-lights"></i><i class="hb-slash s1"></i><i class="hb-slash s2"></i><i class="hb-slash s3"></i><i class="hb-slash s4"></i></div>
+      <div class="home">
+        <header class="h-top">
+          <button id="btn-profile" class="h-prof" type="button" aria-label="Your profile">
+            <span id="h-avatar" class="avatar"></span>
+            <span class="h-who">
+              <b id="h-name">Player</b>
+              <span class="h-lvl"><em>Lv. <span id="h-level">1</span></em><span class="xp-bar"><i id="h-xpbar"></i></span></span>
+              <small id="h-xp" class="h-xp">0 / 100</small>
+            </span>
+          </button>
+          <div class="h-cur">
+            <button id="btn-coins" class="cur-pill coin-pill" type="button" aria-label="Coins: open the Shop"><i class="coin" aria-hidden="true"></i><b data-coins>0</b><span class="plus" aria-hidden="true">+</span></button>
+            <button id="btn-gems" class="cur-pill gem-pill" type="button" aria-label="Diamonds: open the Shop"><i class="gem" aria-hidden="true"></i><b data-stars>0</b><span class="plus" aria-hidden="true">+</span></button>
+            <button id="btn-daily" class="bell" type="button" aria-label="Daily rewards" title="Daily rewards">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.6 2H4.4z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>
               <i class="daily-dot" aria-hidden="true"></i>
             </button>
-            <div class="stars-badge">★ <span data-stars>0</span></div>
           </div>
+        </header>
+
+        <div class="h-hero">
+          <div class="h-brand">
+            <svg class="h-logo" viewBox="0 0 120 60" aria-hidden="true"><defs><linearGradient id="hl-sw" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ff9f1c" stop-opacity="0"/><stop offset=".6" stop-color="#ff9f1c"/><stop offset="1" stop-color="#ffd23f"/></linearGradient></defs><path d="M8 50 C30 26 58 16 86 18" fill="none" stroke="url(#hl-sw)" stroke-width="7" stroke-linecap="round"/><path d="M22 52 C40 36 60 28 82 28" fill="none" stroke="url(#hl-sw)" stroke-width="3.5" stroke-linecap="round" opacity=".7"/><g transform="translate(96 22)"><circle r="17" fill="#fff" stroke="#1b2440" stroke-width="2.4"/><path d="M-16 -4c9 0 18 4 24 14M-6 -15.5c6 5 9 13 8 24M15 -7c-9-2-18 1-24 9M-11 12c6-6 15-8 24-6" fill="none" stroke="#1b2440" stroke-width="2" stroke-linecap="round"/></g></svg>
+            <h1>Spike <span>Rally</span></h1>
+            <span class="h-pill">6v6 Volleyball Game</span>
+            <p class="tag">Coach your team, call the serve, the set and the spike!</p>
+          </div>
+          <div id="h-art" class="h-art" aria-hidden="true"></div>
         </div>
-        <p class="tag">Free 6v6 volleyball game. Coach your team: call the serve, the set and the spike.</p>
+
         <div class="home-hero">
-          <button id="btn-quick" class="tile t-quick">
-            <span class="t-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3c-2.2 4-2 9 2 13M3.6 9.2c4 1 8.8 0 12-4.2M6 18.6c3-3 8-5 14-4.2"/></svg></span>
-            <b>Quick match</b><small>Random or choose your team</small>
+          <button id="btn-quick" class="tile t-quick" type="button">
+            <span class="t-ball" aria-hidden="true"><svg viewBox="0 0 64 64"><defs><radialGradient id="tb-g" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#dbe8ff"/><stop offset="1" stop-color="#9db8f0"/></radialGradient></defs><circle cx="32" cy="32" r="28" fill="url(#tb-g)" stroke="#1d3a8f" stroke-width="3"/><path d="M5 28c14-1 28 6 36 22M17 7c9 8 14 21 12 37M59 22c-14-4-29 0-38 12M12 50c9-9 23-12 37-9" fill="none" stroke="#1d3a8f" stroke-width="2.6" stroke-linecap="round"/></svg></span>
+            <span class="t-copy"><b>Quick Match</b><small>Random or choose your team</small></span>
+            <span class="t-arrow" aria-hidden="true">›</span>
           </button>
-          <button id="btn-career" class="tile t-career">
+          <button id="btn-career" class="tile t-career" type="button">
+            <span id="career-new" class="t-new">New</span>
             <svg class="t-isle" viewBox="0 0 90 56" aria-hidden="true"><ellipse cx="45" cy="44" rx="42" ry="10" fill="#9bf0f7" opacity=".45"/><ellipse cx="45" cy="42" rx="31" ry="8.5" fill="#f3d9a0"/><ellipse cx="45" cy="39.5" rx="20" ry="5" fill="#5cb85c"/><path d="M47 40 C49 31 46 24 50 15" fill="none" stroke="#8a5a2b" stroke-width="2.6" stroke-linecap="round"/><g fill="#2f9e44"><path d="M50 15 C43 10 36 11 32 17 C38 14 44 14 50 15Z"/><path d="M50 15 C56 8 63 9 66 14 C60 12 55 13 50 15Z"/><path d="M50 15 C46 6 40 4 35 5 C41 7 46 10 50 15Z"/><path d="M50 15 C53 5 59 3 63 5 C58 7 53 10 50 15Z"/></g><rect x="30" y="33" width="13" height="7" rx="1" fill="#f28a3a" stroke="#fff" stroke-width="1"/></svg>
-            <b>Career</b><small id="career-prog">New</small>
-            <span class="t-bar"><i id="career-prog-bar"></i></span>
+            <span class="t-copy"><b>Career</b><small id="career-prog">Conquer 21 islands and become a champion!</small><span class="t-bar"><i id="career-prog-bar"></i></span></span>
+            <span class="t-arrow" aria-hidden="true">›</span>
           </button>
         </div>
-        <button id="home-daily" class="daily-teaser hidden" type="button"></button>
-        <button id="home-chal" class="daily-teaser chal-teaser hidden" type="button"></button>
+
+        <button id="home-daily" class="strip gift-strip hidden" type="button"></button>
+        <button id="home-chal" class="strip chal-strip hidden" type="button"></button>
+
         <div class="home-grid">
-          <button id="btn-league" class="mini feat f-league"><span class="f-ico"><svg viewBox="0 0 32 36" aria-hidden="true"><rect x="7" y="31" width="18" height="4" rx="1.2" fill="#4a2a12"/><path d="M13 23h6l1 8h-8z" fill="#e8a400"/><circle cx="16" cy="13" r="12" fill="#ffd23f" stroke="#b86e00" stroke-width="1.2"/><circle cx="16" cy="13" r="8.5" fill="none" stroke="#fff3b0" stroke-width="1" stroke-dasharray="1.6 2"/><circle cx="16" cy="13" r="4.6" fill="#fff8e1"/><path d="M11.8 11.6c2.6.5 5 2.6 6 5.4M14.3 8.7c1.5 1.6 2.3 4 1.8 6.6" fill="none" stroke="#c98a00" stroke-width="1" stroke-linecap="round"/><path d="M7 6a10 10 0 0 1 5-3.6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".7"/></svg></span><span class="f-txt"><b>League</b><small id="league-prog"></small></span><i class="f-shine" aria-hidden="true"></i></button>
-          <button id="btn-cup" class="mini feat f-cup"><span class="f-ico"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M8 3h16v9c0 5-3.6 9-8 9s-8-4-8-9z" fill="#ffd23f" stroke="#b86e00" stroke-width="1.2"/><path d="M8 6H3.5c0 5 2.4 8 6 8.5M24 6h4.5c0 5-2.4 8-6 8.5" fill="none" stroke="#ffd23f" stroke-width="2.4" stroke-linecap="round"/><path d="M14 21h4v5h-4z" fill="#e8a400"/><path d="M9.5 27h13l1.6 5H7.9z" fill="#ffd23f" stroke="#b86e00" stroke-width="1"/><rect x="7" y="31.5" width="18" height="3" rx="1" fill="#8a4b00"/><path d="M12 6c0 4 .6 7 2.6 9.5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".65"/><path d="M16 7.5l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.2-2.4 1.2.5-2.6-1.9-1.8 2.6-.4z" fill="#fff8d6"/></svg></span><span class="f-txt"><b>Tournament</b><small id="cup-prog"></small></span><i class="f-shine" aria-hidden="true"></i></button>
-          <button id="btn-shop" class="mini feat f-shop"><span class="f-ico"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M11 13V9a5 5 0 0 1 10 0v4" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M4.5 12h23l-2 21h-19z" fill="#fff" /><path d="M4.5 12h23l-.5 5h-22z" fill="#d1fae5"/><path d="M16 18.5l2 4.1 4.5.6-3.3 3.2.8 4.5-4-2.1-4 2.1.8-4.5-3.3-3.2 4.5-.6z" fill="#ffd23f" stroke="#c98a00" stroke-width=".8" stroke-linejoin="round"/><circle cx="11" cy="14.5" r="1.3" fill="#0f766e"/><circle cx="21" cy="14.5" r="1.3" fill="#0f766e"/></svg></span><span class="f-txt"><b>Shop</b><small id="shop-prog"></small></span><i class="f-shine" aria-hidden="true"></i></button>
-          <button id="btn-stats" class="mini"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M7 16v-5M12 16V6M17 16V9"/></svg><span>Stats</span></button>
-          <button id="btn-settings" class="mini"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg><span>Settings</span></button>
-          <button id="btn-help" class="mini"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.7.3-1 .9-1 1.7"/><path d="M12 16.8v.4"/></svg><span>How to play</span></button>
+          <button id="btn-league" class="feat f-league" type="button"><span class="f-ico"><svg viewBox="0 0 64 56" aria-hidden="true"><g fill="#ffd23f" stroke="#b86e00" stroke-width="1"><path d="M10 14c-6 8-6 20 2 28 2-8 0-20-2-28z"/><path d="M6 24c-3 7 0 15 7 19-1-7-3-14-7-19z"/><path d="M54 14c6 8 6 20-2 28-2-8 0-20 2-28z"/><path d="M58 24c3 7 0 15-7 19 1-7 3-14 7-19z"/></g><path d="M20 6h24v10c0 8-5.4 14-12 14s-12-6-12-14z" fill="#ffd23f" stroke="#b86e00" stroke-width="1.4"/><path d="M20 9h-5c0 6 3 9.5 7 10M44 9h5c0 6-3 9.5-7 10" fill="none" stroke="#ffd23f" stroke-width="2.6" stroke-linecap="round"/><path d="M29 30h6v7h-6z" fill="#e8a400"/><path d="M22 37h20l2 7H20z" fill="#ffd23f" stroke="#b86e00" stroke-width="1"/><rect x="19" y="44" width="26" height="5" rx="1.5" fill="#8a4b00"/><path d="M32 10.5l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#fff8d6"/></svg></span><b>League</b><small id="league-prog"></small><i class="f-shine" aria-hidden="true"></i></button>
+          <button id="btn-cup" class="feat f-cup" type="button"><span class="f-ico"><svg viewBox="0 0 64 56" aria-hidden="true"><path d="M18 4h28v14c0 9-6.3 16-14 16s-14-7-14-16z" fill="#ffd23f" stroke="#b86e00" stroke-width="1.4"/><path d="M18 8H10c0 8 4 13 10 14M46 8h8c0 8-4 13-10 14" fill="none" stroke="#ffd23f" stroke-width="3.2" stroke-linecap="round"/><path d="M28 33h8v8h-8z" fill="#e8a400"/><path d="M20 41h24l2.5 7h-29z" fill="#ffd23f" stroke="#b86e00" stroke-width="1"/><rect x="16" y="47.5" width="32" height="5" rx="1.5" fill="#8a4b00"/><path d="M25 8c0 7 1 12 4.6 16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".6"/><path d="M32 9.5l2 4 4.4.6-3.2 3.1.8 4.4-4-2.1-4 2.1.8-4.4-3.2-3.1 4.4-.6z" fill="#fff8d6"/></svg></span><b>Tournament</b><small id="cup-prog"></small><i class="f-shine" aria-hidden="true"></i></button>
+          <button id="btn-shop" class="feat f-shop" type="button"><span class="f-ico"><svg viewBox="0 0 64 56" aria-hidden="true"><path d="M24 18v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/><path d="M12 17h40l-3.5 35h-33z" fill="#e9fff6"/><path d="M12 17h40l-.8 7H12.8z" fill="#b9f3da"/><path d="M32 26l3 6.2 6.8.9-5 4.8 1.2 6.8-6-3.2-6 3.2 1.2-6.8-5-4.8 6.8-.9z" fill="#ffd23f" stroke="#c98a00" stroke-width="1" stroke-linejoin="round"/><circle cx="24" cy="20" r="2" fill="#0f766e"/><circle cx="40" cy="20" r="2" fill="#0f766e"/></svg></span><b>Shop</b><small id="shop-prog">Get players, kits and more</small><i class="f-shine" aria-hidden="true"></i></button>
         </div>
+
+        <button id="btn-team" class="strip team-strip" type="button"></button>
+
+        <nav class="h-nav" aria-label="More">
+          <button id="btn-help" class="h-nav-btn on" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5V19c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5z"/><path d="M12 6v13.5"/></svg><span>How to Play</span></button>
+          <button id="btn-stats" class="h-nav-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 17v-6M12 17V6M17 17V9" stroke-width="3"/></svg><span>Stats</span></button>
+          <button id="btn-settings" class="h-nav-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8l1.6 2.4 2.8-.7.7 2.8 2.4 1.6-1.2 2.6 1.2 2.6-2.4 1.6-.7 2.8-2.8-.7-1.6 2.4-1.6-2.4-2.8.7-.7-2.8-2.4-1.6 1.2-2.6-1.2-2.6 2.4-1.6.7-2.8 2.8.7z"/></svg><span>Settings</span></button>
+          <button id="btn-home-demo" class="h-nav-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg><span>Demo</span></button>
+        </nav>
       </div>
     </section>
 
@@ -127,7 +156,7 @@
             <h2>Career</h2>
             <p id="career-sub"></p>
           </div>
-          <div class="stars-badge">★ <span data-stars>0</span></div>
+          <div class="stars-badge"><i class="gem" aria-hidden="true"></i><span data-stars>0</span></div>
           <div class="career-bar"><span id="career-bar"></span></div>
         </header>
         <div id="career-scroll" class="career-scroll"><div id="career-map" class="career-map"></div></div>
@@ -150,7 +179,7 @@
             <h2>Leagues</h2>
             <p id="lmap-sub"></p>
           </div>
-          <div class="stars-badge">★ <span data-stars>0</span></div>
+          <div class="stars-badge"><i class="gem" aria-hidden="true"></i><span data-stars>0</span></div>
           <div class="career-bar"><span id="lmap-bar"></span></div>
         </header>
         <div id="lmap-scroll" class="career-scroll"><div id="lmap-map" class="career-map wmap-map"></div></div>
@@ -169,7 +198,7 @@
             <h2>Tournaments</h2>
             <p id="cmap-sub"></p>
           </div>
-          <div class="stars-badge">★ <span data-stars>0</span></div>
+          <div class="stars-badge"><i class="gem" aria-hidden="true"></i><span data-stars>0</span></div>
           <div class="career-bar"><span id="cmap-bar"></span></div>
         </header>
         <div id="cmap-scroll" class="career-scroll"><div id="cmap-map" class="career-map wmap-map"></div></div>
@@ -188,7 +217,7 @@
             <h2 id="league-title">League</h2>
             <p id="league-sub"></p>
           </div>
-          <div class="stars-badge">★ <span data-stars>0</span></div>
+          <div class="stars-badge"><i class="gem" aria-hidden="true"></i><span data-stars>0</span></div>
           <ol id="league-steps" class="cup-steps lg-steps"></ol>
         </header>
         <div id="league-scroll" class="lg-scroll"><div id="league-board" class="lg-board"></div></div>
@@ -211,7 +240,7 @@
             <h2 id="cup-title">Tournament</h2>
             <p id="cup-sub"></p>
           </div>
-          <div class="stars-badge">★ <span data-stars>0</span></div>
+          <div class="stars-badge"><i class="gem" aria-hidden="true"></i><span data-stars>0</span></div>
           <ol id="cup-steps" class="cup-steps"></ol>
         </header>
         <div id="cup-scroll" class="cup-scroll"><div id="cup-bracket" class="cup-bracket"></div></div>
@@ -227,17 +256,20 @@
 
     <section id="scr-shop" class="screen hidden">
       <div class="panel">
-        <h2><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button>Shop <span class="stars-badge inline">★ <span data-stars>0</span></span></h2>
-        <p class="muted">Win matches to earn stars, then unlock new looks.</p>
+        <h2><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button>Shop <span class="shop-bal"><span class="stars-badge inline"><i class="gem" aria-hidden="true"></i><span data-stars>0</span></span><span class="stars-badge inline coin-badge"><i class="coin" aria-hidden="true"></i><span data-coins>0</span></span></span></h2>
+        <p class="muted">Every match earns coins and XP. Wins, titles, level-ups and daily gifts give diamonds. Spend both here.</p>
+        <h3>Custom team</h3>
+        <div id="shop-custom"></div>
         <h3>Balls</h3>
         <div id="shop-balls" class="shop-grid"></div>
         <h3>Courts</h3>
         <div id="shop-courts" class="shop-grid"></div>
-        <h3>Custom team</h3>
-        <div id="shop-custom"></div>
         <h3>Jerseys</h3>
         <p class="muted small">Your team wears it in offline matches. New jerseys come from the daily rewards. A custom team always wears its own colours.</p>
         <div id="shop-kits" class="shop-grid"></div>
+        <h3>Diamonds for coins</h3>
+        <p class="muted small">Short of diamonds? Swap some coins.</p>
+        <div id="shop-exchange" class="shop-grid ex-grid"></div>
         <button class="btn ghost" data-back>Back</button>
       </div>
     </section>
@@ -295,9 +327,14 @@
     </section>
 
     <section id="scr-stats" class="screen hidden">
-      <div class="panel">
-        <h2>Career stats</h2>
+      <div class="panel stats-panel">
+        <h2><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button>Stats</h2>
+        <div id="stats-profile" class="st-prof"></div>
+        <h3>Team stats</h3>
         <div id="stats-list" class="stats"></div>
+        <div id="stats-teams" class="st-teams"></div>
+        <h3 class="tc-head">Trophy cabinet <span id="trophy-count" class="tc-count"></span></h3>
+        <div id="stats-trophies" class="trophy-cab"></div>
         <div class="row">
           <button class="btn ghost" data-back>Back</button>
           <button id="btn-reset" class="btn danger">Reset progress</button>
@@ -306,13 +343,29 @@
     </section>
 
     <section id="scr-settings" class="screen hidden">
-      <div class="panel">
-        <h2>Settings</h2>
+      <div class="panel settings-panel">
+        <h2><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button>Settings</h2>
+        <h3>Player</h3>
+        <div id="set-profile" class="set-prof"></div>
+        <h3>Game</h3>
         <label class="field">Match length <select id="set-format"></select></label>
         <label class="field">Difficulty <select id="set-diff"></select></label>
         <label class="field check"><input id="set-sound" type="checkbox"> Sound effects</label>
         <label class="field check"><input id="set-music" type="checkbox"> Music</label>
-        <p class="app-about muted small">Spike Rally <span id="app-version">1.0.0</span> · Plays offline · No ads · No account</p>
+        <h3>About</h3>
+        <div class="about-box">
+          <div class="about-head">
+            <img src="icons/icon-192.png" alt="" width="56" height="56">
+            <div><b>Spike Rally</b><small>Version <span id="app-version">1.0.1</span></small></div>
+          </div>
+          <p>A 6v6 volleyball coaching game. Your players move on their own; you make the calls that decide every rally: the serve, the set, the spike and the block.</p>
+          <ul class="about-list">
+            <li><b>Offline</b><span>Plays anywhere, no internet needed</span></li>
+            <li><b>No ads</b><span>Nothing gets in the way of a rally</span></li>
+            <li><b>No account</b><span>Your progress stays on this phone</span></li>
+          </ul>
+          <p class="muted small">Win matches to earn coins, XP and diamonds. Level up, unlock courts and balls, build your own team and fill your trophy cabinet.</p>
+        </div>
         <div class="row">
           <button class="btn ghost" data-back>Back</button>
           <button id="btn-privacy" class="btn" type="button">Privacy policy</button>
@@ -326,12 +379,12 @@
         <p class="muted small">Spike Rally for Android · Last updated 6 November 2026</p>
         <p>Spike Rally is a single-player volleyball game. It works fully offline and does not collect, store on a server, or share any personal data.</p>
         <h3>What the game stores</h3>
-        <p>Your progress (stars, unlocked balls, courts and jerseys, career, league and tournament progress, stats, daily reward streak and settings) is saved only on this device, inside the app's own storage. It never leaves your phone. Uninstalling the app or clearing its storage deletes it. You can also wipe it any time with Stats &gt; Reset progress.</p>
+        <p>Your progress (your player name and avatar, level, diamonds, coins, unlocked balls, courts and jerseys, career, league and tournament progress, stats, daily reward streak and settings) is saved only on this device, inside the app's own storage. It never leaves your phone. Uninstalling the app or clearing its storage deletes it. You can also wipe it any time with Stats &gt; Reset progress.</p>
         <h3>What the game does not do</h3>
         <ul class="help-rules">
           <li>No accounts, sign-in or online play.</li>
           <li>No ads, analytics, tracking or crash reporting SDKs.</li>
-          <li>No in-app purchases. Stars are earned by playing and cannot be bought.</li>
+          <li>No in-app purchases. Diamonds and coins are earned by playing and cannot be bought.</li>
           <li>No internet access is used. The app asks for no permissions such as location, camera, microphone, contacts or files.</li>
         </ul>
         <h3>Children</h3>
@@ -394,7 +447,7 @@
           <li>Rally scoring: every rally wins a point. Win each set by two.</li>
           <li>Choose 5, 11 or 15 points per set and 1, 3 or 5 sets before a match.</li>
           <li>Win a rally on their serve to take the serve; your team rotates.</li>
-          <li>Press <kbd>P</kbd> or <kbd>Esc</kbd> to pause (on a phone, use the pause button or the Back button). Stars: 1 per win, +3 for a league title, +5 for a cup. Spend them in the Shop.</li>
+          <li>Press <kbd>P</kbd> or <kbd>Esc</kbd> to pause (on a phone, use the pause button or the Back button). Every match earns coins and XP; wins, titles, daily gifts and level-ups give diamonds. Spend them in the Shop.</li>
         </ul>
         <div class="row">
           <button id="btn-demo-2" class="btn primary" type="button">Try the guided demo</button>
@@ -409,7 +462,8 @@
         <p id="result-sub" class="lead"></p>
         <p id="result-sets" class="sets"></p>
         <p id="result-stats" class="muted"></p>
-        <p id="result-stars" class="stars-earned"></p>
+        <div id="result-stars" class="res-loot"></div>
+        <div id="result-xp" class="res-xp"></div>
         <p id="result-notes"></p>
         <button id="result-daily" class="daily-teaser hidden" type="button"></button>
         <div class="row center result-btns">
@@ -434,7 +488,8 @@
             <div class="ct-field"><span class="rule-name">Trim colour</span><div id="ct-trims" class="ct-swatches" role="radiogroup" aria-label="Trim colour"></div></div>
             <p id="ct-warn" class="ct-warn hidden">The trim is close to the jersey colour, so the pattern and numbers will be hard to see.</p>
             <div class="ct-field"><span class="rule-name">Pattern</span><div id="ct-pattern" class="seg" role="radiogroup" aria-label="Pattern"></div></div>
-            <div class="ct-field"><span class="rule-name">Skill points <b id="ct-left" class="ct-left"></b></span><p class="ct-hint muted">Take points from one skill to add them to another. Each skill goes from 60 to 90.</p><div id="ct-stats" class="ct-stats"></div></div>
+            <div class="ct-field"><span class="rule-name">Skill points <b id="ct-left" class="ct-left"></b></span><p class="ct-hint muted">Take points from one skill to add them to another. Each skill starts at 60; upgrade the team with coins for more points and higher caps.</p><div id="ct-stats" class="ct-stats"></div></div>
+            <div id="ct-upgrade" class="ct-field ct-upgrade"></div>
           </div>
         </div>
         <div class="row ct-actions">
@@ -454,7 +509,23 @@
       </div>
     </section>
 
-    <!-- Yes / No before every star purchase (js/custom.js). -->
+    <!-- First launch: the player's name and avatar (js/profile.js). -->
+    <div id="name-dlg" class="confirm name-dlg hidden" role="dialog" aria-modal="true" aria-labelledby="name-title">
+      <div class="confirm-box name-box">
+        <div class="nd-burst" aria-hidden="true"></div>
+        <h3 id="name-title">Welcome to Spike Rally!</h3>
+        <p id="name-sub">What should we call you, coach? Pick a look too.</p>
+        <div id="name-avatars" class="nd-avatars" role="radiogroup" aria-label="Avatar"></div>
+        <label class="nd-field"><span class="rule-name">Your name</span><input id="name-input" type="text" maxlength="16" placeholder="Type your name" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
+        <p id="name-err" class="nd-err hidden">Type at least 2 letters.</p>
+        <div class="confirm-btns">
+          <button id="name-cancel" class="btn ghost hidden" type="button">Cancel</button>
+          <button id="name-ok" class="btn primary" type="button">Let's play!</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Yes / No before every diamond or coin purchase (js/custom.js). -->
     <div id="confirm" class="confirm hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
       <div class="confirm-box">
         <div id="confirm-art" class="confirm-art"></div>
@@ -481,11 +552,13 @@
   <script src="js/sprites.js"></script>
   <script src="js/render.js"></script>
   <script src="js/input.js"></script>
+  <script src="js/trophies.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/custom.js"></script>
   <script src="js/daily.js"></script>
   <script src="js/challenge.js"></script>
   <script src="js/demo.js"></script>
+  <script src="js/profile.js"></script>
   <script src="js/android.js"></script>
   <script src="js/main.js"></script>
 </body>

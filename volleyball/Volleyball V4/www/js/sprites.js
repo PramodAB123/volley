@@ -187,7 +187,10 @@
       var lk = Math.sin(Math.PI * clamp(sinceLand / 0.32, 0, 1) * 0.5 + Math.PI * 0.5);
       hipZ = 0.86 - lk * 0.24; lean = 0.08 + lk * 0.14;
       footL = v(0.08, 0.26, 0); footR = v(-0.06, -0.26, 0);
-      handL = v(0.28, 0.32, 0.92 + lk * 0.12); handR = v(0.28, -0.32, 0.92 + lk * 0.12);
+      handL = v(0.22, 0.42 + lk * 0.08, 0.98 + lk * 0.16); handR = v(0.22, -0.42 - lk * 0.08, 0.98 + lk * 0.16);
+      // One foot lands a moment before the other.
+      footL = v(0.1, 0.27, 0); footR = v(-0.08, -0.25, Math.max(0, 0.05 - sinceLand * 0.3));
+      elbowDir = v(-0.4, 1, -0.2);
     } else if (act && act.type === 'sad') {
       var droop = ease(a / 0.3);
       legsRun = true;
@@ -229,6 +232,13 @@
         handL = lv(handL, v(0.38, 0.08, 2.15), lift);
         if (tk < 0.45) { handR = v(-0.05, -0.3, 1.0); hipZ = 0.88; lean = 0.05; footL = v(0.15 * tk, 0.2, 0); footR = v(-0.05, -0.2, 0); }
       }
+    } else if (p.jumpKind === 'block' && !inAir && p.jumpAt > t && p.jumpAt - t < 0.24) {
+      // Block load: a quick dip with the hands up at the shoulders, then the jump.
+      var bk = ease(1 - (p.jumpAt - t) / 0.24), dip = Math.sin(Math.PI * Math.min(1, bk * 1.1));
+      hipZ = 0.86 - dip * 0.2; lean = 0.06 + dip * 0.05;
+      footL = v(0.04, 0.24, 0); footR = v(0.02, -0.24, 0);
+      handL = v(0.2, 0.26, 1.42 + bk * 0.12); handR = v(0.2, -0.26, 1.42 + bk * 0.12);
+      elbowDir = v(-0.3, 1, -0.5);
     } else if (rally.state === 'serve' && rally.server === p) {
       var toss = Math.abs(Math.sin(rally.stateT * 4));
       legsRun = true;
@@ -271,6 +281,9 @@
       }
       hipZ = 0.84 - low * 0.08 + sway; lean = 0.04 + low * 0.1;
       if (low) { footL = v(0.08, 0.3, 0); footR = v(-0.04, -0.3, 0); handL = v(0.36, 0.22, 0.92); handR = v(0.36, -0.22, 0.92); }
+      // Breathing: the chest and hands rise and fall a little.
+      var br = Math.sin(t * 2.4 + p.idx * 0.9) * 0.012;
+      hipZ += br * 0.4; handL.z += br; handR.z += br;
       // Weight shifts from foot to foot so nobody stands frozen.
       var shift = Math.sin(t * 1.6 + p.idx * 1.3) * 0.02;
       footL.z += Math.max(0, -shift) * 0.4; footR.z += Math.max(0, shift) * 0.4;
@@ -287,6 +300,20 @@
     // Upper-body poses (setting, celebrating, reading the ball) still run on
     // planted feet while the player is moving, instead of gliding in a stance.
     if (legsRun && !inAir && speed > 1.2) { runFeet(); hipZ = Math.min(hipZ, 0.92); }
+
+    // Momentum: lean into a sprint, sit back and plant a foot when braking,
+    // bank into a turn. Only on the ground and outside the big actions.
+    if (!inAir && !act && toContact > 0.65 && (p.ax || p.ay)) {
+      var af = (p.ax || 0) * cy + (p.ay || 0) * sy, as = -(p.ax || 0) * sy + (p.ay || 0) * cy;
+      lean += clamp(af * 0.011, -0.13, 0.1);
+      tilt += clamp(-as * 0.018, -0.22, 0.22) * clamp(speed / 3, 0, 1);
+      if (af < -5 && speed > 0.8) {
+        var bkk = clamp((-af - 5) / 12, 0, 1);
+        hipZ -= 0.06 * bkk;
+        footL = v(footL.f + 0.14 * bkk, footL.s + 0.04 * bkk, footL.z * (1 - bkk));
+        handL = v(handL.f - 0.1 * bkk, handL.s + 0.08 * bkk, handL.z + 0.06 * bkk); handR = v(handR.f - 0.1 * bkk, handR.s - 0.08 * bkk, handR.z + 0.06 * bkk);
+      }
+    }
 
     // Keep the torso a fixed length however far the player leans.
     lean = clamp(lean, -0.3, 0.53);
