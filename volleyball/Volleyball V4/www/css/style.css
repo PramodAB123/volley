@@ -2154,7 +2154,7 @@ html.native input, html.native select { -webkit-user-select: auto; user-select: 
   .feat { min-height: 128px; } .h-nav-btn { min-height: 50px; }
 }
 /* Shorter phones: tighten every row so the whole lobby still fits without scrolling. */
-@media (max-aspect-ratio: 5/4) and (max-height: 820px) {
+@media (max-aspect-ratio: 5/4) and (max-height: 740px) {
   .home-scr .home { gap: 9px; }
   .h-hero { min-height: 132px; } .h-art { height: 158px; }
   .home-scr .home .tag { display: none; }
@@ -2166,7 +2166,7 @@ html.native input, html.native select { -webkit-user-select: auto; user-select: 
   .home-scr .f-ico, .feat .f-ico svg { width: 50px; height: 44px; }
   .h-nav-btn { min-height: 52px; }
 }
-@media (max-aspect-ratio: 5/4) and (max-height: 770px) {
+@media (max-aspect-ratio: 5/4) and (max-height: 690px) {
   .home-scr .home { gap: 7px; }
   .h-hero { min-height: 106px; } .h-art { height: 130px; } .h-logo { display: none; }
   .home-scr .home-hero .tile { min-height: 110px; }
@@ -2177,7 +2177,7 @@ html.native input, html.native select { -webkit-user-select: auto; user-select: 
   .home-scr .f-ico, .feat .f-ico svg { width: 44px; height: 38px; }
   .h-nav-btn { min-height: 46px; }
 }
-@media (max-aspect-ratio: 5/4) and (max-height: 670px) {
+@media (max-aspect-ratio: 5/4) and (max-height: 600px) {
   .home-scr .home { gap: 6px; }
   .h-hero { min-height: 84px; } .h-art { height: 104px; top: -2px; } .h-pill { display: none; }
   .home-scr .home-hero .tile { min-height: 84px; }
@@ -2192,3 +2192,141 @@ html.native input, html.native select { -webkit-user-select: auto; user-select: 
 @media (max-aspect-ratio: 5/4) and (prefers-reduced-motion: reduce) {
   .home-scr:not(.hidden) .home > *, .hb-lights, .gift-strip.ready, .gs-claim::after, .t-new, .feat .f-ico svg { animation: none; }
 }
+/* ==== 2026-11-11 (3) Bottom bar: Menu first (lit, you are here), then How to Play / Stats / Settings / Demo ==== */
+.h-nav { grid-template-columns: repeat(4, 1fr); }
+.h-nav-btn span { letter-spacing: -0.01em; }
+@media (max-aspect-ratio: 5/4) and (max-width: 440px) { .h-nav { gap: 2px; padding: 5px; } .h-nav-btn { font-size: 3.3vw; padding-left: 0; padding-right: 0; } .h-nav-btn svg { width: 24px; height: 24px; } }
+@media (min-aspect-ratio: 5/4) and (max-width: 760px) { .h-nav-btn { font-size: 12px; gap: 5px; } }
+/* ==== 2026-11-11 (4) Title banner: a stadium card with the title on the left and a big spiker on the right ==== */
+.h-hero { overflow: hidden; border-radius: 22px; border: 1.5px solid rgba(150, 170, 255, 0.45);
+  box-shadow: 0 0 18px rgba(80, 110, 255, 0.35), 0 12px 26px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -18px 30px rgba(4, 6, 30, 0.55);
+  background:
+    radial-gradient(circle at 93% 10%, #fff 0 3px, rgba(255, 255, 255, 0.5) 4px, transparent 30px),
+    radial-gradient(circle at 99% 20%, #fff 0 2.5px, rgba(255, 255, 255, 0.45) 4px, transparent 26px),
+    radial-gradient(circle at 86% 4%, #fff 0 2.5px, rgba(255, 255, 255, 0.45) 4px, transparent 24px),
+    radial-gradient(circle at 46% 6%, rgba(255, 236, 190, 0.9) 0 2px, transparent 15px),
+    radial-gradient(circle at 60% 14%, rgba(190, 200, 255, 0.6) 0 1.5px, transparent 10px),
+    radial-gradient(circle at 12% 8%, rgba(190, 200, 255, 0.5) 0 1.5px, transparent 10px),
+    radial-gradient(circle at 30% 16%, rgba(255, 190, 240, 0.45) 0 1.5px, transparent 9px),
+    conic-gradient(from 200deg at 93% 8%, transparent 0deg, rgba(200, 210, 255, 0.22) 12deg, transparent 26deg, rgba(200, 210, 255, 0.16) 40deg, transparent 56deg, transparent 360deg),
+    radial-gradient(90% 120% at 78% 60%, rgba(90, 80, 220, 0.55), transparent 62%),
+    linear-gradient(180deg, #131d5c 0%, #0c1242 55%, #080b2a 100%); }
+.h-hero::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 26%; z-index: 0; pointer-events: none; background: linear-gradient(180deg, transparent, rgba(124, 58, 237, 0.4)); }
+.h-brand { width: 58%; padding: 4px 0 8px 10px; }
+.h-pill { margin-top: 6px; } .home-scr .home .tag { margin-top: 6px; }
+.h-art { top: 0; right: 0; bottom: 0; width: 46%; height: auto; }
+.sp-svg { display: block; overflow: hidden; animation: none; filter: drop-shadow(0 0 14px rgba(120, 140, 255, 0.45)); }
+.sp-svg > g { transform-box: fill-box; }
+@media (max-aspect-ratio: 5/4) {
+  .h-art { top: 0; right: 0; width: 46%; height: auto; }
+}
+@media (min-aspect-ratio: 5/4) {
+  .h-art { top: 0; right: 0; bottom: 0; width: 42%; height: auto; }
+  .h-brand { width: 60%; justify-content: center; height: 100%; padding: 8px 0 8px 10px; }
+}
+/* ==== 2026-11-11 (5) Smooth scrolling on phones: League / Tournament maps, tables, bracket, Career, Stats.
+   CSS filters, backdrop blur and always-running repaint animations made every scrolled frame expensive
+   in the Android WebView. Shadows are now baked into opacity / plain colours and the list sits on its own layer. ==== */
+.career-top, .career-bottom, .cup-top, .cup-bottom { backdrop-filter: none; -webkit-backdrop-filter: none; }
+.career-scroll, .cup-scroll, .lg-scroll, .panel, #scr-menu.home-scr { overscroll-behavior: contain; }
+.career-map, .lg-board, .cup-bracket { transform: translateZ(0); backface-visibility: hidden; }
+.wbadge .wb-svg, .cmap .wbadge .wb-svg, .wpath .road, .cmap .wpath .done, .cpath .done, .cisland, .cboat, .wplane, .clock svg, .wpick-badge svg,
+.crest, .cup-lines .me, .lg-item.got .lg-t, .lg-pod-t, .lp svg, .trophy.won .tr-svg, .swatch.kit { filter: none; }
+.wnode.locked .wbadge .wb-svg, .wnode.locked .wground, .wnode.locked .wname, .wmap-pick.locked .wpick-badge svg { filter: none; opacity: 0.5; }
+.cnode.locked .cisland, .cnode.locked .csign { filter: none; opacity: 0.6; }
+.cnode.locked .cthumb, .career-pick.locked .cpick-thumb img { filter: none; opacity: 0.45; }
+.lg-item .lg-t { filter: none; opacity: 0.22; } .lg-item.got .lg-t { opacity: 1; }
+.trophy.locked .tr-svg { filter: none; opacity: 0.22; }
+.cup-arena > i, .lg-hall > i { filter: none; opacity: 0.28; animation: none; }
+.cmap .wpath .done, .wstar, .wring, .wflag::after, .wcloud, .trophy.won .tr-svg, .lg-pod-t { animation: none; }
+#app.full-scr .menu-slides { display: none; }
+/* ==== 2026-11-11 (6) Home: no gift card (the bell is the daily gift), 4-tab bar, even spacing ==== */
+.bell { width: 44px; height: 44px; border-radius: 14px; border: 2px solid rgba(255, 255, 255, 0.35); background: linear-gradient(180deg, #4a56b8, #262d7a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 12px rgba(0, 0, 0, 0.45); overflow: visible; }
+.bell svg { width: 26px; height: 26px; stroke: none; }
+.bell .bell-body { fill: #fff; } .bell .bell-clap { fill: #ffd23f; }
+.bell .daily-dot { top: -7px; right: -7px; width: 20px; height: 20px; display: none; align-items: center; justify-content: center; font: 900 12px/1 system-ui, sans-serif; font-style: normal; color: #fff; background: #ff3148; box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(0, 0, 0, 0.5); }
+.bell.ready .daily-dot { display: flex; }
+.bell.ready { border-color: #fff3b0; background: linear-gradient(180deg, #ffd23f, #ff9f1c 60%, #f97316); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.6), 0 0 0 0 rgba(255, 190, 60, 0.7), 0 4px 14px rgba(255, 140, 20, 0.6); animation: bell-glow 1.6s ease-out infinite; }
+.bell.ready .bell-body { fill: #fff; stroke: #9a4a00; stroke-width: 1.2; } .bell.ready .bell-clap { fill: #9a4a00; }
+@keyframes bell-glow { 0% { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.6), 0 0 0 0 rgba(255, 190, 60, 0.75), 0 4px 14px rgba(255, 140, 20, 0.6); } 100% { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.6), 0 0 0 14px rgba(255, 190, 60, 0), 0 4px 14px rgba(255, 140, 20, 0.6); } }
+.h-top { gap: 10px; } .h-cur { gap: 8px; padding-right: 6px; }
+@media (max-width: 400px) { .bell { width: 40px; height: 40px; } .bell svg { width: 23px; height: 23px; } .h-cur { gap: 6px; } }
+@media (prefers-reduced-motion: reduce) { .bell.ready { animation: none; } }
+/* Phone: spare height is shared out, first into the banner and the tiles, the rest evenly between the rows. */
+@media (max-aspect-ratio: 5/4) {
+  .home-scr .home { justify-content: space-between; }
+  .h-nav { margin-top: 0; }
+  .h-hero { flex: 1.3 1 auto; max-height: 250px; }
+  .home-scr .home-hero { flex: 1 1 auto; max-height: 210px; }
+  .home-scr .home-hero .tile { height: 100%; }
+  .home-scr .home-grid { flex: 1 1 auto; max-height: 180px; }
+  .home-scr .home-grid .feat { height: 100%; justify-content: center; }
+}
+@media (max-aspect-ratio: 5/4) {
+  .home-scr .home-hero .tile .t-copy small { padding-right: 30px; }
+}
+@media (max-aspect-ratio: 5/4) and (max-width: 400px) {
+  .home-scr .home-hero .tile .t-copy small { padding-right: 24px; }
+  .avatar { width: 44px; height: 44px; } .h-prof { gap: 7px; } .h-cur { padding-right: 4px; gap: 5px; }
+  .h-who b { font-size: 14px; max-width: 100px; } .cur-pill { padding: 0 8px 0 4px; gap: 4px; } .cur-pill .gem, .cur-pill .coin { width: 21px; height: 21px; }
+}
+@media (max-aspect-ratio: 5/4) and (max-width: 380px) { .h-who b { font-size: 13px; letter-spacing: -0.02em; } }
+@media (min-aspect-ratio: 5/4) {
+  .home-scr .home { grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 1fr) auto auto; height: 100%; min-height: 0; }
+  .h-hero { min-height: 0; }
+  .h-hero { grid-row: 2 / span 2; }
+  .home-scr .home-hero { grid-row: 4 / span 2; align-self: stretch; }
+  .home-scr .home-hero .tile { height: 100%; min-height: 0; }
+  .chal-strip { grid-row: 2; }
+  .home-scr .home-grid { grid-row: 3 / span 2; align-self: stretch; }
+  .home-scr .home-grid .feat { height: 100%; min-height: 0; justify-content: center; }
+  .team-strip { grid-row: 5; align-self: stretch; }
+  .h-nav { grid-row: 6; }
+}
+@media (min-aspect-ratio: 5/4) and (max-width: 720px) { .feat b { font-size: 13px; } .home-scr .home-hero .tile small { display: none; } }
+@media (min-aspect-ratio: 5/4) and (max-width: 720px) { .feat b { font-size: 12px; } .feat { gap: 4px; padding-left: 4px; padding-right: 4px; } .home-scr .f-ico, .feat .f-ico svg { width: 22px; height: 22px; } .home-scr .home-hero .t-arrow { display: none; } }
+/* ==== 2026-11-11 (7) Trophy pictures (img/trophies): Stats cabinet, League prize / podium / shelf, Tournament bracket, map panels ==== */
+.tr-img { display: block; object-fit: contain; object-position: 50% 100%; -webkit-user-drag: none; user-select: none; pointer-events: none; }
+/* Stats: a lit display case, one niche per trophy. */
+.trophy-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.trophy { gap: 3px; padding: 10px 6px 10px; border-radius: 16px; border: 1px solid rgba(255, 220, 160, 0.14); background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.28)); overflow: hidden; }
+.tr-art { width: 100%; max-width: 112px; height: 104px; margin-bottom: 6px; }
+.tr-art::after { content: ''; position: absolute; left: 6%; right: 6%; bottom: -5px; height: 6px; border-radius: 3px; background: linear-gradient(180deg, #8a6238, #4a2f17); box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5); }
+.tr-art .tr-img { position: relative; z-index: 1; width: 100%; height: 100%; }
+.trophy.won { border-color: rgba(255, 215, 120, 0.55); background: radial-gradient(ellipse 80% 55% at 50% 38%, rgba(255, 214, 120, 0.34), transparent 70%), linear-gradient(180deg, rgba(255, 240, 200, 0.1), rgba(0, 0, 0, 0.25)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 0 14px rgba(255, 190, 70, 0.18); }
+.trophy.won .tr-art::after { background: linear-gradient(180deg, #ffd978, #b77a16); }
+.trophy.locked .tr-img, .trophy.locked .tr-svg { opacity: 0.2; }
+.trophy b { font-size: 12.5px; } .trophy small { font-size: 10.5px; }
+.tr-lock { top: 46%; }
+/* League: the season prize, the podium and the shelf. */
+img.lg-t { width: 58px; height: 60px; }
+.lg-item .lg-t { width: 58px; height: 60px; } svg.lg-t { width: 46px; height: 52px; }
+.lg-item svg.lg-t { margin: 4px 0; }
+.lg-big, img.lg-big { width: 156px; height: 162px; }
+.lg-plinth { padding: 10px 0 6px; }
+.lg-plinth::before { width: 230px; height: 230px; margin: -120px 0 0 -115px; }
+.lg-pod-t, img.lg-pod-t { width: 92px; height: 96px; }
+.lg-board.narrow .lg-big, .lg-board.narrow img.lg-big { width: 100px; height: 104px; }
+.lg-board.narrow .lg-stage:not(.over) .lg-plinth::before { width: 150px; height: 150px; margin: -75px 0 0 -75px; }
+/* Tournament: the cup above the final. */
+.cup-trophy, img.cup-trophy { width: 112px; height: 116px; }
+.cup-prize.won .cup-trophy { width: 132px; height: 138px; }
+.mid .cup-trophy, .tight .cup-trophy { width: 84px; height: 88px; }
+.mid .cup-prize.won .cup-trophy, .tight .cup-prize.won .cup-trophy { width: 96px; height: 100px; }
+.cup-end-ico .cup-trophy { width: 66px; height: 68px; }
+/* Map panels: the trophy you play for. */
+.wpick-badge.wpick-prize { width: 70px; height: 74px; align-items: flex-end; }
+.wpick-prize .tr-img, .cpick-prize .tr-img { width: 100%; height: 100%; }
+.wmap-pick.locked .wpick-prize .tr-img, .wmap-pick.locked .cpick-prize .tr-img { opacity: 0.35; }
+.wmap-pick .cpick-thumb { position: relative; overflow: visible; }
+.cpick-prize { position: absolute; right: -12px; bottom: -8px; width: 46px; height: 48px; }
+@media (max-width: 767px) { .wpick-badge.wpick-prize { display: flex; width: 60px; height: 64px; } }
+@media (max-height: 520px) {
+  .cup-trophy, img.cup-trophy { width: 56px; height: 58px; }
+  .lg-pod-t, img.lg-pod-t { width: 56px; height: 58px; }
+  .lg-big, img.lg-big { width: 96px; height: 100px; }
+  .wpick-badge.wpick-prize { width: 46px; height: 48px; }
+}
+.wmap-pick .cpick-thumb > img { border-radius: 8px; }
+.cpick-thumb .cpick-prize img.tr-img { object-fit: contain; object-position: 50% 100%; }
+.wmap-pick.locked .cpick-thumb .cpick-prize img.tr-img { filter: none; }

@@ -9,6 +9,8 @@
     $('hud').classList.toggle('hidden', id !== null);
     // The home screen has its own full-screen background.
     $('app').classList.toggle('at-home', id === 'scr-menu');
+    // These screens cover everything, so the animated cover art behind them is switched off (it cost frames while scrolling).
+    $('app').classList.toggle('full-scr', id === 'scr-lmap' || id === 'scr-cmap' || id === 'scr-league' || id === 'scr-cup' || id === 'scr-career');
     if (id === 'scr-menu' && SR.profile) SR.profile.refresh();
     if (id === 'scr-menu' && SR.daily) SR.daily.onMenu();
     if (id === 'scr-menu' && SR.challenge) SR.challenge.teaser();
@@ -370,6 +372,11 @@
   // the season ends), this round's fixtures and your trophy cabinet.
   var LG_GOLD = '#ffd23f';
   function lgTrophy(kind, cls) {
+    // Real trophy pictures: the current league's own trophy, a cup, the Career Crown and the Unbeaten Shield.
+    if (kind === 'shield') return SR.trophyImg('league', (data().league && data().league.lid) || 0, 'lg-t ' + (cls || ''));
+    if (kind === 'cup') return SR.trophyImg('cup', (data().tournament && data().tournament.cid) || 0, 'lg-t ' + (cls || ''));
+    if (kind === 'crown') return SR.trophyImg('special', 0, 'lg-t ' + (cls || ''));
+    if (kind === 'unbeaten') return SR.trophyImg('special', 1, 'lg-t ' + (cls || ''));
     var c = '<svg class="lg-t ' + (cls || '') + '" viewBox="0 0 64 72" aria-hidden="true">', ball =
       '<circle cx="32" cy="27" r="9" fill="#fff8e1"/><path d="M23.5 24c5 1 10 5 12 11M28 18.6c3 3 4.5 8 3.5 13M40.8 25c-5 0-10.5 2.5-13.5 8" fill="none" stroke="#c98a00" stroke-width="1.6" stroke-linecap="round"/>';
     if (kind === 'shield') return c +
@@ -426,7 +433,7 @@
     $('league-steps').innerHTML = L.rounds.map(function (r, i) {
       var f = mine[i], st = i < played ? (f === 'w' ? 'done' : f === 'l' ? 'out' : 'done') : i === played && !L.done ? 'now' : '';
       return '<li class="' + st + '"><span>' + (st === 'done' ? '✓' : st === 'out' ? '✕' : i + 1) + '</span>Round ' + (i + 1) + '</li>';
-    }).join('') + '<li class="' + (champ ? 'done gold' : '') + '"><span>🛡</span>Shield</li>';
+    }).join('') + '<li class="' + (champ ? 'done gold' : '') + '"><span>🏆</span>Trophy</li>';
 
     // The table.
     var rows = order.map(function (id, i) {
@@ -452,13 +459,13 @@
           crest(tm, 'lg-shield') + '<b>' + tm.short + '</b><span class="lg-block"><i>' + place + '</i><small>' + L.table[id].pts + ' pts</small></span></div>';
       }).join('');
       stage = '<div class="lg-card lg-stage over' + (champ ? ' won' : '') + '"><h3>' + (champ ? 'Champions!' : 'Final podium') + '</h3><div class="lg-podium">' + pod + '</div>' +
-        '<p class="lg-cap">' + (champ ? me.name + ' lift the ' + LG.name + ' Shield · ' + SR.GEM + ' +' + LG.title : team(top).name + ' took the Shield. You finished ' + leagueOrdinal(pos) + '.') + '</p></div>';
+        '<p class="lg-cap">' + (champ ? me.name + ' lift the ' + LG.name + ' Trophy · ' + SR.GEM + ' +' + LG.title : team(top).name + ' took the trophy. You finished ' + leagueOrdinal(pos) + '.') + '</p></div>';
     } else {
       var left = n - played, gap = lead, can = gap <= left * 3;
       stage = '<div class="lg-card lg-stage"><h3>Season prize</h3><div class="lg-plinth">' + lgTrophy('shield', 'lg-big') + '</div>' +
-        '<b class="lg-prize">' + LG.name + ' Shield</b><p class="lg-cap">Finish top after ' + n + ' rounds · ' + SR.GEM + ' +' + LG.title + ' bonus' +
+        '<b class="lg-prize">' + LG.name + ' Trophy</b><p class="lg-cap">Finish top after ' + n + ' rounds · ' + SR.GEM + ' +' + LG.title + ' bonus' +
         (SR.LEAGUES[(L.lid || 0) + 1] ? ' · Top ' + SR.LEAGUE_PROMOTE + ' go up to the ' + SR.LEAGUES[(L.lid || 0) + 1].name : '') + '</p>' +
-        '<p class="lg-race ' + (pos === 1 ? 'up' : can ? 'on' : 'off') + '">' + (pos === 1 ? (played ? 'You hold the Shield. Keep it!' : 'Every team starts on 0 pts.') : can ? (lead ? lead + ' pt' + (lead === 1 ? '' : 's') + ' to catch ' : 'Level on points with ') + team(top).name : 'The Shield is out of reach this season') + '</p></div>';
+        '<p class="lg-race ' + (pos === 1 ? 'up' : can ? 'on' : 'off') + '">' + (pos === 1 ? (played ? 'You hold the trophy. Keep it!' : 'Every team starts on 0 pts.') : can ? (lead ? lead + ' pt' + (lead === 1 ? '' : 's') + ' to catch ' : 'Level on points with ') + team(top).name : 'The Shield is out of reach this season') + '</p></div>';
     }
 
     // This round's three matches, or the last round's results.
@@ -474,7 +481,7 @@
 
     // The trophy cabinet: everything you have won, empty plinths for the rest.
     var T = trophies(), C = data().career, crown = C && C.unlocked >= SR.CAREER.length ? 1 : 0;
-    var items = [['shield', 'League Shield', T.league, 'Win a league'], ['unbeaten', 'Unbeaten', T.unbeaten, 'Win all ' + n + ' rounds'],
+    var items = [['shield', 'League Trophy', T.league, 'Win a league'], ['unbeaten', 'Unbeaten', T.unbeaten, 'Win all ' + n + ' rounds'],
       ['silver', 'Runner-up', T.silver, 'Finish 2nd'], ['bronze', 'Third place', T.bronze, 'Finish 3rd'],
       ['cup', 'Tournament Cup', T.cup, 'Win a tournament'], ['crown', 'Career Crown', crown, 'Win all Career islands']];
     var shelf = items.map(function (it) {
@@ -586,6 +593,7 @@
   // The bracket: eight crests on a lit arena, lines from each match to the
   // next, your road in gold, and the trophy waiting in the middle.
   var CUP_ROUNDS = ['Quarter-finals', 'Semi-finals', 'Final'], CUP_ONE = ['Quarter-final', 'Semi-final', 'Final'];
+  function cupTrophy() { return SR.trophyImg('cup', (data().tournament && data().tournament.cid) || 0, 'cup-trophy'); }
   var TROPHY = '<svg class="cup-trophy" viewBox="0 0 64 64" aria-hidden="true">' +
     '<path d="M18 6h28v14c0 9-6 16-14 16s-14-7-14-16z" fill="url(#cup-gold)"/><path d="M18 11H9c0 9 4 14 11 15M46 11h9c0 9-4 14-11 15" fill="none" stroke="url(#cup-gold)" stroke-width="4" stroke-linecap="round"/>' +
     '<path d="M29 36h6v9h-6z" fill="#e8a400"/><path d="M21 47h22l3 9H18z" fill="url(#cup-gold)"/><rect x="16" y="55" width="32" height="5" rx="2" fill="#b86e00"/>' +
@@ -647,7 +655,7 @@
       html += '<div class="cup-colw' + (fin ? ' fin' : '') + (r === rnd ? ' now' : r < rnd ? ' past' : '') + '"><h3>' + CUP_ROUNDS[r] + '</h3><div class="cup-col">';
       if (fin) {
         html += '<div class="cup-final">' +
-          '<div class="cup-prize' + (champ ? ' won' : '') + '">' + TROPHY + (champ ? '<span class="cup-champ">' + crest(champ) + '<b>' + champ.name + '</b></span>' : '<span class="cup-court">' + SR.courtById(CP.final).name + '</span>') + '</div>' +
+          '<div class="cup-prize' + (champ ? ' won' : '') + '">' + cupTrophy() + (champ ? '<span class="cup-champ">' + crest(champ) + '<b>' + champ.name + '</b></span>' : '<span class="cup-court">' + SR.courtById(CP.final).name + '</span>') + '</div>' +
           cupCard(T, 2, 0) + '</div>';
       } else c[1].forEach(function (i) { html += cupCard(T, r, i); });
       html += '</div></div>';
@@ -684,7 +692,7 @@
     } else {
       var won = T.champion === T.me, cid = T.cid || 0, upC = (won || lost === 2) && SR.CUPS[cid + 1];
       nx.className = 'cup-next over' + (won ? ' won' : '');
-      nx.innerHTML = '<span class="cup-end-ico">' + (won ? TROPHY : crest(champ)) + '</span>' +
+      nx.innerHTML = '<span class="cup-end-ico">' + (won ? cupTrophy() : crest(champ)) + '</span>' +
         '<span class="venue-text"><small>' + (won ? 'Cup winners' : lost === 2 ? 'Runners-up' : 'Knocked out') + '</small><b>' + (won ? 'You lifted the ' + CP.name + '!' : champ.name + ' won the cup') + '</b><span>' +
         (won ? me.name + ' beat everyone · ' + SR.GEM + ' +' + CP.title + ' bonus' : 'Better luck next time.') + (upC ? ' The ' + upC.name + ' is open.' : won ? '' : ' Reach the final to unlock the next cup.') + '</span></span>' +
         (upC ? '<button id="btn-cup-up" type="button" class="btn primary">Next cup</button>' : '<button id="btn-cup-new" type="button" class="btn primary">' + (won ? 'Play again' : 'Try again') + '</button>');
@@ -1201,7 +1209,7 @@
     var warn = !locked && act >= 0 && act !== i ? '<span class="wwarn">Starting here ends your ' + list[act].name + (isL ? ' season' : ' run') + '</span>' : '';
     var label = locked ? 'Locked' : act === i ? 'Continue' : 'Play';
     var box = $(pre + '-pick');
-    box.innerHTML = (isL ? '<span class="wpick-badge">' + lgBadge(i) + '</span>' : '<span class="cpick-thumb">' + thumbImg(it.final) + '</span>') +
+    box.innerHTML = (isL ? '<span class="wpick-badge wpick-prize">' + SR.trophyImg(kind, i) + '</span>' : '<span class="cpick-thumb">' + thumbImg(it.final) + '<span class="cpick-prize">' + SR.trophyImg(kind, i) + '</span></span>') +
       '<span class="venue-text"><small>' + (isL ? 'League ' : 'Cup ') + (i + 1) + ' of ' + n + ' · ' + it.place + '</small><b>' + it.name + '</b>' +
       '<span>' + info + '</span><span class="cwhat">' + what + '</span>' + warn + '</span>' +
       '<button id="btn-' + pre + '-play" type="button" class="btn primary"' + (locked ? ' disabled' : '') + '>' + label + '</button>';
@@ -1324,13 +1332,9 @@
       return '<div class="trophy' + (n ? ' won' : ' locked') + '"><span class="tr-art">' + art + (n ? '' : '<span class="tr-lock" aria-hidden="true"></span>') + (n > 1 ? '<em class="tr-x">×' + n + '</em>' : '') + '</span>' +
         '<b>' + name + '</b><small>' + (n ? (place ? place + ' · ' : '') + 'Won ' + (n === 1 ? 'once' : n + ' times') : sub) + '</small></div>';
     }
-    var lg = SR.LEAGUES.map(function (L, i) { return tile(SR.trophyArt('league', i), L.name + ' Shield', 'Win the ' + L.name, T.lw[i] || 0, L.place); }).join('');
+    var lg = SR.LEAGUES.map(function (L, i) { return tile(SR.trophyArt('league', i), L.name + ' Trophy', 'Win the ' + L.name, T.lw[i] || 0, L.place); }).join('');
     var cp = SR.CUPS.map(function (c, i) { return tile(SR.trophyArt('cup', i), c.name, 'Win the ' + c.name, T.cw[i] || 0, c.place); }).join('');
-    var careerDone = C && C.unlocked >= SR.CAREER.length ? 1 : 0;
-    var sp = [careerDone, T.unbeaten, (ch.best || 0) >= 7 ? 1 : 0].map(function (n, i) {
-      var d = SR.SPECIAL_TROPHIES[i];
-      return tile(SR.trophyArt('special', i), d.name, d.how, n, '');
-    }).join('');
+    var sp = SR.SPECIAL_TROPHIES.map(function (d, i) { return tile(SR.trophyArt('special', i), d.name, d.how, d.n(data()), ''); }).join('');
     var medals = '<div class="tr-medals"><span class="md md-g"><i></i>League titles <b>' + T.league + '</b></span><span class="md md-s"><i></i>2nd place <b>' + T.silver + '</b></span><span class="md md-b"><i></i>3rd place <b>' + T.bronze + '</b></span><span class="md md-c"><i></i>Cups <b>' + T.cup + '</b></span></div>';
     $('stats-trophies').innerHTML = medals +
       '<h4>Leagues</h4><div class="trophy-grid">' + lg + '</div>' +
@@ -1439,7 +1443,6 @@
       on('btn-shop', function () { openShop(); });
       on('btn-stats', function () { renderStats(); show('scr-stats'); });
       on('btn-settings', function () { fillSettings(); show('scr-settings'); });
-      on('btn-help', function () { show('scr-help'); });
       on('btn-privacy', function () { show('scr-privacy'); var p = document.querySelector('#scr-privacy .panel'); if (p) p.scrollTop = 0; });
       on('btn-privacy-back', function () { show('scr-settings'); });
       document.querySelectorAll('[data-back]').forEach(function (b) {

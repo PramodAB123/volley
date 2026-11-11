@@ -244,7 +244,6 @@
     },
     init: function (q) {
       on('btn-daily', open);
-      on('home-daily', open);
       on('result-daily', open);
       on('btn-daily-x', close);
       on('btn-daily-ok', close);

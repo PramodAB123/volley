@@ -70,8 +70,8 @@
             <button id="btn-coins" class="cur-pill coin-pill" type="button" aria-label="Coins: open the Shop"><i class="coin" aria-hidden="true"></i><b data-coins>0</b><span class="plus" aria-hidden="true">+</span></button>
             <button id="btn-gems" class="cur-pill gem-pill" type="button" aria-label="Diamonds: open the Shop"><i class="gem" aria-hidden="true"></i><b data-stars>0</b><span class="plus" aria-hidden="true">+</span></button>
             <button id="btn-daily" class="bell" type="button" aria-label="Daily rewards" title="Daily rewards">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.6 2H4.4z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>
-              <i class="daily-dot" aria-hidden="true"></i>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path class="bell-body" d="M12 2.6a1.5 1.5 0 0 1 1.5 1.5v.5A6.2 6.2 0 0 1 18.2 11v4.6l1.9 2.6H3.9l1.9-2.6V11a6.2 6.2 0 0 1 4.7-6.4v-.5A1.5 1.5 0 0 1 12 2.6z"/><path class="bell-clap" d="M9.6 19.6a2.4 2.4 0 0 0 4.8 0z"/></svg>
+              <i class="daily-dot" aria-hidden="true">1</i>
             </button>
           </div>
         </header>
@@ -100,7 +100,6 @@
           </button>
         </div>
 
-        <button id="home-daily" class="strip gift-strip hidden" type="button"></button>
         <button id="home-chal" class="strip chal-strip hidden" type="button"></button>
 
         <div class="home-grid">
@@ -112,7 +111,7 @@
         <button id="btn-team" class="strip team-strip" type="button"></button>
 
         <nav class="h-nav" aria-label="More">
-          <button id="btn-help" class="h-nav-btn on" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5V19c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5z"/><path d="M12 6v13.5"/></svg><span>How to Play</span></button>
+          <button id="btn-home-menu" class="h-nav-btn on" type="button" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h4.5v-5h3v5H18v-9"/></svg><span>Menu</span></button>
           <button id="btn-stats" class="h-nav-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 17v-6M12 17V6M17 17V9" stroke-width="3"/></svg><span>Stats</span></button>
           <button id="btn-settings" class="h-nav-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8l1.6 2.4 2.8-.7.7 2.8 2.4 1.6-1.2 2.6 1.2 2.6-2.4 1.6-.7 2.8-2.8-.7-1.6 2.4-1.6-2.4-2.8.7-.7-2.8-2.4-1.6 1.2-2.6-1.2-2.6 2.4-1.6.7-2.8 2.8.7z"/></svg><span>Settings</span></button>
           <button id="btn-home-demo" class="h-nav-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg><span>Demo</span></button>
@@ -399,7 +398,7 @@
 
     <section id="scr-help" class="screen hidden">
       <div class="panel help">
-        <h2>How to play</h2>
+        <h2>Demo &amp; How to Play</h2>
         <p class="help-lead">You coach the team in the near half. Your players move on their own; you make the four calls that decide each rally.</p>
         <button id="btn-demo" class="demo-cta" type="button">
           <span class="demo-cta-icon" aria-hidden="true">▶</span>
