@@ -71,7 +71,13 @@
       var App = Plugins.App;
       if (App && App.addListener) {
         quiet(App.addListener('backButton', function () { try { onBack(); } catch (e) { SR.oops('back', e); } }));
-        quiet(App.addListener('pause', pauseIfPlaying));
+        quiet(App.addListener('pause', function () { try { pauseIfPlaying(); if (SR.audio.sleep) SR.audio.sleep(true); } catch (e) { SR.oops('app pause', e); } }));
+        // Back from the background: sound on again (the match stays paused) and
+        // full screen again, in case Android brought the system bars back.
+        quiet(App.addListener('resume', function () {
+          try { if (SR.audio.sleep) SR.audio.sleep(false); } catch (e) { SR.oops('app resume', e); }
+          if (Plugins.SystemBars && Plugins.SystemBars.hide) quiet(Plugins.SystemBars.hide());
+        }));
         if (App.getInfo) App.getInfo().then(function (i) { var v = document.getElementById('app-version'); if (v && i && i.version) v.textContent = i.version; }, function () {});
       }
       // Full screen while playing; the bars come back with a swipe from the edge.

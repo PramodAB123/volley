@@ -60,6 +60,12 @@
       if (!SR.save.data.settings.sound || !SOUNDS[name]) return;
       try { SOUNDS[name](); } catch (e) { /* audio unavailable */ }
     },
-    ctx: ac
+    ctx: ac,
+    // The app went to the background (or came back): stop or restart all
+    // sound without creating an audio context that doesn't exist yet.
+    sleep: function (on) {
+      if (!ctx) return;
+      try { quiet(on ? ctx.suspend() : ctx.resume()); } catch (e) { /* audio unavailable */ }
+    }
   };
 })();

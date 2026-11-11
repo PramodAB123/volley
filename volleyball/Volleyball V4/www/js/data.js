@@ -61,8 +61,16 @@ SR.CUSTOM = {
 };
 // Names are shown inside menus, so only letters, digits, spaces and a few
 // marks are kept. Short codes are 2-3 capital letters or digits.
+// The Unicode letter class (\p{L}) is built at run time: written as a regex
+// literal it is a syntax error on Android System WebView older than Chrome 64,
+// which stopped this whole file (and so the game) from loading.
+var NAME_JUNK = (function () {
+  try { return new RegExp("[^\\p{L}\\p{N} .'\\-]", 'gu'); } catch (e) {
+    return /[^A-Za-z0-9\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF\u0590-\u06FF\u0900-\u0DFF\u0E00-\u0E7F\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF .'\-]/g;
+  }
+})();
 SR.customName = function (v) {
-  return typeof v === 'string' ? v.replace(/<[^>]*>/g, '').replace(/[^\p{L}\p{N} .'\-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 18).replace(/'/g, '\u2019') : '';
+  return typeof v === 'string' ? v.replace(/<[^>]*>/g, '').replace(NAME_JUNK, '').replace(/\s+/g, ' ').trim().slice(0, 18).replace(/'/g, '\u2019') : '';
 };
 SR.customShort = function (v) {
   if (typeof v !== 'string') return '';

@@ -170,7 +170,15 @@
       try {
         raw = window.localStorage.getItem(KEY);
         if (raw) this.data = clean(merge(defaults(), JSON.parse(raw)));
-      } catch (e) { if (raw) SR.oops('load save', e); this.data = defaults(); } // storage blocked: play without saves
+      } catch (e) {
+        // storage blocked: play without saves. A save that can't be read is
+        // kept aside first (once), so the next write doesn't erase it for good.
+        if (raw) {
+          SR.oops('load save', e);
+          try { if (!window.localStorage.getItem(KEY + '.unreadable')) window.localStorage.setItem(KEY + '.unreadable', raw); } catch (e2) { /* storage full */ }
+        }
+        this.data = defaults();
+      }
       return this.data;
     },
     write: function () {
