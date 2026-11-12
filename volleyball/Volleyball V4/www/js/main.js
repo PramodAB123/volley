@@ -121,8 +121,10 @@
     // (A phone that is really struggling, SR.lowFx, may go to 1.5x.)
     // Settings > Sharp graphics off: a slow phone may go all the way to 1x.
     var sharpOn = !(SR.save && SR.save.data && SR.save.data.settings && SR.save.data.settings.sharp === false);
-    var dpr = Math.min(dev, 3), sharp = sharpOn ? Math.min(dev, SR.lowFx ? 1.5 : 2) : Math.min(dev, 1);
-    var px = SR.render.W * s * SR.render.H * s, cap = 3.2e6;
+    // 2026-11-12 (2): 2.25x at most (the eye barely sees more on a phone, and
+    // it costs much less to draw than 3x); 1.5x floor, 1.25x on a struggling phone.
+    var dpr = Math.min(dev, 2.25), sharp = sharpOn ? Math.min(dev, SR.lowFx ? 1.25 : 1.5) : Math.min(dev, 1);
+    var px = SR.render.W * s * SR.render.H * s, cap = 2.6e6;
     if (px * dpr * dpr > cap) dpr = Math.max(Math.min(sharp, 1.5), Math.sqrt(cap / px));
     if (SR.resScale && SR.resScale < 1) dpr = Math.max(Math.min(dpr, sharp), dpr * SR.resScale);
     lowRes = !!SR.lowFx; lastRes = SR.resScale || 1;

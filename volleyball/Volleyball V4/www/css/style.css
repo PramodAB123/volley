@@ -2855,3 +2855,25 @@ img.lg-t { width: 58px; height: 60px; }
 
 /* ===== 2026-11-12 result-screen banner: keep its space free ===== */
 html.has-banner #scr-result { padding-bottom: calc(var(--banner-h, 0px) + 12px); }
+
+/* ===== 2026-11-12 Still Career: the island on the Career card and the
+   Career map's sea, islets, boats and foam no longer float or drift. ===== */
+.t-isle, .home-scr .t-isle, .career-sea::before, .career-sea::after, .cdecor, .cdecor.boat, .cboat, .cfoam { animation: none !important; }
+.home-scr .home-hero.solo .t-isle { transform: translateY(-46%); }
+
+/* ===== 2026-11-12 Smooth menus: nothing repaints all the time behind a
+   menu. The //// cover strips stand still, and the Play button glows with a
+   fixed shadow instead of an animated one (box-shadow animations repaint
+   every frame on phones). ===== */
+.slash, .slash i, .slash::before, .slash::after { animation: none !important; }
+.np-ball { animation: none; }
+/* Screens fade in quickly when opened from the tab bar or a menu
+   (opacity only, so it is drawn by the compositor and never stutters). */
+.screen:not(.hidden) { animation: scr-fade 0.16s ease-out; }
+@keyframes scr-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .screen:not(.hidden) { animation: none; } }
+/* UI tidy: Match length keeps its label on one line; the Career card's
+   island sits clear of its arrow. */
+.set-sel-wrap { max-width: 46%; }
+.set-row .sr-txt b { white-space: nowrap; }
+.home-scr .home-hero.solo .t-isle { right: 52px; }
