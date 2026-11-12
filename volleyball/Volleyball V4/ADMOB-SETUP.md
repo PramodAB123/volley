@@ -15,6 +15,8 @@
   and Settings gets an "Ad privacy choices" row for those players.
 - The privacy policy (in the app and `store/privacy-policy.html`) has an Ads section.
 - `Volleyball V1/app-ads.txt` is ready for the website.
+- Banner: an adaptive banner (unit `ca-app-pub-1426010855335025/9583910110`, "Result banner") shows at the bottom of the result screen only. It is removed during matches, on other screens and while a reward video plays, and the screen keeps its space free.
+- Interstitial: a full-screen ad (unit `ca-app-pub-1426010855335025/8764818313`) after every 3rd finished match. It plays when the player taps Play again / Continue / Menu on the result screen, never during a match, at most once a minute, and not right after a reward video.
 
 ## Your steps
 

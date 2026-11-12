@@ -2852,3 +2852,6 @@ img.lg-t { width: 58px; height: 60px; }
   .home-scr .home-hero.solo .t-new { position: static; align-self: flex-start; margin: 0 0 6px; }
   .home-scr .home-hero.solo .t-isle { top: 50%; bottom: auto; transform: translateY(-46%); }
 }
+
+/* ===== 2026-11-12 result-screen banner: keep its space free ===== */
+html.has-banner #scr-result { padding-bottom: calc(var(--banner-h, 0px) + 12px); }
