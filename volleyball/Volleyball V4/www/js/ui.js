@@ -287,6 +287,8 @@
   function resultAds(stars, coins, again) {
     var el = $('result-ad');
     if (!el) return;
+    // No ads outside the Android app: rewards are simply paid once.
+    if (!SR.ads || !SR.ads.available()) { el.innerHTML = ''; el.classList.add('hidden'); return; }
     var html = '';
     if (again) {
       html += '<button type="button" class="ad-offer rematch" id="ad-rematch">' + AD_ICON +

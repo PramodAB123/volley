@@ -29,6 +29,12 @@
 
         </activity>
 
+        <!-- Google AdMob app ID (Spike Rally). Required by the AdMob plugin:
+             without it the app closes on start. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-1426010855335025~7211404354"/>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -41,8 +47,10 @@
     </application>
 
     <!-- Permissions: none that need the player's approval. INTERNET is a normal
-         (install-time) permission that the Capacitor web view expects; the game
-         itself makes no network requests (see the Content-Security-Policy in index.html). -->
+         (install-time) permission, used only by Google AdMob to load the reward
+         videos players choose to watch; the game itself makes no network requests
+         (see the Content-Security-Policy in index.html). The AdMob library also adds
+         ACCESS_NETWORK_STATE and the advertising ID permission (AD_ID). -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Plays with touch, but also runs on Chromebooks and devices with a mouse. -->

@@ -1,44 +1,50 @@
-# Turning on real AdMob ads in Spike Rally (V4)
+# Real AdMob ads in Spike Rally (V4)
 
-The game already has every reward button wired up. Until the AdMob plugin is
-installed, a built-in **test ad** (5-second countdown) stands in, so you can try
-everything now. When you're ready for real ads:
+## Already done in the game (12 November 2026)
 
-1. **Create the app and the ad unit in AdMob**
-   - AdMob console > Apps > Add app > Android, package `buzz.spikerally.game`.
-   - Add one **Rewarded** ad unit. Copy the **App ID** (`ca-app-pub-...~...`) and the
-     **ad unit ID** (`ca-app-pub-.../...`).
+- AdMob plugin `@capacitor-community/admob` 8.2.1 added to `package.json` and
+  `package-lock.json`. The cloud build installs it by itself (`npm ci` + `npx cap sync`).
+- App ID `ca-app-pub-1426010855335025~7211404354` is in
+  `android/app/src/main/AndroidManifest.xml`.
+- Rewarded ad unit `ca-app-pub-1426010855335025/7295678184` is in `www/js/ads.js`,
+  with test mode off.
+- The 5-second stand-in "test ad" is removed. If no ad can load (offline, or AdMob
+  has none yet), the player sees "No ad available right now" and keeps the normal
+  reward. In a desktop browser the ad buttons are hidden.
+- EU/UK consent: the app shows Google's consent form when the law requires it,
+  and Settings gets an "Ad privacy choices" row for those players.
+- The privacy policy (in the app and `store/privacy-policy.html`) has an Ads section.
+- `Volleyball V1/app-ads.txt` is ready for the website.
 
-2. **Install the plugin** (in the `Volleyball V4` folder)
-   ```
-   npm install @capacitor-community/admob
-   npx cap sync android
-   ```
-   Use the plugin version that supports Capacitor 8 (see the plugin's README).
+## Your steps
 
-3. **Add your App ID to Android**: in `android/app/src/main/AndroidManifest.xml`,
-   inside `<application>`:
-   ```xml
-   <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"
-              android:value="ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY"/>
-   ```
-   Without this line the app closes on start once the plugin is installed.
+1. **Build:** push the V4 folder to GitHub as usual. The workflow builds the new
+   AAB and APK.
+2. **Never tap your own real ads.** To test on your phone safely, go to
+   AdMob > Settings > Test devices > Add test device, pick Android, and enter
+   your phone's advertising ID (phone Settings > Google > Ads). Your phone then
+   gets test ads even from the real ad unit.
+3. **Consent message:** AdMob > Privacy & messaging > European regulations >
+   Create message. Pick the Spike Rally app, add your privacy policy URL, then
+   Publish. Without it, players in Europe may get no ads.
+4. **Website:** upload `app-ads.txt` with the V1 site so it opens at
+   https://spikerally.buzz/app-ads.txt. In Play Console, use spikerally.buzz as
+   the developer website.
+5. **Play Console** (App content):
+   - Ads: **Yes, my app contains ads**.
+   - Data safety: data is collected and shared: **Device or other IDs**
+     (advertising ID), **App interactions**, **Approximate location**
+     (from the IP address), **Diagnostics**. The purposes are Advertising or
+     marketing, Analytics and Fraud prevention. The data is encrypted in transit,
+     and users can't ask for it to be deleted from the game itself.
+   - Advertising ID declaration: **Yes**, used for Advertising.
+   - Privacy policy URL: put the updated `store/privacy-policy.html` online.
+6. **After launch:** in AdMob, open Apps > Spike Rally > App settings and link
+   it to the Play Store listing (buzz.spikerally.game). AdMob reviews the app,
+   and then real ads start.
 
-4. **Put your ad unit in the game**: in `www/js/ads.js` set
-   - `rewardedId:` your rewarded ad unit ID
-   - `testing: false` (keep `true` while you test on your own phone)
-
-5. **Update the Play Store listing**
-   - App content > Ads: **Yes, my app contains ads**.
-   - Data safety: AdMob collects the **device or other IDs** (advertising ID) and
-     app interactions, shared for advertising. Answer per Google's AdMob guide.
-   - Privacy policy: the in-app policy is updated. Copy the same "Ads" section into
-     `store/privacy-policy.html` and the public web page.
-   - Optional: publish `app-ads.txt` on your developer website.
-
-Where the ads appear:
-- After every match: **Collect** or **2x rewards** (watch an ad, get the diamonds
-  and coins again; XP is not doubled).
-- After losing a tournament match: **Rematch** (watch an ad, replay that round;
-  once per round).
+Where ads appear:
+- After every match: **Collect** or **2x rewards** (diamonds and coins again; XP
+  is not doubled).
+- After losing a tournament match: **Rematch** (replay that round, once per round).
 - A reward is only paid when the ad is watched to the end.

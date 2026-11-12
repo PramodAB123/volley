@@ -2792,3 +2792,11 @@ img.lg-t { width: 58px; height: 60px; }
 .cup-ramp.r0 { color: #7cf0b0; }
 .cup-ramp.r1 { color: #ffc14d; }
 .cup-ramp.r2 { color: #ff7a7a; }
+
+/* ===== 2026-11-12 real AdMob: loading veil + "no ad" toast ===== */
+.ad-wait { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: rgba(5, 7, 20, 0.78); color: #fff; font-size: 16px; animation: tut-pop 0.2s ease-out; }
+.aw-spin { width: 44px; height: 44px; border-radius: 50%; border: 4px solid rgba(255, 255, 255, 0.15); border-top-color: #ffd23f; animation: aw-spin 0.8s linear infinite; }
+@keyframes aw-spin { to { transform: rotate(360deg); } }
+.ad-toast { position: fixed; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); z-index: 9999; transform: translateX(-50%); max-width: calc(100% - 32px); padding: 12px 18px; border-radius: 14px;
+  background: #1b2150; border: 1px solid rgba(170, 180, 255, 0.35); color: #fff; font-weight: 700; font-size: 14px; text-align: center; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5); animation: tut-pop 0.25s ease-out; transition: opacity 0.4s; }
+.ad-toast.out { opacity: 0; }

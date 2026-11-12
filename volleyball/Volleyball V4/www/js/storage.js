@@ -142,6 +142,8 @@
     sk.owned = Array.isArray(sk.owned) ? sk.owned.filter(known) : [];
     sk.slots = Math.max(SR.SKILLS.slots, Math.min(SR.SKILLS.maxSlots, num(sk.slots, SR.SKILLS.slots)));
     sk.on = (Array.isArray(sk.on) ? sk.on.filter(known) : []).filter(function (id) { return sk.owned.indexOf(id) >= 0; }).slice(0, sk.slots);
+    var sp = 0; // at most one special smash on
+    sk.on = sk.on.filter(function (id) { return !SR.skillById(id).special || !sp++; });
     customOn = d.custom.unlocked;
     ['owned', 'equipped', 'settings', 'stats', 'trophies', 'daily', 'challenge', 'leagueMap', 'cupMap'].forEach(function (k) { if (!obj(d[k])) d[k] = def[k]; });
     Object.keys(def.owned).forEach(function (kind) {

@@ -291,18 +291,20 @@
     }
     if (!$('scr-custom')) return;
     $('ct-name').addEventListener('input', function () {
+      if (!draft) return; // the builder isn't open
       draft.name = SR.customName($('ct-name').value) || 'My Club';
       // Keep the short name following the name until it's typed by hand.
       if (!$('ct-short').dataset.manual) { draft.short = SR.customShort(draft.name) || draft.short; $('ct-short').value = draft.short; }
       render();
     });
     $('ct-short').addEventListener('input', function () {
+      if (!draft) return;
       $('ct-short').value = $('ct-short').value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
       $('ct-short').dataset.manual = '1';
       var s = SR.customShort($('ct-short').value);
       if (s) { draft.short = s; render(); }
     });
-    $('ct-short').addEventListener('blur', function () { $('ct-short').value = draft.short; });
+    $('ct-short').addEventListener('blur', function () { if (draft) $('ct-short').value = draft.short; });
     $('btn-custom-save').addEventListener('click', saveTeam);
     $('btn-custom-back').addEventListener('click', leave);
     $('btn-custom-cancel').addEventListener('click', leave);
