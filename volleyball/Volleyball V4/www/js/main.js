@@ -145,6 +145,7 @@
     hud.style.top = (SR.render.portrait ? top + ch - 56 : top + 12) + 'px';
     hud.style.right = 'auto';
     // The canvas box, for overlays laid out in CSS.
+    var emo = document.getElementById('emotes'); if (emo) emo.classList.toggle('flat', SR.render.portrait);
     var app = document.getElementById('app').style;
     app.setProperty('--cv-l', left + 'px'); app.setProperty('--cv-t', top + 'px');
     app.setProperty('--cv-w', cw + 'px'); app.setProperty('--cv-h', ch + 'px');
@@ -157,12 +158,15 @@
     if (SR.demo && SR.demo.active) SR.demo.tick(dt);
     // Hit-stop on big hits: a brief slow-motion beat rather than a dead
     // freeze, so motion never visibly stops.
-    if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; dt *= 0.6; }
+    // (Skipped online so the match never stalls for your friend.)
+    if (SR.fx.hitStop > 0) { SR.fx.hitStop -= dt; if (!(g && g.cfg.online)) dt *= 0.6; }
     if (g && !g.paused) {
       acc += dt * (g.rally.loopScale || g.rally.timeScale) * (SR.speed || 1);
       var n = 0;
       while (acc >= STEP && n < 4000) { saveStep(g.rally); g.rally.update(STEP); acc -= STEP; n++; }
     }
+    // Online: send/receive snapshots, keep the link alive.
+    if (SR.net) { try { SR.net.tick(); } catch (e) { SR.oops && SR.oops('net', e); } }
     if ((SR.lowFx && !lowRes) || (SR.resScale || 1) !== lastRes) resize();
     // No match (menus): show the cover art instead of the court.
     if (!g !== menuBg) { menuBg = !g; document.getElementById('app').classList.toggle('menu-bg', menuBg); }
@@ -189,6 +193,15 @@
   }
 
   SR.resize = function () { if (canvas) resize(); };
+
+  // When the host's app is in the background (a call, a notification pulled
+  // down) animation frames stop. Keep an online match running on a timer so
+  // the friend's game doesn't freeze; the app's WebView may still pause it.
+  setInterval(function () {
+    var g = SR.game;
+    if (!document.hidden || !g || g.cfg.online !== 'host') return;
+    try { step(performance.now()); } catch (e) { SR.oops('hidden tick', e); }
+  }, 33);
 
   // The page's ?key=value options (URLSearchParams is missing on some old browsers).
   function query() {
@@ -228,6 +241,7 @@
     part('challenge', function () { if (SR.challenge) SR.challenge.init(); });
     part('profile', function () { if (SR.profile) SR.profile.init(); });
     part('android', function () { if (SR.app) SR.app.init(); });
+    part('online', function () { if (SR.net) SR.net.init(q); });
     window.requestAnimationFrame(frame);
   });
 })();

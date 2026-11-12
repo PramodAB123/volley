@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Spike Rally for Android – Privacy policy</title>
+<title>Spike Rally for Android – Privacy policy and terms of play</title>
 <meta name="robots" content="index, follow">
 <style>
   :root { color-scheme: light dark; --bg: #ffffff; --text: #1b2433; --muted: #5b6678; --line: #e3e8f0; --accent: #2f6fe0; }
@@ -12,6 +12,7 @@
   main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
   h1 { font-size: 30px; line-height: 1.2; margin: 0 0 4px; }
   h2 { font-size: 19px; margin: 28px 0 6px; }
+  h3 { font-size: 16px; margin: 18px 0 4px; }
   .muted { color: var(--muted); font-size: 14px; }
   a { color: var(--accent); }
   li { margin-bottom: 6px; }
@@ -20,36 +21,70 @@
 </head>
 <body>
 <main>
-  <h1>Privacy policy</h1>
+  <h1>Privacy policy and terms of play</h1>
   <p class="muted">Spike Rally for Android (package buzz.spikerally.game) · Last updated 12 November 2026</p>
 
-  <p>Spike Rally is a single-player volleyball game. This policy explains what the Android app does with information. In short: the game itself collects nothing. The only exception is the optional reward videos, which are shown by Google AdMob when you choose to watch one.</p>
+  <p>Spike Rally is a volleyball game you can play on your own or, with Multiplayer, against a friend on another phone. This page explains what the Android app does with information, and the rules for online matches and coins. In short: your progress stays on your phone, we run no servers and keep no data about you. When you play online, game data goes to your friend's phone, helped by free public connection servers. The optional reward videos are shown by Google AdMob.</p>
 
   <h2>Information the app collects</h2>
-  <p>The game itself collects nothing. It has no accounts, no sign-in and no online play, and it contains no analytics, tracking or crash reporting software of its own.</p>
+  <p>We do not collect, store or sell personal information. The app has no accounts and no sign-in, and contains no analytics, tracking or crash reporting software of its own. Two features use the internet: Multiplayer (when you create or join a room) and the reward videos (when you tap to watch one).</p>
+
+  <h2>Multiplayer (online play with a friend)</h2>
+  <p>Multiplayer only starts when you tap Create a room or Join. One player creates a room and gets a 6-letter room code; the other joins with that code. During a room and a match, the two phones exchange:</p>
+  <ul>
+    <li>your player name, the team you pick, the match rules, the court and the coin stake;</li>
+    <li>your moves (where you tap to serve, set, spike and block), the match score and the live game state;</li>
+    <li>the quick emoji reactions you choose to send (there is no text chat).</li>
+  </ul>
+  <p>To connect the two phones the app uses these third-party services. We do not run or control them, and we receive nothing from them:</p>
+  <ul>
+    <li><b>PeerJS public server</b> (0.peerjs.com, run by the PeerJS open-source project) introduces the two phones using the room code. It sees the room code and your IP address.</li>
+    <li><b>Google STUN servers</b> (stun.l.google.com) help each phone find a direct route to the other. They see your IP address.</li>
+    <li>When a direct link works, the match data flows <b>directly between the two phones</b> (WebRTC, encrypted). Your friend's phone can see your IP address, as with any direct connection.</li>
+    <li>When a network blocks direct links, the same game messages go through a <b>backup server</b>: free public MQTT servers (broker.emqx.io by EMQ, broker.hivemq.com by HiveMQ, test.mosquitto.org by the Eclipse Foundation). The connection to them is encrypted (TLS), but these are public servers, so do not put anything private in your player name.</li>
+  </ul>
+  <p>None of this data is stored by us. A room ends when the match ends or a player leaves. The services above may keep short technical logs (such as IP addresses) under their own policies. Online play needs the internet permission, which Android grants without asking.</p>
 
   <h2>Ads</h2>
-  <p>After a match you can choose to watch a short video ad to double your reward, or to replay a lost tournament match. Ads are only shown when you tap one of these buttons. They are provided by Google AdMob, which uses an internet connection and may collect your device's advertising ID, approximate location (from your IP address), device information and how you interact with the ad, to show, measure and improve ads and to prevent fraud. This data is collected and handled by Google, not by us. Google's privacy policy explains how: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>, and how Google uses data from apps that use its services: <a href="https://policies.google.com/technologies/partner-sites">policies.google.com/technologies/partner-sites</a>.</p>
+  <p>After a match you can choose to watch a short video ad to double your reward, or to replay a lost tournament match. Ads are only shown when you tap one of these buttons; online matches use the same reward buttons and no other ads. Ads are provided by Google AdMob, which uses an internet connection and may collect your device's advertising ID, approximate location (from your IP address), device information and how you interact with the ad, to show, measure and improve ads and to prevent fraud. This data is collected and handled by Google, not by us. Google's privacy policy explains how: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>, and how Google uses data from apps that use its services: <a href="https://policies.google.com/technologies/partner-sites">policies.google.com/technologies/partner-sites</a>.</p>
   <p>In the European Economic Area, the UK and Switzerland the app asks for your consent before personalised ads are shown, and you can change your choice at any time in Settings &gt; Ad privacy choices. Anywhere, you can reset or delete your advertising ID in your phone's Settings &gt; Google &gt; Ads (or Settings &gt; Privacy &gt; Ads).</p>
 
   <h2>Information stored on your device</h2>
-  <p>To keep your progress, the app saves game data in its own private storage on your device: stars, unlocked balls, courts and jerseys, career, league and tournament progress, match stats, your daily reward streak and your settings. This data never leaves your device and is not sent to us or to anyone else.</p>
+  <p>To keep your progress, the app saves game data in its own private storage on your device: your player name and avatar, level, diamonds and coins, unlocked balls, courts, jerseys and skills, career, league and tournament progress, match stats (including online wins), your daily reward streak and your settings. This data is not sent to us. Only your player name and your match choices are sent to your friend's phone when you play online, as described above.</p>
   <p>If your phone's own Android backup is turned on, Android may include this game data in your personal Google backup so that your progress returns on a new phone. That backup is controlled by your Google account settings; we cannot access it.</p>
 
   <h2>Deleting your data</h2>
-  <p>You can delete all game data at any time: in the app use Stats &gt; Reset progress, or clear the app's storage in Android Settings, or uninstall the app.</p>
+  <p>You can delete all game data at any time: in the app use Stats &gt; Reset progress, or clear the app's storage in Android Settings, or uninstall the app. Because we keep no data about you, there is nothing to delete on our side.</p>
 
   <h2>Permissions</h2>
-  <p>The app does not ask for any permissions that need your approval. It uses the internet only to load the ads you choose to watch. It does not access your GPS location, camera, microphone, contacts, photos or files.</p>
+  <p>The app does not ask for any permissions that need your approval. It uses the internet for Multiplayer and for the ads you choose to watch. It does not access your GPS location, camera, microphone, contacts, photos or files.</p>
 
-  <h2>Purchases</h2>
-  <p>There are no in-app purchases. Diamonds and coins are earned only by playing (and by the optional reward videos).</p>
+  <h2>Terms of play</h2>
+  <h3>Coins and diamonds</h3>
+  <ul>
+    <li>Coins and diamonds are virtual game items with no money value. They cannot be bought with real money, sold, cashed out or traded outside the game. There are no in-app purchases.</li>
+    <li>They are earned by playing (and by the optional reward videos) and are kept only on your phone. If you uninstall the app or clear its data, they are gone, and we cannot restore them.</li>
+  </ul>
+  <h3>Coin stakes in Multiplayer</h3>
+  <ul>
+    <li>The player who creates the room chooses the stake: a friendly match (no coins) or a number of coins each. The friend sees the stake before joining and accepts it by picking a team.</li>
+    <li>Both players put in the stake when the match starts. The winner gets both stakes. Match rewards (coins and XP) are paid as for a normal match, and a reward video can double those, but never the stake.</li>
+    <li>If you leave a match (Quit match, closing the app, or not coming back in time), you lose your stake and your friend wins it. If your friend leaves, you win.</li>
+    <li>If the connection is lost for good, the player ahead in the match (sets, then points) gets both stakes. If the score is level, both get their stake back.</li>
+    <li>Online play uses free public servers and your internet connection. We cannot guarantee they are always available or fast, and coins lost because of a connection problem cannot be refunded.</li>
+  </ul>
+  <h3>Fair play</h3>
+  <ul>
+    <li>Play with people you know and share your room code only with them. Be kind: the emoji reactions are for fun.</li>
+    <li>Do not cheat, use modified versions of the app, or try to disrupt other players or the connection servers.</li>
+    <li>We may change the game, its balance, prices and rewards in updates.</li>
+  </ul>
 
   <h2>Children</h2>
-  <p>The app is not directed at children under 13. The game itself collects no personal information from anyone, and we do not knowingly allow ads to be personalised for children.</p>
+  <p>The app is not directed at children under 13. We collect no personal information from anyone, and we do not knowingly allow ads to be personalised for children.</p>
 
-  <h2>Changes to this policy</h2>
-  <p>If the app changes in a way that affects your privacy (for example, if a future version adds online features), this page will be updated before that version is released, and the date above will change.</p>
+  <h2>Changes to this page</h2>
+  <p>If the app changes in a way that affects your privacy or these terms, this page will be updated before that version is released, and the date above will change.</p>
 
   <h2>Contact</h2>
   <p>Questions about this policy: <a href="mailto:katzee619@gmail.com">katzee619@gmail.com</a></p>

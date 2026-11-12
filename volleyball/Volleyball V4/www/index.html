@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <!-- Android app build: everything is bundled, nothing is loaded from the internet. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com wss://broker.emqx.io:8084 wss://broker.hivemq.com:8884 wss://test.mosquitto.org:8081; frame-src 'none'; object-src 'none'">
   <title>Spike Rally</title>
   <meta name="theme-color" content="#0b1220">
   <meta name="color-scheme" content="dark">
@@ -204,9 +204,19 @@
     <div class="menu-slides" aria-hidden="true"><div class="slash"><i data-name="Champions Court" style="background-image:url(img/menu/bg-1-tall.webp)"></i><i data-name="Sunset Beach" style="background-image:url(img/menu/bg-2-tall.webp)"></i></div><div class="slash"><i data-name="Lava Pit" style="background-image:url(img/menu/bg-7-tall.webp)"></i><i data-name="Galaxy" style="background-image:url(img/menu/bg-6-tall.webp)"></i></div><div class="slash"><i data-name="Neon Grid" style="background-image:url(img/menu/bg-3-tall.webp)"></i><i data-name="Cherry Blossom" style="background-image:url(img/menu/bg-4-tall.webp)"></i></div><div class="slash"><i data-name="Candy Land" style="background-image:url(img/menu/bg-5-tall.webp)"></i><i data-name="Frost Arena" style="background-image:url(img/menu/bg-8-tall.webp)"></i></div></div>
     <canvas id="game" width="960" height="640" aria-label="Spike Rally volleyball court"></canvas>
 
+    <div id="net-banner" class="net-banner hidden" role="status" aria-live="polite"></div>
+    <div id="net-link" class="net-link hidden" aria-hidden="true"></div>
+
     <div id="hud" class="hidden">
       <div id="goal-chip" class="goal-chip hidden" aria-live="polite"></div>
       <button id="btn-pause" class="icon-btn" aria-label="Pause">II</button>
+    </div>
+
+    <div id="emotes" class="emotes hidden" role="group" aria-label="Send a reaction">
+      <button class="emote" data-emo="laugh" type="button" title="Laughing" aria-label="Laughing">😂</button>
+      <button class="emote" data-emo="cry" type="button" title="Crying" aria-label="Crying">😭</button>
+      <button class="emote" data-emo="angry" type="button" title="Angry" aria-label="Angry">😡</button>
+      <button class="emote" data-emo="idle" type="button" title="Idle" aria-label="Idle">😐</button>
     </div>
 
     <aside id="demo" class="demo tut hidden" aria-label="Tutorial">
@@ -264,20 +274,34 @@
           <div id="h-art" class="h-art h-photo" aria-hidden="true"><img src="img/home/hero-player.webp" alt="" draggable="false" decoding="async"></div>
         </div>
 
-        <div class="home-hero solo">
+        <div class="home-hero duo">
           <button id="btn-career" class="tile t-career" type="button">
             <span id="career-new" class="t-new">New</span>
             <svg class="t-isle" viewBox="0 0 90 56" aria-hidden="true"><ellipse cx="45" cy="44" rx="42" ry="10" fill="#9bf0f7" opacity=".45"/><ellipse cx="45" cy="42" rx="31" ry="8.5" fill="#f3d9a0"/><ellipse cx="45" cy="39.5" rx="20" ry="5" fill="#5cb85c"/><path d="M47 40 C49 31 46 24 50 15" fill="none" stroke="#8a5a2b" stroke-width="2.6" stroke-linecap="round"/><g fill="#2f9e44"><path d="M50 15 C43 10 36 11 32 17 C38 14 44 14 50 15Z"/><path d="M50 15 C56 8 63 9 66 14 C60 12 55 13 50 15Z"/><path d="M50 15 C46 6 40 4 35 5 C41 7 46 10 50 15Z"/><path d="M50 15 C53 5 59 3 63 5 C58 7 53 10 50 15Z"/></g><rect x="30" y="33" width="13" height="7" rx="1" fill="#f28a3a" stroke="#fff" stroke-width="1"/></svg>
-            <span class="t-copy"><b>Career</b><small id="career-prog">Conquer 21 islands and become a champion!</small><span class="t-bar"><i id="career-prog-bar"></i></span></span>
+            <span class="t-copy"><b>Career</b><small id="career-prog">Conquer 21 islands, become champion</small><span class="t-bar"><i id="career-prog-bar"></i></span></span>
+            <span class="t-arrow" aria-hidden="true">›</span>
+          </button>
+          <button id="btn-online" class="tile t-online" type="button">
+            <span class="t-live" aria-hidden="true"><i></i>1 v 1</span>
+            <svg class="t-vs" viewBox="0 0 96 60" aria-hidden="true"><g class="vs-p1"><rect x="6" y="10" width="26" height="42" rx="6" fill="#1b2440" stroke="#7fd3ff" stroke-width="2"/><rect x="10" y="15" width="18" height="28" rx="2.5" fill="#3aa0ff"/><circle cx="19" cy="25" r="4.4" fill="#fff"/><path d="M12.5 39c1.4-4.4 3.8-6.4 6.5-6.4s5.1 2 6.5 6.4z" fill="#fff"/></g><g class="vs-p2"><rect x="64" y="10" width="26" height="42" rx="6" fill="#1b2440" stroke="#ffb27f" stroke-width="2"/><rect x="68" y="15" width="18" height="28" rx="2.5" fill="#ff6b3d"/><circle cx="77" cy="25" r="4.4" fill="#fff"/><path d="M70.5 39c1.4-4.4 3.8-6.4 6.5-6.4s5.1 2 6.5 6.4z" fill="#fff"/></g><path d="M36 30h24" stroke="#fff" stroke-width="2.4" stroke-dasharray="3 4" stroke-linecap="round" opacity=".8"/><circle cx="48" cy="30" r="10" fill="#ffd23f" stroke="#b86e00" stroke-width="1.6"/><path d="M50 22.5l-6 9h4.4l-2 7 6.2-9.4h-4.4z" fill="#1b2440"/></svg>
+            <span class="t-copy"><b>Multiplayer</b><small>Play a friend with a room code</small></span>
             <span class="t-arrow" aria-hidden="true">›</span>
           </button>
         </div>
 
         <button id="home-chal" class="strip chal-strip hidden" type="button"></button>
 
-        <div class="home-grid two">
-          <button id="btn-league" class="feat f-league" type="button"><span class="f-ico"><svg viewBox="0 0 64 56" aria-hidden="true"><g fill="#ffd23f" stroke="#b86e00" stroke-width="1"><path d="M10 14c-6 8-6 20 2 28 2-8 0-20-2-28z"/><path d="M6 24c-3 7 0 15 7 19-1-7-3-14-7-19z"/><path d="M54 14c6 8 6 20-2 28-2-8 0-20 2-28z"/><path d="M58 24c3 7 0 15-7 19 1-7 3-14 7-19z"/></g><path d="M20 6h24v10c0 8-5.4 14-12 14s-12-6-12-14z" fill="#ffd23f" stroke="#b86e00" stroke-width="1.4"/><path d="M20 9h-5c0 6 3 9.5 7 10M44 9h5c0 6-3 9.5-7 10" fill="none" stroke="#ffd23f" stroke-width="2.6" stroke-linecap="round"/><path d="M29 30h6v7h-6z" fill="#e8a400"/><path d="M22 37h20l2 7H20z" fill="#ffd23f" stroke="#b86e00" stroke-width="1"/><rect x="19" y="44" width="26" height="5" rx="1.5" fill="#8a4b00"/><path d="M32 10.5l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#fff8d6"/></svg></span><b>League</b><small id="league-prog"></small><i class="f-shine" aria-hidden="true"></i></button>
-          <button id="btn-cup" class="feat f-cup" type="button"><span class="f-ico"><svg viewBox="0 0 64 56" aria-hidden="true"><path d="M18 4h28v14c0 9-6.3 16-14 16s-14-7-14-16z" fill="#ffd23f" stroke="#b86e00" stroke-width="1.4"/><path d="M18 8H10c0 8 4 13 10 14M46 8h8c0 8-4 13-10 14" fill="none" stroke="#ffd23f" stroke-width="3.2" stroke-linecap="round"/><path d="M28 33h8v8h-8z" fill="#e8a400"/><path d="M20 41h24l2.5 7h-29z" fill="#ffd23f" stroke="#b86e00" stroke-width="1"/><rect x="16" y="47.5" width="32" height="5" rx="1.5" fill="#8a4b00"/><path d="M25 8c0 7 1 12 4.6 16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".6"/><path d="M32 9.5l2 4 4.4.6-3.2 3.1.8 4.4-4-2.1-4 2.1.8-4.4-3.2-3.1 4.4-.6z" fill="#fff8d6"/></svg></span><b>Tournament</b><small id="cup-prog"></small><i class="f-shine" aria-hidden="true"></i></button>
+        <div class="home-hero duo home-modes">
+          <button id="btn-league" class="tile t-league" type="button">
+            <svg class="t-trophy" viewBox="0 0 64 56" aria-hidden="true"><g fill="#ffd23f" stroke="#b86e00" stroke-width="1"><path d="M10 14c-6 8-6 20 2 28 2-8 0-20-2-28z"/><path d="M6 24c-3 7 0 15 7 19-1-7-3-14-7-19z"/><path d="M54 14c6 8 6 20-2 28-2-8 0-20 2-28z"/><path d="M58 24c3 7 0 15-7 19 1-7 3-14 7-19z"/></g><path d="M20 6h24v10c0 8-5.4 14-12 14s-12-6-12-14z" fill="#ffd23f" stroke="#b86e00" stroke-width="1.4"/><path d="M20 9h-5c0 6 3 9.5 7 10M44 9h5c0 6-3 9.5-7 10" fill="none" stroke="#ffd23f" stroke-width="2.6" stroke-linecap="round"/><path d="M29 30h6v7h-6z" fill="#e8a400"/><path d="M22 37h20l2 7H20z" fill="#ffd23f" stroke="#b86e00" stroke-width="1"/><rect x="19" y="44" width="26" height="5" rx="1.5" fill="#8a4b00"/><path d="M32 10.5l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#fff8d6"/></svg>
+            <span class="t-copy"><b>League</b><small id="league-prog"></small></span>
+            <span class="t-arrow" aria-hidden="true">›</span>
+          </button>
+          <button id="btn-cup" class="tile t-cup" type="button">
+            <svg class="t-trophy" viewBox="0 0 64 56" aria-hidden="true"><path d="M18 4h28v14c0 9-6.3 16-14 16s-14-7-14-16z" fill="#ffd23f" stroke="#b86e00" stroke-width="1.4"/><path d="M18 8H10c0 8 4 13 10 14M46 8h8c0 8-4 13-10 14" fill="none" stroke="#ffd23f" stroke-width="3.2" stroke-linecap="round"/><path d="M28 33h8v8h-8z" fill="#e8a400"/><path d="M20 41h24l2.5 7h-29z" fill="#ffd23f" stroke="#b86e00" stroke-width="1"/><rect x="16" y="47.5" width="32" height="5" rx="1.5" fill="#8a4b00"/><path d="M25 8c0 7 1 12 4.6 16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".6"/><path d="M32 9.5l2 4 4.4.6-3.2 3.1.8 4.4-4-2.1-4 2.1.8-4.4-3.2-3.1 4.4-.6z" fill="#fff8d6"/></svg>
+            <span class="t-copy"><b>Tournament</b><small id="cup-prog"></small></span>
+            <span class="t-arrow" aria-hidden="true">›</span>
+          </button>
         </div>
 
         <!-- 2026-11-12: five tabs. Shop and the custom team moved here from the
@@ -290,6 +314,62 @@
           <button id="btn-stats" class="h-nav-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 17v-6M12 17V6M17 17V9" stroke-width="3"/></svg><span>Stats</span></button>
           <button id="btn-settings" class="h-nav-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8l1.6 2.4 2.8-.7.7 2.8 2.4 1.6-1.2 2.6 1.2 2.6-2.4 1.6-.7 2.8-2.8-.7-1.6 2.4-1.6-2.4-2.8.7-.7-2.8-2.4-1.6 1.2-2.6-1.2-2.6 2.4-1.6.7-2.8 2.8.7z"/></svg><span>Settings</span></button>
         </nav>
+      </div>
+    </section>
+
+    <section id="scr-online" class="screen hidden mp-scr">
+      <div class="panel online mp">
+        <header class="mp-top">
+          <button id="btn-on-back" class="top-back" type="button" aria-label="Back"><span aria-hidden="true">‹</span> Back</button>
+          <h2>Multiplayer</h2>
+          <span class="mp-coins"><i class="coin" aria-hidden="true"></i><b data-coins>0</b></span>
+        </header>
+        <div id="on-home" class="mp-home">
+          <div class="mp-hero">
+            <svg class="mp-hero-art" viewBox="0 0 220 92" aria-hidden="true"><defs><linearGradient id="mp-cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2aa7ff"/><stop offset="1" stop-color="#0b5fd0"/></linearGradient><linearGradient id="mp-cg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8a4c"/><stop offset="1" stop-color="#e2432a"/></linearGradient></defs><path d="M14 78L50 20h120l36 58z" fill="#0f1a3a" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/><path d="M14 78L50 20h60v58z" fill="url(#mp-cg)" opacity=".85"/><path d="M110 20h60l36 58h-96z" fill="url(#mp-cg2)" opacity=".85"/><path d="M110 10v74" stroke="#fff" stroke-width="3"/><path d="M110 12h0" stroke="#fff"/><g fill="#fff" opacity=".9"><circle cx="62" cy="54" r="5"/><circle cx="84" cy="40" r="5"/><circle cx="140" cy="44" r="5"/><circle cx="160" cy="60" r="5"/></g><circle cx="128" cy="20" r="8" fill="#fff" stroke="#1b2440" stroke-width="1.6"/><path d="M121 18c4 0 8 2 11 7M124 13c3 2 4 6 4 11" fill="none" stroke="#1b2440" stroke-width="1.3"/></svg>
+            <b>1 v 1 with a friend</b>
+            <small>Two phones, one live match. One of you hosts, the other joins with the code.</small>
+          </div>
+          <button id="btn-on-create" class="mp-card mp-create" type="button">
+            <span class="mp-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span class="mp-txt"><b>Create a room</b><small>Set the coins, rules and court. You get a code.</small></span>
+            <span class="t-arrow" aria-hidden="true">›</span>
+          </button>
+          <div class="mp-card mp-join">
+            <div class="mp-join-head">
+              <span class="mp-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="3.6"/><path d="M11.6 12H21M18 12v3.2M15 12v2.4"/></svg></span>
+              <span class="mp-txt"><b>Join a room</b><small>Type the 6-letter code from your friend</small></span>
+            </div>
+            <div class="join-row">
+              <input id="on-code" type="text" inputmode="text" maxlength="6" placeholder="ROOM CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Room code">
+              <button id="btn-on-join" class="btn primary" type="button">Join</button>
+            </div>
+          </div>
+          <ol class="mp-how">
+            <li><i>1</i><span>Host makes a room and picks the coins</span></li>
+            <li><i>2</i><span>Friend joins with the code and puts in the same</span></li>
+            <li><i>3</i><span>The winner takes all the coins</span></li>
+          </ol>
+        </div>
+        <div id="on-teams" class="hidden mp-teams">
+          <h3 id="on-teams-title">Choose your team</h3>
+          <div id="on-stake" class="on-stake"></div>
+          <div id="on-rules" class="rules"></div>
+          <div id="on-courts" class="rule courts hidden"></div>
+          <div id="on-team-grid" class="team-grid"></div>
+        </div>
+        <div id="on-room" class="hidden mp-room">
+          <p class="mp-room-lbl">Your room code</p>
+          <div id="on-code-big" class="room-code">······</div>
+          <div id="on-room-stake" class="on-room-stake"></div>
+          <div class="mp-wait" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="mp-share">
+            <button id="btn-on-copy" class="btn primary" type="button">Copy code</button>
+            <button id="btn-on-share" class="btn" type="button">Share</button>
+          </div>
+          <input id="on-link" class="invite-link hidden" type="text" readonly aria-label="Room code" spellcheck="false">
+        </div>
+        <p id="on-status" class="status" role="status" aria-live="polite"></p>
       </div>
     </section>
 
@@ -543,7 +623,7 @@
         <div class="set-group">
           <h3>More</h3>
           <button id="btn-set-help" class="set-row link" type="button"><span class="sr-ico c-violet" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none"/><path d="M10 8.5v7l5.5-3.5z"/></svg></span><span class="sr-txt"><b>How to play</b><small>Tutorial and rules</small></span><span class="sr-go" aria-hidden="true">›</span></button>
-          <button id="btn-privacy" class="set-row link" type="button"><span class="sr-ico c-teal" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.8l7.5 3v5.6c0 4.8-3.2 8.6-7.5 10-4.3-1.4-7.5-5.2-7.5-10V5.8z" fill="none"/><path d="M8.8 12.2l2.2 2.2 4.4-4.6" fill="none"/></svg></span><span class="sr-txt"><b>Privacy policy</b><small>What the game stores</small></span><span class="sr-go" aria-hidden="true">›</span></button>
+          <button id="btn-privacy" class="set-row link" type="button"><span class="sr-ico c-teal" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.8l7.5 3v5.6c0 4.8-3.2 8.6-7.5 10-4.3-1.4-7.5-5.2-7.5-10V5.8z" fill="none"/><path d="M8.8 12.2l2.2 2.2 4.4-4.6" fill="none"/></svg></span><span class="sr-txt"><b>Privacy &amp; terms</b><small>Online play, coins and your data</small></span><span class="sr-go" aria-hidden="true">›</span></button>
           <button id="btn-ad-privacy" class="set-row link hidden" type="button"><span class="sr-ico c-blue" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="3.5" fill="none"/><path d="M10 9.2v5.6l4.8-2.8z"/></svg></span><span class="sr-txt"><b>Ad privacy choices</b><small>Change your ad consent</small></span><span class="sr-go" aria-hidden="true">›</span></button>
         </div>
         <div class="set-about">
@@ -551,31 +631,35 @@
           <div><b>Spike Rally</b><small>Version <span id="app-version">1.0.1</span> · 6v6 volleyball coaching</small></div>
         </div>
         <ul class="set-chips" aria-label="About the game">
-          <li>Offline play</li><li>No account</li><li>Ads only if you choose</li>
+          <li>Offline + online 1 v 1</li><li>No account</li><li>Ads only if you choose</li>
         </ul>
       </div>
     </section>
 
     <section id="scr-privacy" class="screen hidden">
       <div class="panel help privacy">
-        <h2>Privacy policy</h2>
+        <h2>Privacy &amp; terms</h2>
         <p class="muted small">Spike Rally for Android · Last updated 12 November 2026</p>
-        <p>Spike Rally is a single-player volleyball game. It works offline. The game itself does not collect, store on a server, or share any personal data. Optional reward videos are served by Google AdMob (see below).</p>
+        <p>Spike Rally is a volleyball game you play on your own or, with Multiplayer, against a friend on another phone. Your progress stays on your phone. We run no servers and keep no data about you.</p>
+        <h3>Multiplayer</h3>
+        <p>Only when you create or join a room, the two phones exchange your player name, your team, the match rules, court and coin stake, your moves and the score, and the emoji reactions you send (there is no chat). To connect, the app uses the public PeerJS server (0.peerjs.com) and Google's STUN servers, which see the room code and your IP address. The match then runs directly between the two phones, so your friend's phone can see your IP address. If a network blocks that, the game messages go through free public backup servers (broker.emqx.io, broker.hivemq.com, test.mosquitto.org). Don't put anything private in your player name. Nothing is stored by us.</p>
         <h3>Ads</h3>
         <p>You can choose to watch a short video ad to double a match reward or to replay a lost tournament match. Ads are only shown when you tap one of these buttons. They are provided by Google AdMob, which needs an internet connection and may use your device's advertising ID and basic device information to show and measure ads. Google's privacy policy explains how it handles that data: policies.google.com/privacy. You can reset or delete your advertising ID in your phone's Google settings.</p>
         <h3>What the game stores</h3>
-        <p>Your progress (your player name and avatar, level, diamonds, coins, unlocked balls, courts and jerseys, career, league and tournament progress, stats, daily reward streak and settings) is saved only on this device, inside the app's own storage. It never leaves your phone. Uninstalling the app or clearing its storage deletes it. You can also wipe it any time with Stats &gt; Reset progress.</p>
-        <h3>What the game does not do</h3>
+        <p>Your progress (your player name and avatar, level, diamonds, coins, unlocked balls, courts, jerseys and skills, career, league and tournament progress, stats, daily reward streak and settings) is saved only on this device, inside the app's own storage. Uninstalling the app or clearing its storage deletes it. You can also wipe it any time with Stats &gt; Reset progress.</p>
+        <h3>Terms of play</h3>
         <ul class="help-rules">
-          <li>No accounts, sign-in or online play.</li>
-          <li>No analytics, tracking or crash reporting SDKs of its own, and no ads unless you choose to watch one.</li>
-          <li>No in-app purchases. Diamonds and coins are earned by playing and cannot be bought.</li>
-          <li>The internet is only used to load the ads you choose to watch. The app asks for no permissions such as location, camera, microphone, contacts or files.</li>
+          <li>Coins and diamonds are virtual and have no money value. They can't be bought, sold, cashed out or traded outside the game. There are no in-app purchases.</li>
+          <li>Coin stakes: the room's host picks the stake (or a friendly match). Your friend sees it before joining. Both pay it when the match starts and the winner gets both. Reward videos never double a stake.</li>
+          <li>Leaving a match (Quit, closing the app or not coming back in time) loses your stake to your friend. If your friend leaves, you win it. If the connection is lost for good, whoever is ahead gets both; a level score refunds both.</li>
+          <li>Online play uses free public servers and your connection, so it can't always be guaranteed, and coins lost to a connection problem can't be refunded.</li>
+          <li>Play fair and be kind: share your room code only with friends, no cheating or modified apps.</li>
+          <li>The app asks for no permissions such as location, camera, microphone, contacts or files.</li>
         </ul>
         <h3>Children</h3>
-        <p>The game is not directed at children under 13. The game itself collects no personal data from anyone, of any age.</p>
+        <p>The game is not directed at children under 13. We collect no personal data from anyone, of any age.</p>
         <h3>Changes and contact</h3>
-        <p>If this policy changes, the new version will ship with an app update and be posted at the policy web address on the Google Play listing. Questions: see the developer contact on the Google Play listing.</p>
+        <p>If this page changes, the new version ships with an app update and is posted at the policy web address on the Google Play listing. Questions: see the developer contact on the Google Play listing.</p>
         <div class="row">
           <button id="btn-privacy-back" class="btn ghost" type="button">Back</button>
         </div>
@@ -719,6 +803,10 @@
   <script src="js/profile.js"></script>
   <script src="js/android.js"></script>
   <script src="js/polish.js"></script>
+  <script src="js/vendor/peerjs.min.js"></script>
+  <script src="js/net-config.js"></script>
+  <script src="js/relay.js"></script>
+  <script src="js/net.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

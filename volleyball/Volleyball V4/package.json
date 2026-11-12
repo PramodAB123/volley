@@ -2,7 +2,7 @@
   "name": "spike-rally-android",
   "version": "1.0.0",
   "private": true,
-  "description": "Spike Rally volleyball, Android app build (Capacitor). Offline, single-player.",
+  "description": "Spike Rally volleyball, Android app build (Capacitor). Single-player, plus online 1 v 1 with a friend.",
   "scripts": {
     "sync": "npx cap sync android",
     "open": "npx cap open android"
@@ -11,7 +11,8 @@
     "@capacitor-community/admob": "8.2.1",
     "@capacitor/android": "8.6.0",
     "@capacitor/app": "8.1.2",
-    "@capacitor/core": "8.6.0"
+    "@capacitor/core": "8.6.0",
+    "@capacitor/share": "8.0.3"
   },
   "devDependencies": {
     "@capacitor/cli": "8.6.0"

@@ -936,7 +936,7 @@
       CM.unlocked || tr.cup ? (CM.unlocked + 1) + ' / ' + nc + ' cups open' : nc + ' cups to win';
     if ($('shop-prog')) $('shop-prog').textContent = 'Skills, balls, courts and more';
     if ($('career-new')) $('career-new').classList.toggle('hidden', !!C);
-    if ($('career-prog') && !C) $('career-prog').textContent = 'Conquer ' + n + ' islands and become a champion!';
+    if ($('career-prog') && !C) $('career-prog').textContent = 'Conquer ' + n + ' islands, become champion';
   }
 
   function openCareer() {
@@ -1460,32 +1460,62 @@
   }
 
   function quitMatch() {
-    if (SR.game && SR.game.cfg.online && SR.net) { SR.net.leave(); return; }
+    if (SR.game && SR.game.cfg.online && SR.net) { quitOnline(); return; }
     stopMatch();
     show('scr-menu');
   }
 
-  // Result screen for an online match, from this player's side.
+  // Result screen for an online match, from this player's side (2026-11-12:
+  // the app's own result look). The match pays XP and coins like a quick
+  // match (a reward ad can double those, never the stake); the coin stake is
+  // shown on its own line: the winner gets both stakes.
   function onlineResult(r) {
-    var won = r.mySets > r.oppSets, st = data().stats, stars = won ? SR.STARS.quickWin : 0;
+    var won = r.mySets > r.oppSets, st = data().stats, stars = won ? SR.STARS.quickWin : 0, my = r.stats || {};
     mode = 'online';
     st.matches++;
     if (won) st.wins++;
-    r.history.forEach(function (x) { st.points += x[0]; });
-    st.aces += r.stats.aces; st.kills += r.stats.kills; st.blocks += r.stats.blocks;
+    st.streak = won ? st.streak + 1 : 0;
+    st.best = Math.max(st.best, st.streak);
+    r.history.forEach(function (x) { st.points += x[0]; if (x[0] > x[1]) st.sets++; });
+    st.aces += my.aces || 0; st.kills += my.kills || 0; st.blocks += my.blocks || 0; st.errors += my.errors || 0;
+    st.online = st.online || { m: 0, w: 0 };
+    st.online.m++; if (won) st.online.w++;
+    var loot = SR.profile.matchLoot({ kills: my.kills || 0, aces: my.aces || 0, blocks: my.blocks || 0 }, won, 'quick');
+    var pf = data().profile, before = { level: pf.level, xp: pf.xp }, coins = loot.coins;
     data().stars += stars;
+    data().coins += coins;
+    var ups = SR.profile.addXp(loot.xp);
     save();
+    var who = r.friend ? ' vs ' + r.friend : '';
     $('result-title').textContent = won ? 'Victory!' : 'Defeat';
     $('result-title').className = won ? 'win' : 'loss';
-    $('result-sub').textContent = r.me.name + ' ' + r.mySets + ' - ' + r.oppSets + ' ' + r.opp.name + ' (online)';
+    $('result-title').parentNode.classList.toggle('lost', !won);
+    $('result-sub').textContent = r.me.name + ' ' + r.mySets + ' - ' + r.oppSets + ' ' + r.opp.name + ' · Online' + who;
     $('result-sets').textContent = r.history.map(function (x) { return x[0] + '-' + x[1]; }).join('   ');
-    $('result-stats').textContent = 'Aces ' + r.stats.aces + ' · Kills ' + r.stats.kills + ' · Blocks ' + r.stats.blocks + ' · Errors ' + r.stats.errors;
-    $('result-stars').innerHTML = stars ? '<span class="loot gem-loot">' + SR.GEM + '<b>+' + stars + '</b></span>' : '';
-    $('result-xp').innerHTML = '';
-    $('result-notes').textContent = '';
-    resultButtons(null);
+    $('result-stats').textContent = 'Aces ' + (my.aces || 0) + ' · Kills ' + (my.kills || 0) + ' · Blocks ' + (my.blocks || 0) + ' · Errors ' + (my.errors || 0);
+    resultLoot(stars, coins, loot.xp, before, ups);
+    var note = '';
+    if (r.stake) {
+      note = won ? 'Stake won: ' + SR.fmtNum(r.coinsWon || r.stake * 2) + ' coins (yours back + your friend\'s ' + SR.fmtNum(r.stake) + ').'
+        : 'Stake lost: ' + SR.fmtNum(r.stake) + ' coins went to ' + (r.friend || 'your friend') + '.';
+      var box = $('result-stars');
+      box.insertAdjacentHTML('afterbegin', '<span class="loot stake-loot' + (won ? '' : ' lost') + '">' + SR.COIN + '<b>' + (won ? '+' + SR.fmtNum(r.coinsWon || r.stake * 2) : '-' + SR.fmtNum(r.stake)) + '</b><small>stake</small></span>');
+    }
+    $('result-notes').textContent = note;
+    resultButtons({ label: 'Play online again', go: function () { if (SR.net) SR.net.openLobby(); } });
+    resultAds(stars, coins, null);
     stopMatch();
+    refreshStars();
     show('scr-result');
+  }
+
+  // Leaving an online match with coins at stake: ask first.
+  function quitOnline() {
+    var n = SR.net, stake = n && n.held && n.stake;
+    if (!stake || !SR.custom || !SR.custom.ask) { n.leave(); return; }
+    SR.custom.ask({ title: 'Leave the match?', yes: 'Leave', no: 'Keep playing',
+      text: 'Your friend wins and you lose your <b class="cf-coin">' + SR.COIN + ' ' + SR.fmtNum(stake) + '</b> stake.',
+      onYes: function () { n.leave(); } });
   }
 
   // ---- wiring -------------------------------------------------------------
@@ -1503,6 +1533,7 @@
     courtPicker: courtPicker,
     courtSwatch: courtSwatch,
     onlineResult: onlineResult,
+    refreshStars: refreshStars,
     save: save,
     renderShop: renderShop,
     openShop: openShop,
@@ -1517,6 +1548,7 @@
       on('btn-quick-random', quickRandom);
       on('btn-quick-choose', function () { openTeams('quick'); });
       on('btn-career', openCareer);
+      on('btn-online', function () { if (SR.net) SR.net.openLobby(); });
       on('btn-career-team', function () { openTeams('career'); });
       var careerArmed = false;
       on('btn-career-reset', function () {
