@@ -22,6 +22,8 @@
   var lastBack = 0;
   function onBack() {
     var ui = SR.ui, g = SR.game, cur = ui ? ui.current() : null;
+    // The start-up loader is still showing: Back does nothing yet.
+    if (window.SR_BOOT && !SR_BOOT.done) return;
     // The name dialog: Back closes it (not on first launch, the name is needed).
     if (SR.profile && SR.profile.isOpen()) { SR.profile.back(); return; }
     // A Yes / No dialog (a purchase, leave the team builder): Back says No.

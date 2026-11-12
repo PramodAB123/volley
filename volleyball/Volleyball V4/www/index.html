@@ -11,9 +11,147 @@
   <meta name="format-detection" content="telephone=no">
   <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="img/menu/bg-1-tall.webp" as="image" fetchpriority="high">
+  <style id="od-boot-css">
+    /* 2026-11-12 Oddora Games start-up loader (inline so it paints before style.css) */
+    html.od-loading, html.od-loading body { background: #04060c; }
+    #od-boot { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; color: #fff; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: radial-gradient(120% 80% at 50% 42%, #131a2e 0%, #070a14 55%, #020309 100%); transition: opacity .6s ease, visibility 0s linear .6s; -webkit-user-select: none; user-select: none; touch-action: none; }
+    #od-boot.od-out { opacity: 0; visibility: hidden; }
+    #od-boot .od-sky, #od-boot .od-sky2 { position: absolute; top: -20%; right: -20%; bottom: -20%; left: -20%; pointer-events: none; opacity: 0; animation: od-fade 1.4s ease .2s forwards, od-drift 18s linear infinite; background-image: radial-gradient(1.4px 1.4px at 12% 22%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 28% 68%, #cfe0ff 50%, transparent 51%), radial-gradient(1.6px 1.6px at 44% 14%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 63% 81%, #ffe2b8 50%, transparent 51%), radial-gradient(1.3px 1.3px at 78% 33%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 88% 62%, #cfe0ff 50%, transparent 51%), radial-gradient(1.2px 1.2px at 6% 88%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 52% 48%, #fff 50%, transparent 51%); background-size: 340px 340px; }
+    #od-boot .od-sky2 { background-size: 210px 210px; animation-duration: 1.4s, 30s; animation-direction: normal, reverse; }
+    #od-boot .od-sky2 { opacity: 0; }
+    .od-stage { position: relative; width: min(74vw, 46vh, 360px); transition: transform .7s cubic-bezier(.3,0,.2,1); }
+    #od-boot.od-out .od-stage { transform: scale(1.08); }
+    .od-logo { position: relative; width: 100%; padding-top: 73.17%; }
+    .od-logo img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; -webkit-user-drag: none; }
+    .od-ring { opacity: 0; -webkit-clip-path: inset(100% 0 0 0); clip-path: inset(100% 0 0 0); transform: translateY(10%); animation: od-rise 1s cubic-bezier(.2,.7,.2,1) .15s forwards; }
+    .od-star { opacity: 0; -webkit-clip-path: inset(0 50% 0 50%); clip-path: inset(0 50% 0 50%); animation: od-horizon .8s cubic-bezier(.3,.8,.2,1) .7s forwards; }
+    .od-word { opacity: 0; -webkit-clip-path: inset(0 100% 0 0); clip-path: inset(0 100% 0 0); animation: od-wipe .7s cubic-bezier(.4,0,.2,1) 1.05s forwards; }
+    .od-games { opacity: 0; transform: translateY(6%); animation: od-up .6s ease-out 1.35s forwards; }
+    .od-rules { opacity: 0; -webkit-clip-path: inset(0 50% 0 50%); clip-path: inset(0 50% 0 50%); animation: od-horizon .7s ease-out 1.4s forwards; }
+    /* eclipse corona: a warm glow behind the ring plus a light that sweeps round it */
+    .od-corona { position: absolute; left: 49.4%; top: 43.8%; width: 62%; height: 0; padding-top: 62%; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; opacity: 0; animation: od-fade .9s ease .55s forwards; box-shadow: 0 0 40px 6px rgba(255, 159, 28, .35), inset 0 0 30px 4px rgba(255, 190, 90, .25); }
+    .od-corona::before { content: ""; position: absolute; top: -5%; right: -5%; bottom: -5%; left: -5%; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 62%, rgba(255, 210, 120, .0) 64%, rgba(255, 214, 140, .9) 74%, transparent 80% 100%); -webkit-mask: radial-gradient(closest-side, transparent 84%, #000 88%, #000 96%, transparent 100%); mask: radial-gradient(closest-side, transparent 84%, #000 88%, #000 96%, transparent 100%); animation: od-spin 2.4s linear infinite; }
+    .od-corona::after { content: ""; position: absolute; top: 18%; right: 18%; bottom: 18%; left: 18%; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 150, 40, .16), transparent 70%); animation: od-pulse 2.2s ease-in-out infinite; }
+    /* the star flares where it meets the horizon */
+    .od-flare { position: absolute; left: 49.7%; top: 47.3%; width: 8%; height: 0; padding-top: 8%; border-radius: 50%; transform: translate(-50%, -50%) scale(0); background: radial-gradient(closest-side, #fff 0, rgba(255, 236, 200, .9) 25%, rgba(255, 170, 60, .35) 55%, transparent 100%); pointer-events: none; animation: od-flare 1.1s ease-out .62s forwards; }
+    .od-flare::before, .od-flare::after { content: ""; position: absolute; left: 50%; top: 50%; width: 1400%; height: 6%; transform: translate(-50%, -50%); background: linear-gradient(90deg, transparent, rgba(255, 230, 190, .85) 45%, #fff 50%, rgba(255, 230, 190, .85) 55%, transparent); border-radius: 50%; }
+    .od-flare::after { width: 6%; height: 700%; background: linear-gradient(180deg, transparent, rgba(255, 230, 190, .8) 45%, #fff 50%, rgba(255, 230, 190, .8) 55%, transparent); }
+    .od-shine { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; opacity: 0; background: linear-gradient(105deg, transparent 38%, rgba(255, 196, 110, .95) 48%, #fff 50%, rgba(255, 196, 110, .95) 52%, transparent 62%) -120% 0 / 250% 100% no-repeat; -webkit-mask: url(img/brand/oddora-word.webp) 0 0 / 100% 100%; mask: url(img/brand/oddora-word.webp) 0 0 / 100% 100%; animation: od-shine 1.1s ease-in-out 1.6s forwards; }
+    .od-load { margin-top: min(7vh, 44px); width: min(52vw, 220px); opacity: 0; animation: od-fade .5s ease .5s forwards; text-align: center; }
+    .od-track { position: relative; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .12); overflow: visible; }
+    .od-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: linear-gradient(90deg, #ff7a1a, #ff9f1c 60%, #ffd23f); box-shadow: 0 0 10px rgba(255, 159, 28, .7); }
+    .od-fill::after { content: ""; position: absolute; right: -4px; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px 3px rgba(255, 210, 120, .9); }
+    .od-meta { display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(225, 232, 255, .62); }
+    .od-pct { font-variant-numeric: tabular-nums; color: #ffd9a0; }
+    @keyframes od-fade { to { opacity: 1; } }
+    @keyframes od-drift { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-340px, -170px, 0); } }
+    @keyframes od-rise { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 1; -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); transform: none; } }
+    @keyframes od-horizon { 0% { opacity: 1; } 100% { opacity: 1; -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); } }
+    @keyframes od-wipe { 0% { opacity: 1; } 100% { opacity: 1; -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); } }
+    @keyframes od-up { to { opacity: 1; transform: none; } }
+    @keyframes od-spin { to { transform: rotate(360deg); } }
+    @keyframes od-pulse { 0%, 100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.04); } }
+    @keyframes od-flare { 0% { transform: translate(-50%, -50%) scale(0); opacity: 1; } 35% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(.5); opacity: .3; } }
+    @keyframes od-shine { 0% { opacity: 1; background-position: -120% 0; } 100% { opacity: 1; background-position: 220% 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      #od-boot *, #od-boot *::before, #od-boot *::after { animation-duration: .01s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }
+    }
+  </style>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <!-- 2026-11-12 Oddora Games start-up loader: stays until every script, style, font and picture is in (at least 2 seconds), then fades into the game. -->
+  <div id="od-boot" role="progressbar" aria-label="Loading Spike Rally" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <div class="od-sky" aria-hidden="true"></div>
+    <div class="od-sky od-sky2" aria-hidden="true"></div>
+    <div class="od-stage">
+      <div class="od-logo" aria-label="Oddora Games" role="img">
+        <div class="od-corona" aria-hidden="true"></div>
+        <img class="od-ring" src="img/brand/oddora-ring.webp" alt="" draggable="false">
+        <img class="od-star" src="img/brand/oddora-star.webp" alt="" draggable="false">
+        <div class="od-flare" aria-hidden="true"></div>
+        <img class="od-word" src="img/brand/oddora-word.webp" alt="" draggable="false">
+        <div class="od-shine" aria-hidden="true"></div>
+        <img class="od-rules" src="img/brand/oddora-rules.webp" alt="" draggable="false">
+        <img class="od-games" src="img/brand/oddora-games.webp" alt="" draggable="false">
+      </div>
+    </div>
+    <div class="od-load" aria-hidden="true">
+      <div class="od-track"><div class="od-fill" id="od-fill"></div></div>
+      <div class="od-meta"><span id="od-what">Loading</span><span class="od-pct" id="od-pct">0%</span></div>
+    </div>
+  </div>
+  <script>
+  // Start-up loader. Counts the page itself (scripts, styles), fonts and every
+  // picture the game uses, shows the real progress, and only lets go once all
+  // of it is in and at least MIN ms have passed. MAX is a safety net so a
+  // broken file can never leave the player stuck here.
+  (function () {
+    var MIN = 2000, MAX = 12000;
+    var root = document.documentElement, box = document.getElementById('od-boot');
+    var fill = document.getElementById('od-fill'), pct = document.getElementById('od-pct'), what = document.getElementById('od-what');
+    var t0 = Date.now(), total = 0, done = 0, shown = 0, finished = false, keep = [];
+    var boot = window.SR_BOOT = { done: false, wait: function (fn) { if (boot.done) fn(); else waiters.push(fn); } };
+    var waiters = [];
+    root.className += ' od-loading';
+    function task() { total++; var over = false; return function () { if (!over) { over = true; done++; } }; }
+    // 1. the page: every script and stylesheet (the window load event)
+    var page = task();
+    if (document.readyState === 'complete') page(); else window.addEventListener('load', page);
+    // 2. fonts (system fonts today, ready for bundled ones later)
+    if (document.fonts && document.fonts.ready) { var f = task(); document.fonts.ready.then(f, f); }
+    // 3. every picture, decoded so the first screens show them at once
+    var pics = ['img/home/hero-player.webp', 'icons/icon-192.png'], i;
+    for (i = 1; i <= 8; i++) pics.push('img/menu/bg-' + i + '-tall.webp');
+    for (i = 1; i <= 21; i++) pics.push('img/trophies/t' + (i < 10 ? '0' : '') + i + '.webp');
+    pics.forEach(function (src) {
+      var end = task(), im = new Image();
+      im.onload = function () { if (im.decode) im.decode().then(end, end); else end(); };
+      im.onerror = end;
+      im.src = src;
+      keep.push(im);
+    });
+    function label(k) {
+      if (k >= 1) return 'Ready';
+      if (k > 0.7) return 'Trophies';
+      if (k > 0.35) return 'Courts';
+      return 'Loading';
+    }
+    function finish() {
+      if (finished) return;
+      finished = true;
+      fill.style.width = '100%'; pct.textContent = '100%'; what.textContent = 'Ready';
+      box.setAttribute('aria-valuenow', '100');
+      setTimeout(function () {
+        box.className += ' od-out';
+        root.className = root.className.replace(/\s*od-loading/g, '');
+        boot.done = true;
+        window.SR_PRELOADED = keep;
+        while (waiters.length) { try { waiters.shift()(); } catch (e) { if (window.console) console.error(e); } }
+        setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, 700);
+      }, 220);
+    }
+    function tick() {
+      if (finished) return;
+      var age = Date.now() - t0;
+      var real = total ? done / total : 1;
+      // never run ahead of the clock, so the bar fills smoothly over at least MIN
+      var goal = Math.min(real, 0.08 + 0.92 * Math.min(1, age / MIN));
+      shown += (goal - shown) * 0.14;
+      if (goal - shown < 0.004) shown = goal;
+      var p = Math.round(shown * 100);
+      fill.style.width = (shown * 100).toFixed(1) + '%';
+      pct.textContent = p + '%';
+      what.textContent = label(shown);
+      box.setAttribute('aria-valuenow', String(p));
+      if ((done >= total && age >= MIN && shown >= 0.995) || age >= MAX) { finish(); return; }
+      (window.requestAnimationFrame || function (fn) { setTimeout(fn, 16); })(tick);
+    }
+    tick();
+    // rAF sleeps while the app is in the background; the timer still lets go
+    setTimeout(function check() { if (finished) return; if (Date.now() - t0 >= MAX) finish(); else setTimeout(check, 1000); }, 1000);
+  })();
+  </script>
   <div id="app">
     <div class="menu-slides" aria-hidden="true"><div class="slash"><i data-name="Champions Court" style="background-image:url(img/menu/bg-1-tall.webp)"></i><i data-name="Sunset Beach" style="background-image:url(img/menu/bg-2-tall.webp)"></i></div><div class="slash"><i data-name="Lava Pit" style="background-image:url(img/menu/bg-7-tall.webp)"></i><i data-name="Galaxy" style="background-image:url(img/menu/bg-6-tall.webp)"></i></div><div class="slash"><i data-name="Neon Grid" style="background-image:url(img/menu/bg-3-tall.webp)"></i><i data-name="Cherry Blossom" style="background-image:url(img/menu/bg-4-tall.webp)"></i></div><div class="slash"><i data-name="Candy Land" style="background-image:url(img/menu/bg-5-tall.webp)"></i><i data-name="Frost Arena" style="background-image:url(img/menu/bg-8-tall.webp)"></i></div></div>
     <canvas id="game" width="960" height="640" aria-label="Spike Rally volleyball court"></canvas>

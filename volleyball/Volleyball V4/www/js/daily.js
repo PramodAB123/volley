@@ -113,13 +113,22 @@
     $('daily-note').textContent = 'You missed a day, so the streak started again at Day 1.';
     list.innerHTML = SR.DAILY.days.map(function (def, i) {
       var r = reward(i), st = i < s.done ? 'done' : (s.ready && i === s.index) ? 'today' : 'locked';
-      var extra = i === 6 && r.item ? '<span class="dd-plus">+ ' + item(r.item.kind, r.item.id).name + (r.item.kind === 'balls' ? ' ball' : ' jersey') + '</span>' : '';
-      var what = (i === 6 ? '+' + r.stars + '&nbsp;' + SR.GEM : label(r, i)) + (r.coins ? '<span class="dd-coins">' + SR.COIN + ' +' + r.coins + '</span>' : '');
-      return '<li class="dday ' + st + (i === 6 ? ' big' : '') + (r.item && i !== 6 ? ' item' : '') + '" style="--d:' + i + '">' +
-        '<span class="dd-day">Day ' + (i + 1) + '</span>' +
-        '<span class="dd-art">' + art(r, i) + '</span>' +
-        '<span class="dd-what">' + (i === 6 ? '<b>Mega chest</b>' : '') + what + '</span>' + extra +
-        (st === 'done' ? '<span class="dd-check" aria-label="Claimed">✓</span>' : '') +
+      var gems = r.stars ? '<span class="dd-gems">+' + r.stars + SR.GEM + '</span>' : '';
+      var cash = r.coins ? '<span class="dd-coins">' + SR.COIN + '+' + SR.fmtNum(r.coins) + '</span>' : '';
+      var check = st === 'done' ? '<span class="dd-check" aria-label="Claimed">✓</span>' : '';
+      var head = '<span class="dd-day">Day ' + (i + 1) + '</span>';
+      if (i === 6) {
+        var legend = r.item ? '<span class="dd-plus">+ ' + item(r.item.kind, r.item.id).name + (r.item.kind === 'balls' ? ' ball' : ' jersey') + '</span>' : '';
+        return '<li class="dday big ' + st + '" style="--d:' + i + '">' +
+          '<span class="dd-day">Day 7<i aria-hidden="true">·</i><b>Mega chest</b></span>' +
+          '<span class="dd-body"><span class="dd-art">' + art(r, i) + check + '</span>' +
+          '<span class="dd-info">' + gems + cash + legend + '</span></span>' +
+          '</li>';
+      }
+      var main = r.item ? '<span class="dd-name" title="' + label(r, i) + '">' + item(r.item.kind, r.item.id).name + '</span>' : gems;
+      return '<li class="dday ' + st + (r.item ? ' item' : '') + '" style="--d:' + i + '">' + head +
+        '<span class="dd-art">' + art(r, i) + check + '</span>' +
+        '<span class="dd-info">' + main + cash + '</span>' +
         '</li>';
     }).join('');
     $('btn-daily-claim').classList.toggle('hidden', !s.ready);
@@ -240,7 +249,8 @@
     onMenu: function () {
       if (!autoPending || !state().ready || !data().stats.matches || (SR.profile && SR.profile.isOpen())) return;
       autoPending = false;
-      setTimeout(function () { if (SR.ui.current() === 'scr-menu' && !SR.game && !(SR.profile && SR.profile.isOpen())) open(); else if (SR.profile && SR.profile.isOpen()) autoPending = true; }, 700);
+      // At start-up the Oddora loader is still on top: wait until it has gone.
+      (window.SR_BOOT ? SR_BOOT.wait : function (fn) { fn(); })(function () { setTimeout(function () { if (SR.ui.current() === 'scr-menu' && !SR.game && !(SR.profile && SR.profile.isOpen())) open(); else if (SR.profile && SR.profile.isOpen()) autoPending = true; }, 700); });
     },
     init: function (q) {
       on('btn-daily', open);
