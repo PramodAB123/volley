@@ -57,10 +57,11 @@
     </application>
 
     <!-- Permissions: none that need the player's approval. INTERNET is a normal
-         (install-time) permission, used only by Google AdMob to load the reward
-         videos players choose to watch; the game itself makes no network requests
-         (see the Content-Security-Policy in index.html). The AdMob library also adds
-         ACCESS_NETWORK_STATE and the advertising ID permission (AD_ID). -->
+         (install-time) permission, used by Multiplayer (the public PeerJS server,
+         Google STUN, the direct phone-to-phone link and the backup MQTT servers;
+         see the Content-Security-Policy in index.html) and by Google AdMob. The
+         AdMob library also adds ACCESS_NETWORK_STATE and the advertising ID
+         permission (AD_ID). -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Plays with touch, but also runs on Chromebooks and devices with a mouse. -->
