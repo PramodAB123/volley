@@ -51,7 +51,7 @@ SR.teamById = function (id) {
 // Skill points: every rating starts at `min`, `total` is shared out between
 // the five, none above `max`. The default (78 each) matches a top club.
 SR.CUSTOM = {
-  price: 10,
+  price: 20,
   min: 60, max: 90, total: 390, step: 2,
   stats: [['attack', 'Attack'], ['block', 'Block'], ['pass', 'Pass'], ['serve', 'Serve'], ['speed', 'Speed']],
   colors: ['#e5484d', '#ff6b35', '#f5a524', '#e0b100', '#7cc142', '#2f9e44', '#12a594', '#1fb6d6', '#2f6fe0', '#3b3fbf', '#7c5cd6', '#d9468f', '#607086', '#1f2633', '#f4f4f4'],
@@ -60,7 +60,7 @@ SR.CUSTOM = {
   // Team level (bought with coins): each level adds `perLevel` skill points
   // to share out and lets every skill go one point higher (max + level).
   levels: 10, perLevel: 5,
-  upgradeCost: function (lvl) { return 150 + 100 * lvl; },
+  upgradeCost: function (lvl) { return 300 + 200 * lvl; },
   base: { unlocked: false, lvl: 0, name: 'My Club', short: 'MYC', color: '#ff6b35', trim: '#ffffff', pattern: 'stripes', r: { attack: 78, block: 78, pass: 78, serve: 78, speed: 78 } }
 };
 // Names are shown inside menus, so only letters, digits, spaces and a few
@@ -138,13 +138,13 @@ SR.DIFFICULTY = {
 SR.SHOP = {
   balls: [
     { id: 'classic', name: 'Classic',  price: 0, main: '#f4d03f', stripe: '#2453a6' },
-    { id: 'sunset',  name: 'Sunset',   price: 3, main: '#ff8a3d', stripe: '#ffffff' },
-    { id: 'neon',    name: 'Neon',     price: 5, main: '#b6ff3b', stripe: '#ff3bb0' },
-    { id: 'mono',    name: 'Mono',     price: 8, main: '#f5f5f5', stripe: '#1d1d1d' },
+    { id: 'sunset',  name: 'Sunset',   price: 6, main: '#ff8a3d', stripe: '#ffffff' },
+    { id: 'neon',    name: 'Neon',     price: 10, main: '#b6ff3b', stripe: '#ff3bb0' },
+    { id: 'mono',    name: 'Mono',     price: 16, main: '#f5f5f5', stripe: '#1d1d1d' },
     // Bought with coins (earned in every match) instead of diamonds.
-    { id: 'aqua',    name: 'Aqua',     coins: 300, main: '#5ee7ff', stripe: '#1452a8' },
-    { id: 'berry',   name: 'Berry',    coins: 450, main: '#d9468f', stripe: '#ffe14d' },
-    { id: 'lime',    name: 'Lime',     coins: 600, main: '#c6ff3b', stripe: '#1d6b2a' },
+    { id: 'aqua',    name: 'Aqua',     coins: 600, main: '#5ee7ff', stripe: '#1452a8' },
+    { id: 'berry',   name: 'Berry',    coins: 900, main: '#d9468f', stripe: '#ffe14d' },
+    { id: 'lime',    name: 'Lime',     coins: 1200, main: '#c6ff3b', stripe: '#1d6b2a' },
     // Daily reward balls: not for sale, only won on the reward calendar.
     { id: 'ember',   name: 'Ember',    daily: true, main: '#ff4d2e', stripe: '#ffd23f' },
     { id: 'frost',   name: 'Frost',    daily: true, main: '#c8ecff', stripe: '#2f6fe0' },
@@ -162,21 +162,21 @@ SR.SHOP = {
     { id: 'champion', name: 'Champion', daily: true, color: '#e0a800', trim: '#ffffff', pattern: 'stripes' },
     { id: 'royal',    name: 'Royal',    daily: true, color: '#5b2bd6', trim: '#ffd75e', pattern: 'hoops' },
     // Bought with coins.
-    { id: 'ocean',    name: 'Ocean',    coins: 400, color: '#1fb6d6', trim: '#ffffff', pattern: 'hoops' },
-    { id: 'forest',   name: 'Forest',   coins: 550, color: '#1f6b3a', trim: '#c6ff3b', pattern: 'stripes' },
-    { id: 'sunrise',  name: 'Sunrise',  coins: 700, color: '#ff8a3d', trim: '#2a1a08', pattern: 'split' },
-    { id: 'shadow',   name: 'Shadow',   coins: 900, color: '#1f2633', trim: '#ff3bd4', pattern: 'stripes' }
+    { id: 'ocean',    name: 'Ocean',    coins: 800, color: '#1fb6d6', trim: '#ffffff', pattern: 'hoops' },
+    { id: 'forest',   name: 'Forest',   coins: 1100, color: '#1f6b3a', trim: '#c6ff3b', pattern: 'stripes' },
+    { id: 'sunrise',  name: 'Sunrise',  coins: 1400, color: '#ff8a3d', trim: '#2a1a08', pattern: 'split' },
+    { id: 'shadow',   name: 'Shadow',   coins: 1800, color: '#1f2633', trim: '#ff3bd4', pattern: 'stripes' }
   ],
   courts: [
     { id: 'maple', name: 'Arena',  price: 0, floor: '#2e7a4f', court: '#f28a3a', zone: '#ec7c2b', line: '#ffffff', wall: '#10261b', seat: '#ef7d2d', riser: '#173324' },
-    { id: 'ocean', name: 'Ocean',  price: 3, floor: '#2d7a5a', court: '#2f6fa8', zone: '#285f94', line: '#ffffff', wall: '#0e1f33', seat: '#2f6fa8', riser: '#101c2c' },
-    { id: 'clay',  name: 'Clay',   price: 5, floor: '#3f5d3a', court: '#b5583a', zone: '#a24b30', line: '#fff3e6', wall: '#2a160e', seat: '#b5583a', riser: '#26150e' },
-    { id: 'night', name: 'Night',  price: 8, floor: '#1b1530', court: '#2b2150', zone: '#352866', line: '#53f3ff', wall: '#09060f', seat: '#6b3fd1', riser: '#120c22', glow: true },
+    { id: 'ocean', name: 'Ocean',  price: 6, floor: '#2d7a5a', court: '#2f6fa8', zone: '#285f94', line: '#ffffff', wall: '#0e1f33', seat: '#2f6fa8', riser: '#101c2c' },
+    { id: 'clay',  name: 'Clay',   price: 10, floor: '#3f5d3a', court: '#b5583a', zone: '#a24b30', line: '#fff3e6', wall: '#2a160e', seat: '#b5583a', riser: '#26150e' },
+    { id: 'night', name: 'Night',  price: 16, floor: '#1b1530', court: '#2b2150', zone: '#352866', line: '#53f3ff', wall: '#09060f', seat: '#6b3fd1', riser: '#120c22', glow: true },
     // Themed courts with floor art (motifs in render.js).
-    { id: 'galaxy', name: 'Galaxy',       price: 10, motif: 'galaxy', floor: '#05040f', court: '#1a1446', zone: '#221a5c', line: '#c7b8ff', wall: '#020108', seat: '#7c5cff', riser: '#0a0820', accent: '#ff4fd8', glow: true },
-    { id: 'lava',   name: 'Lava Pit',     price: 12, motif: 'lava',   floor: '#1a0a06', court: '#3a1a12', zone: '#4a2016', line: '#ffb347', wall: '#0c0402', seat: '#ff5a1f', riser: '#200c06', accent: '#ff5a1f', glow: true },
-    { id: 'candy',  name: 'Candy Land',   price: 15, motif: 'candy',  floor: '#ffc2e0', court: '#7cc6f5', zone: '#6ab8ea', line: '#ffffff', wall: '#3a1030', seat: '#ff5fa2', riser: '#2a0c22', accent: '#ff5fa2' },
-    { id: 'arcade', name: 'Retro Arcade', price: 20, motif: 'pixels', floor: '#101018', court: '#24245a', zone: '#2c2c70', line: '#7dff6b', wall: '#05050a', seat: '#ff4d6d', riser: '#0c0c18', accent: '#ffd23f', glow: true }
+    { id: 'galaxy', name: 'Galaxy',       price: 20, motif: 'galaxy', floor: '#05040f', court: '#1a1446', zone: '#221a5c', line: '#c7b8ff', wall: '#020108', seat: '#7c5cff', riser: '#0a0820', accent: '#ff4fd8', glow: true },
+    { id: 'lava',   name: 'Lava Pit',     price: 24, motif: 'lava',   floor: '#1a0a06', court: '#3a1a12', zone: '#4a2016', line: '#ffb347', wall: '#0c0402', seat: '#ff5a1f', riser: '#200c06', accent: '#ff5a1f', glow: true },
+    { id: 'candy',  name: 'Candy Land',   price: 30, motif: 'candy',  floor: '#ffc2e0', court: '#7cc6f5', zone: '#6ab8ea', line: '#ffffff', wall: '#3a1030', seat: '#ff5fa2', riser: '#2a0c22', accent: '#ff5fa2' },
+    { id: 'arcade', name: 'Retro Arcade', price: 40, motif: 'pixels', floor: '#101018', court: '#24245a', zone: '#2c2c70', line: '#7dff6b', wall: '#05050a', seat: '#ff4d6d', riser: '#0c0c18', accent: '#ffd23f', glow: true }
   ]
 };
 
@@ -269,7 +269,7 @@ SR.coinsHtml = function (n) { return '<span class="cur cur-coin">' + SR.COIN + '
 SR.fmtNum = function (n) { n = Math.floor(Number(n) || 0); return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
 // Coins for a match: something for playing, more for winning and for big plays.
 SR.COINS = { play: 15, win: 35, kill: 1, ace: 3, block: 2, mode: 10, leagueTitle: 150, cupTitle: 200, challenge: 60, island: 30,
-  exchange: [{ gems: 1, coins: 250 }, { gems: 5, coins: 1100 }, { gems: 12, coins: 2400 }] };
+  exchange: [{ gems: 1, coins: 500 }, { gems: 5, coins: 2200 }, { gems: 12, coins: 4800 }] };
 // Player level: XP from every match; need(L) XP to go from level L to L+1.
 SR.XP = {
   play: 25, win: 35, kill: 2, ace: 4, block: 3, mode: 10,
