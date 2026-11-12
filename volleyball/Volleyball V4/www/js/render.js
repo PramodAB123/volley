@@ -617,6 +617,10 @@
       var c2 = cache.cv.getContext('2d');
       c2.setTransform(sc, 0, 0, sc, PAD * sc, 0);
       drawArena(c2, style, t, cheer, cache.bg, cache.floor);
+      // The vignette is baked into the arena copy: one full-screen gradient
+      // fill less per frame (2026-11-12, pays for the sharper resolution).
+      c2.setTransform(sc, 0, 0, sc, PAD * sc, 0);
+      c2.fillStyle = vignetteFor(c2); c2.fillRect(-PAD, 0, W + PAD * 2, H);
       cache.key = key; cache.at = t; cache.calm = !(cheer > 0);
     }
     if (zoomed) { ctx.drawImage(cache.cv, -PAD, 0, W + PAD * 2, H); return; }
@@ -773,7 +777,7 @@
   }
 
   var squashAt = -9, lastVel = null;
-  var frameAvg = 0.016, slowFor = 0, dropFor = 0;
+  var frameAvg = 0.016, workAvg = 0.004, slowFor = 0, dropFor = 0;
 
   // The ball: panels that roll the way it travels, a stretch along the motion
   // when it's fast, a squash against the hit, and a shadow that sharpens as it
@@ -1165,15 +1169,18 @@
     ctx.restore();
   }
 
+  // The vignette gradient is made once per screen size and reused. It is
+  // drawn into the arena copy (arenaLayer), not over every frame.
   var vignette = null;
-  function drawOverlay(ctx, rally) {
-    // The vignette gradient is made once per screen size and reused.
+  function vignetteFor(ctx) {
     if (!vignette || vignette._w !== W || vignette._h !== H) {
       vignette = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.95);
       vignette.addColorStop(0, 'rgba(0,0,0,0)'); vignette.addColorStop(1, 'rgba(0,0,0,0.42)');
       vignette._w = W; vignette._h = H;
     }
-    ctx.fillStyle = vignette; ctx.fillRect(0, 0, W, H);
+    return vignette;
+  }
+  function drawOverlay(ctx, rally) {
     if (rally && rally.timeScale < 1) {
       // Slow motion: cinematic bars and a cool tint that slide and fade in
       // with the slowdown, so it eases in and out instead of popping.
@@ -1238,11 +1245,21 @@
       lastNow = now;
       // If the device can't keep up, switch to cheaper effects for the session.
       if (dt > 0) {
-        frameAvg += (dt - frameAvg) * 0.05; slowFor = frameAvg > 0.027 ? slowFor + dt : 0; if (slowFor > 3) SR.lowFx = true;
+        // Slow = long frames AND the game's own work per frame is big. Many
+        // phones (battery saver, 30 Hz WebViews) simply run at 30 fps while
+        // the game needs only a few ms: that is not lag, and used to cut the
+        // resolution and blur the players for nothing.
+        var work = SR.frameWork || 0;
+        frameAvg += (dt - frameAvg) * 0.05; workAvg += (work / 1000 - workAvg) * 0.05;
+        var busy = workAvg > Math.min(0.012, frameAvg * 0.5);
+        slowFor = frameAvg > 0.027 && busy ? slowFor + dt : 0; if (slowFor > 3) SR.lowFx = true;
         // Dynamic resolution: while frames run long (under ~52 fps), render a
-        // little fewer pixels, one step every 1.5 s, down to 60%. Effects stay.
+        // little fewer pixels, one step every 1.5 s, down to 50%. main.js
+        // never goes below 2 canvas pixels per screen pixel (1.5 on a struggling
+        // phone), so the players
+        // stay sharp. Effects stay.
         dropFor = game && game.rally && !game.paused && frameAvg > 0.0192 ? dropFor + dt : 0;
-        if (dropFor > 1.5 && (SR.resScale || 1) > 0.6) { SR.resScale = Math.max(0.6, Math.round(((SR.resScale || 1) - 0.1) * 100) / 100); dropFor = 0; frameAvg = 0.017; }
+        if (dropFor > 1.5 && (SR.resScale || 1) > 0.5) { SR.resScale = Math.max(0.5, Math.round(((SR.resScale || 1) - 0.1) * 100) / 100); dropFor = 0; frameAvg = 0.017; }
       }
       var rally = game && game.rally, paused = game && game.paused;
       var simDt = paused ? 0 : dt * (rally ? rally.timeScale : 1) * (SR.speed || 1);
@@ -1253,8 +1270,10 @@
       panX = (camFollow - 4.5) * PAN;
 
       ctx.setTransform(SR.render.scale, 0, 0, SR.render.scale, 0, 0);
-      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
       var sh = SR.fx.shake;
+      // The arena copy covers the whole canvas; black is only needed behind
+      // a shake or a camera punch, which can show the edges.
+      if (sh > 0 || SR.fx.punch > 0) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
       ctx.translate(panX + (sh > 0 ? (Math.random() - 0.5) * sh : 0), sh > 0 ? (Math.random() - 0.5) * sh : 0);
       // Camera push-in on big hits, eased out.
       var pk = SR.fx.punch, zm = 1 + 0.045 * pk * pk * (3 - 2 * pk);

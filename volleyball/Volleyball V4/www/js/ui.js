@@ -1444,6 +1444,7 @@
     $('set-diff').value = s.difficulty;
     $('set-sound').checked = !!s.sound;
     $('set-music').checked = s.music !== false;
+    if ($('set-sharp')) $('set-sharp').checked = s.sharp !== false;
     if (SR.profile) SR.profile.refresh();
   }
 
@@ -1583,6 +1584,8 @@
       $('set-diff').addEventListener('change', function (e) { data().settings.difficulty = e.target.value; save(); });
       $('set-sound').addEventListener('change', function (e) { data().settings.sound = e.target.checked; save(); });
       $('set-music').addEventListener('change', function (e) { data().settings.music = e.target.checked; save(); if (SR.music) SR.music.refresh(); });
+      // Sharp graphics: off lets a slow phone drop to a lower, smoother resolution.
+      if ($('set-sharp')) $('set-sharp').addEventListener('change', function (e) { data().settings.sharp = e.target.checked; save(); SR.resScale = 1; if (SR.resize) SR.resize(); });
       stopMatch();
       show('scr-menu');
     }

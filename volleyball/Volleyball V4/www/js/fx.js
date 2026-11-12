@@ -3,14 +3,14 @@
 //
 // Shot elements: the ball in flight can carry an element that changes how its
 // trail, hit and landing look.
-//   fire     every Power spike (default)
-//   thunder  the hardest spikes (strong hitter on a good set): a lightning
-//            bolt strikes the ball at contact and again where it lands
-//   ice      spikes with the Frost ball equipped
-//   wind     hard jump serves, and spikes with the Jungle ball
-//   water    the Water Splash Smash skill pack (droplets and a splash)
-// The skill packs' special smashes (js/skills.js) pick their element; the
-// rally applies their powers. Otherwise elements are only looks.
+//   fire / water / ice / wind / thunder  the special smashes bought as skill
+//            packs (js/skills.js): only a bought smash brings its element,
+//            and the rally applies its powers
+//   ice      spikes with the Frost ball (a bought ball, looks only)
+//   wind     spikes with the Jungle ball (a bought ball, looks only)
+// 2026-11-12: plain spikes and serves have no element any more. Every spike
+// used to be a fire spike, hard spikes a free "THUNDER SMASH" and hard serves
+// wind, so players saw the smashes before buying any of them.
 (function () {
   function rnd(a, b) { return a + Math.random() * (b - a); }
   function few(n) { return Math.max(1, Math.round(n * (SR.lowFx ? 0.5 : 1))); }
@@ -27,7 +27,7 @@
   var CRACK = { fire: '#ff7a2b', thunder: '#7fdcff', ice: '#dff6ff', wind: '#c9fff0', water: '#7fd6ff' };
 
   function ballElem() {
-    try { return BALL_ELEM[SR.save.data.equipped.ball] || 'fire'; } catch (e) { return 'fire'; }
+    try { return BALL_ELEM[SR.save.data.equipped.ball] || null; } catch (e) { return null; }
   }
 
   // Jagged lightning from a to b (world points), with a couple of side forks.
@@ -127,7 +127,6 @@
         this.burst(p, few(26), c, 8, 4, 0.35, 0.05, 2, 'spark');
         this.burst(p, few(10), ['#cfefff', '#6fd0ff'], 3, 1.5, 0.35, 0.22, 0, 'glow');
         this.flash = 0.16; this.flashColor = '#d8f0ff';
-        this.word(p, 'THUNDER SMASH', '#6fd0ff');
       } else if (el === 'ice') {
         this.burst(p, few(18 * m), c, 4.5, 2.5, 0.6, 0.09, 5, 'shard');
         this.burst(p, few(8 * m), ['#e6f7ff', '#9fe0ff'], 2.5, 1.5, 0.4, 0.18, 0, 'glow');
@@ -236,28 +235,29 @@
       } else if (name === 'spike') {
         var pw = d.power === undefined ? 0.6 : d.power;
         // A special smash (skill pack) brings its own element and callout.
-        var el = d.elem && PAL[d.elem] ? d.elem : pw >= THUNDER_AT ? 'thunder' : ballElem();
+        var el = d.elem && PAL[d.elem] ? d.elem : ballElem();
         this.setElem(el);
-        this.burst(p, 14, ['#fff7c2', '#ffffff'], 4, 2.5, 0.35, 0.05, 6);
-        this.strike(p, el, true);
+        this.burst(p, 14 + Math.round(pw * 6), ['#fff7c2', '#ffffff'], 4, 2.5, 0.35, 0.05, 6);
+        if (el) this.strike(p, el, true);
         if (d.word) this.word(p, d.word, d.color || '#ffffff');
-        this.shake = Math.max(this.shake, el === 'thunder' || d.word ? 8 : 4);
-        this.hitStop = el === 'thunder' || d.word ? 0.1 : 0.06;
+        this.shake = Math.max(this.shake, d.word ? 8 : pw >= THUNDER_AT ? 6 : 4);
+        this.hitStop = d.word ? 0.1 : 0.06;
         this.punch = 1;
       } else if (name === 'block') {
         // The spike's element shatters on the hands.
-        var be = this.elem || 'ice';
+        var be = this.elem;
         this.setElem(null);
         this.burst(p, 16, ['#9fd4ff', '#ffffff', '#5aa9ff'], 4, 2.5, 0.5, 0.07, 6);
-        this.burst(p, few(14), PAL[be], 4.5, 3, 0.55, 0.09, 6, be === 'fire' || be === 'water' ? 'glow' : be === 'ice' ? 'shard' : 'spark');
+        if (be && PAL[be]) this.burst(p, few(14), PAL[be], 4.5, 3, 0.55, 0.09, 6, be === 'fire' || be === 'water' ? 'glow' : be === 'ice' ? 'shard' : 'spark');
+        else this.burst(p, few(10), ['#ffffff', '#fff3c4'], 4, 2.5, 0.45, 0.07, 6, 'spark');
         this.shake = Math.max(this.shake, 6);
         this.hitStop = 0.08;
         this.punch = Math.max(this.punch, 0.8);
       } else if (name === 'serve') {
         var sp = d.power || 0.5;
-        this.setElem(sp > 0.7 ? 'wind' : null);
+        this.setElem(null);
         this.burst(p, 8 + Math.round(sp * 14), sp > 0.7 ? ['#fff7c2', '#ffd23f', '#ffffff'] : ['#ffffff', '#ffe28a'], 1.6 + sp * 2.4, 1.6, 0.35, 0.05, 5);
-        if (sp > 0.7) { this.strike(p, 'wind', false); this.shake = Math.max(this.shake, 3); this.punch = Math.max(this.punch, 0.5); }
+        if (sp > 0.7) { this.shake = Math.max(this.shake, 3); this.punch = Math.max(this.punch, 0.5); }
       } else if (name === 'net') {
         this.setElem(null);
         this.burst(p, 12, ['#ffffff', '#cccccc'], 1.5, 0.6, 0.5, 0.05, 6);

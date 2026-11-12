@@ -111,21 +111,29 @@
     var dm = SR.demo && SR.demo.active ? SR.demo.layout(vw, vh) : null, bw = dm ? dm.w : vw, bh = dm ? dm.h : vh;
     SR.render.setView(bw, bh);
     var s = Math.min(bw / SR.render.W, bh / SR.render.H);
-    // Very sharp phone screens cost a lot of pixels for little gain: cap the
-    // backing resolution, and lower it further if the device is struggling.
-    var dpr = Math.min(window.devicePixelRatio || 1, SR.lowFx ? 1.25 : 2);
-    // Never push more than ~2.6 million pixels a frame (big or sharp PC screens),
-    // and scale down further while the device can't hold a smooth frame rate.
-    var px = SR.render.W * s * SR.render.H * s, cap = SR.lowFx ? 1.3e6 : 2.6e6;
-    if (px * dpr * dpr > cap) dpr = Math.sqrt(cap / px);
-    // (Never below one canvas pixel per screen pixel, so it stays sharp.)
-    if (SR.resScale && SR.resScale < 1) dpr = Math.max(Math.min(dpr, 1), dpr * SR.resScale);
+    // Sharpness: draw at the screen's own pixel density (up to 3x), so
+    // players and text are crisp instead of a blurry upscale. Only a very big
+    // canvas (tablets, PC windows) is held to ~3.2 million pixels a frame.
+    // When the device struggles, dynamic resolution (SR.resScale) lowers it a
+    // little, but never below 2 canvas pixels per screen pixel on phones
+    // (2026-11-12: going down to 1x is what made the players look blurred).
+    var dev = window.devicePixelRatio || 1;
+    // (A phone that is really struggling, SR.lowFx, may go to 1.5x.)
+    // Settings > Sharp graphics off: a slow phone may go all the way to 1x.
+    var sharpOn = !(SR.save && SR.save.data && SR.save.data.settings && SR.save.data.settings.sharp === false);
+    var dpr = Math.min(dev, 3), sharp = sharpOn ? Math.min(dev, SR.lowFx ? 1.5 : 2) : Math.min(dev, 1);
+    var px = SR.render.W * s * SR.render.H * s, cap = 3.2e6;
+    if (px * dpr * dpr > cap) dpr = Math.max(Math.min(sharp, 1.5), Math.sqrt(cap / px));
+    if (SR.resScale && SR.resScale < 1) dpr = Math.max(Math.min(dpr, sharp), dpr * SR.resScale);
     lowRes = !!SR.lowFx; lastRes = SR.resScale || 1;
-    canvas.style.width = Math.floor(SR.render.W * s) + 'px';
-    canvas.style.height = Math.floor(SR.render.H * s) + 'px';
-    canvas.width = Math.max(1, Math.floor(SR.render.W * s * dpr));
-    canvas.height = Math.max(1, Math.floor(SR.render.H * s * dpr));
-    SR.render.scale = s * dpr;
+    // The CSS box and the backing store use the same rounded size, so the
+    // canvas is shown without being stretched by a fraction of a pixel.
+    var cssW = Math.max(1, Math.floor(SR.render.W * s)), cssH = Math.max(1, Math.floor(SR.render.H * s));
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    canvas.width = Math.max(1, Math.round(cssW * dpr));
+    canvas.height = Math.max(1, Math.round(cssH * dpr));
+    SR.render.scale = canvas.width / SR.render.W;
     // Pause button sits on the canvas corner: top right in landscape,
     // bottom right in portrait where the scoreboard fills the top.
     var cw = SR.render.W * s, ch = SR.render.H * s, left = pl + (bw - cw) / 2, top = pt + (bh - ch) / 2;
@@ -168,7 +176,8 @@
   var fails = 0;
   function frame(ts) {
     window.requestAnimationFrame(frame);
-    try { step(ts); fails = 0; } catch (e) {
+    var t0 = performance.now();
+    try { step(ts); fails = 0; SR.frameWork = performance.now() - t0; } catch (e) {
       SR.oops('frame', e);
       if (++fails < 30) return;
       fails = 0;

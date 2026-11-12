@@ -35,6 +35,16 @@
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-1426010855335025~7211404354"/>
 
+        <!-- Start the Google Mobile Ads SDK and load ads on background threads,
+             not the app's main thread, so starting up or loading an ad can't
+             freeze the game ("app isn't responding"). -->
+        <meta-data
+            android:name="com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION"
+            android:value="true"/>
+        <meta-data
+            android:name="com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING"
+            android:value="true"/>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
