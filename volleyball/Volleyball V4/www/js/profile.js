@@ -294,6 +294,7 @@
     go('btn-coins', function () { SR.ui.openShop('shop-exchange'); });
     go('btn-gems', function () { SR.ui.openShop('shop-exchange'); });
     go('btn-team', function () { SR.custom.fromHome(); });
+    go('btn-nav-team', function () { SR.custom.fromHome(); });
     go('btn-home-menu', function () { var m = document.getElementById('scr-menu'); if (m) m.scrollTop = 0; });
     go('btn-home-demo', function () { SR.ui.show('scr-help'); var h = document.querySelector('#scr-help .panel'); if (h) h.scrollTop = 0; });
     refresh();

@@ -12,47 +12,81 @@
   <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="img/menu/bg-1-tall.webp" as="image" fetchpriority="high">
   <style id="od-boot-css">
-    /* 2026-11-12 Oddora Games start-up loader (inline so it paints before style.css) */
+    /* 2026-11-12 Oddora Games start-up loader (inline so it paints before style.css).
+       Every moving part animates only transform and opacity, so the phone's
+       compositor runs it on its own and it stays smooth while the game loads. */
     html.od-loading, html.od-loading body { background: #04060c; }
-    #od-boot { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; color: #fff; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: radial-gradient(120% 80% at 50% 42%, #131a2e 0%, #070a14 55%, #020309 100%); transition: opacity .35s ease, visibility 0s linear .35s; -webkit-user-select: none; user-select: none; touch-action: none; }
-    #od-boot.od-out { opacity: 0; visibility: hidden; pointer-events: none; }
-    #od-boot .od-sky, #od-boot .od-sky2 { position: absolute; top: -20%; right: -20%; bottom: -20%; left: -20%; pointer-events: none; opacity: 0; animation: od-fade .8s ease 0s forwards, od-drift 18s linear infinite; background-image: radial-gradient(1.4px 1.4px at 12% 22%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 28% 68%, #cfe0ff 50%, transparent 51%), radial-gradient(1.6px 1.6px at 44% 14%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 63% 81%, #ffe2b8 50%, transparent 51%), radial-gradient(1.3px 1.3px at 78% 33%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 88% 62%, #cfe0ff 50%, transparent 51%), radial-gradient(1.2px 1.2px at 6% 88%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 52% 48%, #fff 50%, transparent 51%); background-size: 340px 340px; }
-    #od-boot .od-sky2 { background-size: 210px 210px; animation-duration: .8s, 30s; animation-direction: normal, reverse; }
-    #od-boot .od-sky2 { opacity: 0; }
-    .od-stage { position: relative; width: min(74vw, 46vh, 360px); transition: transform .4s cubic-bezier(.3,0,.2,1); }
-    #od-boot.od-out .od-stage { transform: scale(1.08); }
+    html.od-loading #app { visibility: hidden; }
+    #od-boot { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; color: #fff; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: radial-gradient(120% 80% at 50% 42%, #131a2e 0%, #070a14 55%, #020309 100%); opacity: 1; transition: opacity .45s ease; -webkit-user-select: none; user-select: none; touch-action: none; contain: strict; }
+    #od-boot.od-out { opacity: 0; pointer-events: none; }
+    #od-boot * { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+    .od-sky { position: absolute; left: 0; top: 0; width: 200%; height: 200%; pointer-events: none; opacity: 0; will-change: transform, opacity; background-image: radial-gradient(1.4px 1.4px at 12% 22%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 28% 68%, #cfe0ff 50%, transparent 51%), radial-gradient(1.6px 1.6px at 44% 14%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 63% 81%, #ffe2b8 50%, transparent 51%), radial-gradient(1.3px 1.3px at 78% 33%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 88% 62%, #cfe0ff 50%, transparent 51%), radial-gradient(1.2px 1.2px at 6% 88%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 52% 48%, #fff 50%, transparent 51%); background-size: 340px 340px; }
+    .od-sky2 { background-size: 220px 220px; }
+    .od-stage { position: relative; width: 74vw; max-width: 360px; will-change: transform; transition: transform .5s cubic-bezier(.3,0,.2,1); }
+    @media (max-aspect-ratio: 1/2) { .od-stage { width: 78vw; } }
+    @media (min-aspect-ratio: 1/1) { .od-stage { width: 46vh; } }
+    #od-boot.od-out .od-stage { transform: scale(1.06); }
     .od-logo { position: relative; width: 100%; padding-top: 73.17%; }
-    .od-logo img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; -webkit-user-drag: none; }
-    .od-ring { opacity: 0; -webkit-clip-path: inset(100% 0 0 0); clip-path: inset(100% 0 0 0); transform: translateY(10%); animation: od-rise .7s cubic-bezier(.2,.7,.2,1) 0s forwards; }
-    .od-star { opacity: 0; -webkit-clip-path: inset(0 50% 0 50%); clip-path: inset(0 50% 0 50%); animation: od-horizon .6s cubic-bezier(.3,.8,.2,1) .35s forwards; }
-    .od-word { opacity: 0; -webkit-clip-path: inset(0 100% 0 0); clip-path: inset(0 100% 0 0); animation: od-wipe .5s cubic-bezier(.4,0,.2,1) .6s forwards; }
-    .od-games { opacity: 0; transform: translateY(6%); animation: od-up .45s ease-out .85s forwards; }
-    .od-rules { opacity: 0; -webkit-clip-path: inset(0 50% 0 50%); clip-path: inset(0 50% 0 50%); animation: od-horizon .5s ease-out .9s forwards; }
-    /* eclipse corona: a warm glow behind the ring plus a light that sweeps round it */
-    .od-corona { position: absolute; left: 49.4%; top: 43.8%; width: 62%; height: 0; padding-top: 62%; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; opacity: 0; animation: od-fade .7s ease .25s forwards; box-shadow: 0 0 40px 6px rgba(255, 159, 28, .35), inset 0 0 30px 4px rgba(255, 190, 90, .25); }
-    .od-corona::before { content: ""; position: absolute; top: -5%; right: -5%; bottom: -5%; left: -5%; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 62%, rgba(255, 210, 120, .0) 64%, rgba(255, 214, 140, .9) 74%, transparent 80% 100%); -webkit-mask: radial-gradient(closest-side, transparent 84%, #000 88%, #000 96%, transparent 100%); mask: radial-gradient(closest-side, transparent 84%, #000 88%, #000 96%, transparent 100%); animation: od-spin 2.4s linear infinite; }
-    .od-corona::after { content: ""; position: absolute; top: 18%; right: 18%; bottom: 18%; left: 18%; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 150, 40, .16), transparent 70%); animation: od-pulse 2.2s ease-in-out infinite; }
-    /* the star flares where it meets the horizon */
-    .od-flare { position: absolute; left: 49.7%; top: 47.3%; width: 8%; height: 0; padding-top: 8%; border-radius: 50%; transform: translate(-50%, -50%) scale(0); background: radial-gradient(closest-side, #fff 0, rgba(255, 236, 200, .9) 25%, rgba(255, 170, 60, .35) 55%, transparent 100%); pointer-events: none; animation: od-flare .9s ease-out .3s forwards; }
-    .od-flare::before, .od-flare::after { content: ""; position: absolute; left: 50%; top: 50%; width: 1400%; height: 6%; transform: translate(-50%, -50%); background: linear-gradient(90deg, transparent, rgba(255, 230, 190, .85) 45%, #fff 50%, rgba(255, 230, 190, .85) 55%, transparent); border-radius: 50%; }
-    .od-flare::after { width: 6%; height: 700%; background: linear-gradient(180deg, transparent, rgba(255, 230, 190, .8) 45%, #fff 50%, rgba(255, 230, 190, .8) 55%, transparent); }
-    .od-shine { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; opacity: 0; background: linear-gradient(105deg, transparent 38%, rgba(255, 196, 110, .95) 48%, #fff 50%, rgba(255, 196, 110, .95) 52%, transparent 62%) -120% 0 / 250% 100% no-repeat; -webkit-mask: url(img/brand/oddora-word.webp) 0 0 / 100% 100%; mask: url(img/brand/oddora-word.webp) 0 0 / 100% 100%; animation: od-shine .9s ease-in-out 1.05s forwards; }
-    .od-load { margin-top: min(7vh, 44px); width: min(52vw, 220px); opacity: 0; animation: od-fade .4s ease .2s forwards; text-align: center; }
-    .od-track { position: relative; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .12); overflow: visible; }
-    .od-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: linear-gradient(90deg, #ff7a1a, #ff9f1c 60%, #ffd23f); box-shadow: 0 0 10px rgba(255, 159, 28, .7); }
-    .od-fill::after { content: ""; position: absolute; right: -4px; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px 3px rgba(255, 210, 120, .9); }
-    .od-meta { display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(225, 232, 255, .62); }
-    .od-pct { font-variant-numeric: tabular-nums; color: #ffd9a0; }
-    @keyframes od-fade { to { opacity: 1; } }
-    @keyframes od-drift { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-340px, -170px, 0); } }
-    @keyframes od-rise { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 1; -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); transform: none; } }
-    @keyframes od-horizon { 0% { opacity: 1; } 100% { opacity: 1; -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); } }
-    @keyframes od-wipe { 0% { opacity: 1; } 100% { opacity: 1; -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); } }
-    @keyframes od-up { to { opacity: 1; transform: none; } }
-    @keyframes od-spin { to { transform: rotate(360deg); } }
-    @keyframes od-pulse { 0%, 100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.04); } }
-    @keyframes od-flare { 0% { transform: translate(-50%, -50%) scale(0); opacity: 1; } 35% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(.5); opacity: .3; } }
-    @keyframes od-shine { 0% { opacity: 1; background-position: -120% 0; } 100% { opacity: 1; background-position: 220% 0; } }
+    .od-logo img, .od-mask { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; -webkit-user-drag: none; }
+    .od-clip { position: absolute; left: 0; top: 0; width: 100%; overflow: hidden; }
+    .od-clip img { will-change: transform; }
+    /* everything waits, hidden, until the logo pictures are decoded (.od-go) */
+    .od-ring, .od-star, .od-word, .od-games, .od-rules, .od-corona, .od-glow, .od-flare, .od-shine i, .od-load { opacity: 0; }
+    /* ring: rises from behind the horizon like the sun in an eclipse */
+    .od-rise { height: 55%; }
+    .od-rise img { height: 181.8%; transform: translate3d(0, 56%, 0); }
+    .od-go .od-rise img { animation: od-rise 1s cubic-bezier(.16,.84,.3,1) .1s both; }
+    /* corona: warm glow behind the ring and a light that sweeps round it */
+    .od-corona, .od-glow { position: absolute; left: 49.4%; top: 43.8%; width: 62%; height: 0; padding-top: 62%; margin: -31% 0 0 -31%; border-radius: 50%; pointer-events: none; will-change: transform, opacity; }
+    .od-glow { box-shadow: 0 0 46px 8px rgba(255, 159, 28, .38), inset 0 0 34px 6px rgba(255, 190, 90, .26); }
+    .od-corona { background: conic-gradient(from 0deg, transparent 0 60%, rgba(255, 214, 140, .95) 74%, transparent 82% 100%); -webkit-mask: radial-gradient(closest-side, transparent 84%, #000 88%, #000 96%, transparent 100%); mask: radial-gradient(closest-side, transparent 84%, #000 88%, #000 96%, transparent 100%); }
+    .od-go .od-glow { animation: od-in .7s ease .55s both, od-pulse 2.4s ease-in-out 1.25s infinite; }
+    .od-go .od-corona { animation: od-in .6s ease .7s both, od-spin 2.6s linear .7s infinite; }
+    /* star and horizon: open out from the centre with a flare */
+    .od-star { transform-origin: 49.7% 47.3%; transform: scale3d(0, 1, 1); will-change: transform, opacity; }
+    .od-go .od-star { animation: od-open .7s cubic-bezier(.2,.8,.2,1) .78s both; }
+    .od-flare { position: absolute; left: 49.7%; top: 47.3%; width: 8%; height: 0; padding-top: 8%; margin: -4% 0 0 -4%; border-radius: 50%; pointer-events: none; will-change: transform, opacity; background: radial-gradient(closest-side, #fff 0, rgba(255, 236, 200, .9) 25%, rgba(255, 170, 60, .35) 55%, transparent 100%); }
+    .od-flare::before, .od-flare::after { content: ""; position: absolute; left: 50%; top: 50%; width: 1400%; height: 6%; margin: -3% 0 0 -700%; background: linear-gradient(90deg, transparent, rgba(255, 230, 190, .85) 45%, #fff 50%, rgba(255, 230, 190, .85) 55%, transparent); border-radius: 50%; }
+    .od-flare::after { width: 6%; height: 700%; margin: -350% 0 0 -3%; background: linear-gradient(180deg, transparent, rgba(255, 230, 190, .8) 45%, #fff 50%, rgba(255, 230, 190, .8) 55%, transparent); }
+    .od-go .od-flare { animation: od-flare 1.1s ease-out .72s both; }
+    /* ODDORA: wiped in left to right (two opposite slides), then a shine runs across it */
+    .od-wipe { height: 100%; transform: translate3d(-100%, 0, 0); will-change: transform; }
+    .od-wipe img { transform: translate3d(100%, 0, 0); }
+    .od-go .od-wipe { animation: od-slide .65s cubic-bezier(.5,0,.2,1) 1.15s both; }
+    .od-go .od-wipe img { animation: od-slide-back .65s cubic-bezier(.5,0,.2,1) 1.15s both; }
+    .od-word { opacity: 1; }
+    .od-mask { overflow: hidden; -webkit-mask: url(img/brand/oddora-word.webp) 0 0 / 100% 100% no-repeat; mask: url(img/brand/oddora-word.webp) 0 0 / 100% 100% no-repeat; }
+    .od-shine i { position: absolute; left: 0; top: 0; width: 40%; height: 100%; transform: translate3d(-110%, 0, 0); will-change: transform; background: linear-gradient(105deg, transparent 20%, rgba(255, 196, 110, .9) 45%, #fff 50%, rgba(255, 196, 110, .9) 55%, transparent 80%); }
+    .od-go .od-shine i { animation: od-shine 1s ease-in-out 1.85s both; }
+    /* GAMES and its two rules */
+    .od-games { transform: translate3d(0, 5%, 0); will-change: transform, opacity; }
+    .od-go .od-games { animation: od-up .55s ease-out 1.5s both; }
+    .od-rules { transform-origin: 50% 50%; transform: scale3d(0, 1, 1); will-change: transform, opacity; }
+    .od-go .od-rules { animation: od-open .6s ease-out 1.45s both; }
+    .od-go .od-sky { animation: od-in .8s ease 0s both, od-drift 24s linear 0s infinite; }
+    .od-go .od-sky2 { animation: od-in .8s ease .2s both, od-drift2 36s linear 0s infinite; }
+    /* the bar fills itself on the compositor; the script only ends it */
+    .od-load { margin-top: 7vh; width: 52vw; max-width: 220px; text-align: center; }
+    .od-go .od-load { animation: od-in .4s ease .3s both; }
+    .od-track { position: relative; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .12); overflow: hidden; }
+    .od-fill { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border-radius: 3px; transform-origin: 0 50%; transform: scale3d(0, 1, 1); will-change: transform; background: linear-gradient(90deg, #ff7a1a, #ff9f1c 60%, #ffd23f); }
+    .od-go .od-fill { animation: od-bar 2.6s cubic-bezier(.3,.6,.3,1) .3s both; }
+    .od-ready .od-fill { animation: none; transform: none; transition: transform .25s ease-out; }
+    .od-meta { margin-top: 10px; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: rgba(225, 232, 255, .62); }
+    .od-ready .od-meta { color: #ffd9a0; }
+    @keyframes od-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes od-rise { from { opacity: 0; transform: translate3d(0, 56%, 0); } 25% { opacity: 1; } to { opacity: 1; transform: translate3d(0, 0, 0); } }
+    @keyframes od-open { from { opacity: 1; transform: scale3d(0, 1, 1); } to { opacity: 1; transform: scale3d(1, 1, 1); } }
+    @keyframes od-slide { from { transform: translate3d(-100%, 0, 0); } to { transform: translate3d(0, 0, 0); } }
+    @keyframes od-slide-back { from { transform: translate3d(100%, 0, 0); } to { transform: translate3d(0, 0, 0); } }
+    @keyframes od-up { from { opacity: 0; transform: translate3d(0, 5%, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
+    @keyframes od-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes od-pulse { 0%, 100% { opacity: 1; transform: scale3d(1, 1, 1); } 50% { opacity: .7; transform: scale3d(1.04, 1.04, 1); } }
+    @keyframes od-flare { 0% { opacity: 1; transform: scale3d(0, 0, 1); } 35% { opacity: 1; transform: scale3d(1.5, 1.5, 1); } 100% { opacity: .3; transform: scale3d(.5, .5, 1); } }
+    @keyframes od-shine { from { opacity: 1; transform: translate3d(-110%, 0, 0); } to { opacity: 1; transform: translate3d(260%, 0, 0); } }
+    @keyframes od-drift { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-340px, -340px, 0); } }
+    @keyframes od-drift2 { from { transform: translate3d(-220px, 0, 0); } to { transform: translate3d(0, -220px, 0); } }
+    @keyframes od-bar { from { transform: scale3d(0, 1, 1); } to { transform: scale3d(.92, 1, 1); } }
     @media (prefers-reduced-motion: reduce) {
       #od-boot *, #od-boot *::before, #od-boot *::after { animation-duration: .01s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }
     }
@@ -60,97 +94,110 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- 2026-11-12 Oddora Games start-up loader: stays until every script, style, font and picture is in (at least 2 seconds), then fades into the game. -->
+  <!-- 2026-11-12 Oddora Games start-up loader: plays the logo animation, stays until every script, style, font and picture is in, then fades into the game. -->
   <div id="od-boot" role="progressbar" aria-label="Loading Spike Rally" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
     <div class="od-sky" aria-hidden="true"></div>
     <div class="od-sky od-sky2" aria-hidden="true"></div>
     <div class="od-stage">
       <div class="od-logo" aria-label="Oddora Games" role="img">
+        <div class="od-glow" aria-hidden="true"></div>
         <div class="od-corona" aria-hidden="true"></div>
-        <img class="od-ring" src="img/brand/oddora-ring.webp" alt="" draggable="false">
-        <img class="od-star" src="img/brand/oddora-star.webp" alt="" draggable="false">
+        <div class="od-clip od-rise"><img class="od-ring" src="img/brand/oddora-ring.webp" alt="" draggable="false" decoding="sync"></div>
+        <img class="od-star" src="img/brand/oddora-star.webp" alt="" draggable="false" decoding="sync">
         <div class="od-flare" aria-hidden="true"></div>
-        <img class="od-word" src="img/brand/oddora-word.webp" alt="" draggable="false">
-        <div class="od-shine" aria-hidden="true"></div>
-        <img class="od-rules" src="img/brand/oddora-rules.webp" alt="" draggable="false">
-        <img class="od-games" src="img/brand/oddora-games.webp" alt="" draggable="false">
+        <div class="od-clip od-wipe"><img class="od-word" src="img/brand/oddora-word.webp" alt="" draggable="false" decoding="sync"></div>
+        <div class="od-mask od-shine" aria-hidden="true"><i></i></div>
+        <img class="od-rules" src="img/brand/oddora-rules.webp" alt="" draggable="false" decoding="sync">
+        <img class="od-games" src="img/brand/oddora-games.webp" alt="" draggable="false" decoding="sync">
       </div>
     </div>
     <div class="od-load" aria-hidden="true">
       <div class="od-track"><div class="od-fill" id="od-fill"></div></div>
-      <div class="od-meta"><span id="od-what">Loading</span><span class="od-pct" id="od-pct">0%</span></div>
+      <div class="od-meta" id="od-what">Loading</div>
     </div>
   </div>
   <script>
-  // Start-up loader. Counts the page itself (scripts, styles), fonts and every
-  // picture the game uses, shows the real progress, and only lets go once all
-  // of it is in and at least MIN ms have passed. MAX is a safety net so a
-  // broken file can never leave the player stuck here.
+  // Start-up loader.
+  // 1. The logo pictures are decoded first, then the animation starts (.od-go),
+  //    so nothing pops in half drawn. The animation and the bar are pure CSS on
+  //    the compositor, so they stay smooth while the game boots underneath.
+  // 2. It lets go once the page (scripts, styles), fonts and the first-screen
+  //    pictures are in AND the logo animation has played (MIN after it began).
+  // 3. MAX is a safety net: a broken file can never leave the player stuck, and
+  //    any error in here just removes the loader.
   (function () {
-    var MIN = 2000, MAX = 12000;
+    var MIN = 2700, MAX = 12000;
     var root = document.documentElement, box = document.getElementById('od-boot');
-    var fill = document.getElementById('od-fill'), pct = document.getElementById('od-pct'), what = document.getElementById('od-what');
-    var t0 = Date.now(), total = 0, done = 0, shown = 0, finished = false, keep = [];
+    var waiters = [], keep = [], finished = false, t0 = Date.now(), tGo = 0, total = 0, done = 0;
     var boot = window.SR_BOOT = { done: false, wait: function (fn) { if (boot.done) fn(); else waiters.push(fn); } };
-    var waiters = [];
-    root.className += ' od-loading';
-    function task() { total++; var over = false; return function () { if (!over) { over = true; done++; } }; }
-    // 1. the page: every script and stylesheet (the window load event)
-    var page = task();
-    if (document.readyState === 'complete') page(); else window.addEventListener('load', page);
-    // 2. fonts (system fonts today, ready for bundled ones later)
-    if (document.fonts && document.fonts.ready) { var f = task(); document.fonts.ready.then(f, f); }
-    // 3. every picture, decoded so the first screens show them at once
-    var pics = ['img/home/hero-player.webp', 'icons/icon-192.png'], i;
-    for (i = 1; i <= 8; i++) pics.push('img/menu/bg-' + i + '-tall.webp');
-    pics.forEach(function (src) {
-      var end = task(), im = new Image();
-      im.onload = function () { if (im.decode) im.decode().then(end, end); else end(); };
-      im.onerror = end;
-      im.src = src;
-      keep.push(im);
-    });
-    function label(k) {
-      if (k >= 1) return 'Ready';
-      if (k > 0.35) return 'Courts';
-      return 'Loading';
+    function later(fn, ms) { return setTimeout(function () { try { fn(); } catch (e) { bail(e); } }, ms); }
+    function frame(fn) { (window.requestAnimationFrame || function (f) { return setTimeout(f, 16); })(function () { try { fn(); } catch (e) { bail(e); } }); }
+    function release() {
+      boot.done = true;
+      root.className = root.className.replace(/\s*od-loading/g, '');
+      window.SR_PRELOADED = keep;
+      while (waiters.length) { try { waiters.shift()(); } catch (e) { if (window.console) console.error(e); } }
     }
-    function finish() {
-      if (finished) return;
+    function bail(e) {
+      if (window.console) console.error('loader', e);
       finished = true;
-      fill.style.width = '100%'; pct.textContent = '100%'; what.textContent = 'Ready';
-      box.setAttribute('aria-valuenow', '100');
-      (function () {
-        box.className += ' od-out';
-        root.className = root.className.replace(/\s*od-loading/g, '');
-        boot.done = true;
-        window.SR_PRELOADED = keep;
-        while (waiters.length) { try { waiters.shift()(); } catch (e) { if (window.console) console.error(e); } }
-        setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, 450);
-        // trophy pictures are not on the first screen: warm them up after the loader
-        setTimeout(function () { for (var j = 1; j <= 21; j++) { var im = new Image(); im.src = 'img/trophies/t' + (j < 10 ? '0' : '') + j + '.webp'; keep.push(im); } }, 600);
-      })();
+      if (box && box.parentNode) box.parentNode.removeChild(box);
+      if (!boot.done) release();
     }
-    function tick() {
-      if (finished) return;
-      var age = Date.now() - t0;
-      var real = total ? done / total : 1;
-      // never run ahead of the clock, so the bar fills smoothly over at least MIN
-      var goal = Math.min(real, 0.08 + 0.92 * Math.min(1, age / MIN));
-      shown += (goal - shown) * 0.35;
-      if (goal - shown < 0.01) shown = goal;
-      var p = Math.round(shown * 100);
-      fill.style.width = (shown * 100).toFixed(1) + '%';
-      pct.textContent = p + '%';
-      what.textContent = label(shown);
-      box.setAttribute('aria-valuenow', String(p));
-      // let go the moment everything is in and MIN has passed (no waiting for the bar to catch up)
-      if ((done >= total && age >= MIN) || age >= MAX) { finish(); return; }
-      (window.requestAnimationFrame || function (fn) { setTimeout(fn, 16); })(tick);
-    }
-    tick();
-    // rAF sleeps while the app is in the background; the timer still lets go
-    setTimeout(function check() { if (finished) return; if (Date.now() - t0 >= MAX) finish(); else setTimeout(check, 1000); }, 1000);
+    try {
+      root.className += ' od-loading';
+      var what = document.getElementById('od-what');
+      var task = function () { total++; var over = false; return function () { if (!over) { over = true; done++; check(); } }; };
+      var finish = function () {
+        if (finished) return;
+        finished = true;
+        box.className += ' od-ready';
+        what.textContent = 'Ready';
+        box.setAttribute('aria-valuenow', '100');
+        later(function () {
+          box.className += ' od-out';
+          release();
+          later(function () { if (box.parentNode) box.parentNode.removeChild(box); }, 520);
+          // trophy pictures are not on the first screen: warm them up afterwards
+          later(function () { for (var j = 1; j <= 21; j++) { var im = new Image(); im.src = 'img/trophies/t' + (j < 10 ? '0' : '') + j + '.webp'; keep.push(im); } }, 900);
+        }, 260);
+      };
+      var check = function () {
+        if (finished) return;
+        var now = Date.now();
+        if (now - t0 >= MAX) { finish(); return; }
+        if (tGo && done >= total && now - tGo >= MIN) finish();
+      };
+      // start the animation once the logo layers are decoded (or after 700 ms whatever happens)
+      var logos = box.getElementsByTagName('img'), left = logos.length, started = false;
+      var go = function () {
+        if (started) return;
+        started = true;
+        // two frames so the hidden start state is on screen before it moves
+        frame(function () { frame(function () { tGo = Date.now(); box.className += ' od-go'; later(check, MIN + 20); }); });
+      };
+      var one = function () { if (--left <= 0) go(); };
+      for (var k = 0; k < logos.length; k++) (function (im) {
+        function ok() { if (im.decode) im.decode().then(one, one); else one(); }
+        if (im.complete && im.naturalWidth) ok(); else { im.onload = ok; im.onerror = one; }
+      })(logos[k]);
+      later(go, 700);
+      // what the game needs before it shows: the page itself (all scripts and
+      // styles), fonts, and the pictures on the first screens
+      var page = task();
+      if (document.readyState === 'complete') page(); else window.addEventListener('load', page);
+      if (document.fonts && document.fonts.ready) { var f = task(); document.fonts.ready.then(f, f); }
+      var pics = ['img/home/hero-player.webp', 'icons/icon-192.png'], i;
+      for (i = 1; i <= 8; i++) pics.push('img/menu/bg-' + i + '-tall.webp');
+      pics.forEach(function (src) {
+        var end = task(), im = new Image();
+        im.onload = function () { if (im.decode) im.decode().then(end, end); else end(); };
+        im.onerror = end;
+        im.src = src;
+        keep.push(im);
+      });
+      later(function () { if (!finished) finish(); }, MAX);
+    } catch (e) { bail(e); }
   })();
   </script>
   <div id="app">
@@ -217,12 +264,7 @@
           <div id="h-art" class="h-art h-photo" aria-hidden="true"><img src="img/home/hero-player.webp" alt="" draggable="false" decoding="async"></div>
         </div>
 
-        <div class="home-hero">
-          <button id="btn-quick" class="tile t-quick" type="button">
-            <span class="t-ball" aria-hidden="true"><svg viewBox="0 0 64 64"><defs><radialGradient id="tb-g" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#dbe8ff"/><stop offset="1" stop-color="#9db8f0"/></radialGradient></defs><circle cx="32" cy="32" r="28" fill="url(#tb-g)" stroke="#1d3a8f" stroke-width="3"/><path d="M5 28c14-1 28 6 36 22M17 7c9 8 14 21 12 37M59 22c-14-4-29 0-38 12M12 50c9-9 23-12 37-9" fill="none" stroke="#1d3a8f" stroke-width="2.6" stroke-linecap="round"/></svg></span>
-            <span class="t-copy"><b>Quick Match</b><small>Random or choose your team</small></span>
-            <span class="t-arrow" aria-hidden="true">›</span>
-          </button>
+        <div class="home-hero solo">
           <button id="btn-career" class="tile t-career" type="button">
             <span id="career-new" class="t-new">New</span>
             <svg class="t-isle" viewBox="0 0 90 56" aria-hidden="true"><ellipse cx="45" cy="44" rx="42" ry="10" fill="#9bf0f7" opacity=".45"/><ellipse cx="45" cy="42" rx="31" ry="8.5" fill="#f3d9a0"/><ellipse cx="45" cy="39.5" rx="20" ry="5" fill="#5cb85c"/><path d="M47 40 C49 31 46 24 50 15" fill="none" stroke="#8a5a2b" stroke-width="2.6" stroke-linecap="round"/><g fill="#2f9e44"><path d="M50 15 C43 10 36 11 32 17 C38 14 44 14 50 15Z"/><path d="M50 15 C56 8 63 9 66 14 C60 12 55 13 50 15Z"/><path d="M50 15 C46 6 40 4 35 5 C41 7 46 10 50 15Z"/><path d="M50 15 C53 5 59 3 63 5 C58 7 53 10 50 15Z"/></g><rect x="30" y="33" width="13" height="7" rx="1" fill="#f28a3a" stroke="#fff" stroke-width="1"/></svg>
@@ -233,19 +275,20 @@
 
         <button id="home-chal" class="strip chal-strip hidden" type="button"></button>
 
-        <div class="home-grid">
+        <div class="home-grid two">
           <button id="btn-league" class="feat f-league" type="button"><span class="f-ico"><svg viewBox="0 0 64 56" aria-hidden="true"><g fill="#ffd23f" stroke="#b86e00" stroke-width="1"><path d="M10 14c-6 8-6 20 2 28 2-8 0-20-2-28z"/><path d="M6 24c-3 7 0 15 7 19-1-7-3-14-7-19z"/><path d="M54 14c6 8 6 20-2 28-2-8 0-20 2-28z"/><path d="M58 24c3 7 0 15-7 19 1-7 3-14 7-19z"/></g><path d="M20 6h24v10c0 8-5.4 14-12 14s-12-6-12-14z" fill="#ffd23f" stroke="#b86e00" stroke-width="1.4"/><path d="M20 9h-5c0 6 3 9.5 7 10M44 9h5c0 6-3 9.5-7 10" fill="none" stroke="#ffd23f" stroke-width="2.6" stroke-linecap="round"/><path d="M29 30h6v7h-6z" fill="#e8a400"/><path d="M22 37h20l2 7H20z" fill="#ffd23f" stroke="#b86e00" stroke-width="1"/><rect x="19" y="44" width="26" height="5" rx="1.5" fill="#8a4b00"/><path d="M32 10.5l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#fff8d6"/></svg></span><b>League</b><small id="league-prog"></small><i class="f-shine" aria-hidden="true"></i></button>
           <button id="btn-cup" class="feat f-cup" type="button"><span class="f-ico"><svg viewBox="0 0 64 56" aria-hidden="true"><path d="M18 4h28v14c0 9-6.3 16-14 16s-14-7-14-16z" fill="#ffd23f" stroke="#b86e00" stroke-width="1.4"/><path d="M18 8H10c0 8 4 13 10 14M46 8h8c0 8-4 13-10 14" fill="none" stroke="#ffd23f" stroke-width="3.2" stroke-linecap="round"/><path d="M28 33h8v8h-8z" fill="#e8a400"/><path d="M20 41h24l2.5 7h-29z" fill="#ffd23f" stroke="#b86e00" stroke-width="1"/><rect x="16" y="47.5" width="32" height="5" rx="1.5" fill="#8a4b00"/><path d="M25 8c0 7 1 12 4.6 16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".6"/><path d="M32 9.5l2 4 4.4.6-3.2 3.1.8 4.4-4-2.1-4 2.1.8-4.4-3.2-3.1 4.4-.6z" fill="#fff8d6"/></svg></span><b>Tournament</b><small id="cup-prog"></small><i class="f-shine" aria-hidden="true"></i></button>
-          <button id="btn-shop" class="feat f-shop" type="button"><span class="f-ico"><svg viewBox="0 0 64 56" aria-hidden="true"><path d="M24 18v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/><path d="M12 17h40l-3.5 35h-33z" fill="#e9fff6"/><path d="M12 17h40l-.8 7H12.8z" fill="#b9f3da"/><path d="M32 26l3 6.2 6.8.9-5 4.8 1.2 6.8-6-3.2-6 3.2 1.2-6.8-5-4.8 6.8-.9z" fill="#ffd23f" stroke="#c98a00" stroke-width="1" stroke-linejoin="round"/><circle cx="24" cy="20" r="2" fill="#0f766e"/><circle cx="40" cy="20" r="2" fill="#0f766e"/></svg></span><b>Shop</b><small id="shop-prog">Skills, balls, courts and more</small><i class="f-shine" aria-hidden="true"></i></button>
         </div>
 
-        <button id="btn-team" class="strip team-strip" type="button"></button>
-
-        <nav class="h-nav" aria-label="More">
-          <button id="btn-home-menu" class="h-nav-btn on" type="button" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h4.5v-5h3v5H18v-9"/></svg><span>Menu</span></button>
+        <!-- 2026-11-12: five tabs. Shop and the custom team moved here from the
+             home page, Play (Quick Match) is the big button in the middle, and
+             How to play / Demo is a row in Settings. -->
+        <nav class="h-nav nav2 nav5" aria-label="Main">
+          <button id="btn-shop" class="h-nav-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 8V6.8a3.5 3.5 0 0 1 7 0V8"/><path d="M4.8 8h14.4l-1.3 12H6.1z"/></svg><span>Shop</span></button>
+          <button id="btn-nav-team" class="h-nav-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7.5 3v5.5c0 4.6-3.2 8-7.5 9.5-4.3-1.5-7.5-4.9-7.5-9.5V6z"/><path d="M12 8.5v6M9 11.5h6"/></svg><span>Team</span></button>
+          <button id="btn-quick" class="h-nav-play" type="button" aria-label="Play a quick match"><span class="np-ball" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8.5 6.5v11l9-5.5z"/></svg></span><span>Play</span></button>
           <button id="btn-stats" class="h-nav-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 17v-6M12 17V6M17 17V9" stroke-width="3"/></svg><span>Stats</span></button>
           <button id="btn-settings" class="h-nav-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8l1.6 2.4 2.8-.7.7 2.8 2.4 1.6-1.2 2.6 1.2 2.6-2.4 1.6-.7 2.8-2.8-.7-1.6 2.4-1.6-2.4-2.8.7-.7-2.8-2.4-1.6 1.2-2.6-1.2-2.6 2.4-1.6.7-2.8 2.8.7z"/></svg><span>Settings</span></button>
-          <button id="btn-home-demo" class="h-nav-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg><span>Demo</span></button>
         </nav>
       </div>
     </section>
