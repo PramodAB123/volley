@@ -247,7 +247,11 @@
 
     if (mode === 'quick') { if (won) stars += SR.STARS.quickWin; }
     else if (mode === 'league') { var r = leagueRecord(result); stars += r.stars; coins += r.coins || 0; notes = r.notes; }
-    else if (mode === 'cup') { var c = cupRecord(result); stars += c.stars; coins += c.coins || 0; notes = c.notes; }
+    else if (mode === 'cup') {
+      // Kept so a lost tournament match can be replayed after a rewarded ad.
+      var cupSnap = data().tournament ? JSON.stringify({ t: data().tournament, map: data().cupMap }) : null, cupRound = data().tournament ? data().tournament.round : 0;
+      var c = cupRecord(result); stars += c.stars; coins += c.coins || 0; notes = c.notes;
+    }
     else if (mode === 'career') { var k = careerRecord(won); stars += k.stars; coins += k.coins || 0; notes = k.notes; }
     else if (mode === 'daily' && SR.challenge) { var dc = SR.challenge.record(m, won); stars += dc.stars; if (dc.stars) coins += SR.COINS.challenge; notes = dc.notes; }
     // Every match pays coins and XP; XP can level you up (more diamonds and coins).
@@ -260,14 +264,74 @@
 
     $('result-title').textContent = won ? 'Victory!' : 'Defeat';
     $('result-title').className = won ? 'win' : 'loss';
+    $('result-title').parentNode.classList.toggle('lost', !won);
     $('result-sub').textContent = m.teams[0].name + ' ' + m.sets[0] + ' - ' + m.sets[1] + ' ' + m.teams[1].name;
     $('result-sets').textContent = m.history.map(function (s) { return s[0] + '-' + s[1]; }).join('   ');
     $('result-stats').textContent = 'Aces ' + my.aces + ' · Kills ' + my.kills + ' · Blocks ' + my.blocks + ' · Errors ' + my.errors;
     resultLoot(stars, coins, loot.xp, before, ups);
     $('result-notes').textContent = notes.join(' ');
     resultButtons(nextAction(won, prevPick));
+    var T1 = data().tournament, again = null;
+    if (mode === 'cup' && !won && cupSnap && T1 && T1.out && T1.champion !== T1.me && JSON.parse(cupSnap).t.rm !== cupRound) {
+      again = { snap: cupSnap, round: cupRound };
+    }
+    resultAds(stars, coins, again);
     stopMatch();
     show('scr-result');
+  }
+
+  // ---- rewarded ads on the result screen -----------------------------------
+  // Collect the match rewards, or watch an ad to get them twice. After a lost
+  // tournament match, an ad can also replay that match (once per round).
+  var AD_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><path d="M10 9.2v5.6l4.8-2.8z" class="ad-tri"/></svg>';
+  function resultAds(stars, coins, again) {
+    var el = $('result-ad');
+    if (!el) return;
+    var html = '';
+    if (again) {
+      html += '<button type="button" class="ad-offer rematch" id="ad-rematch">' + AD_ICON +
+        '<span><b>Rematch</b><small>Watch an ad to replay the ' + CUP_ONE[again.round] + '</small></span><i class="ad-badge">AD</i></button>';
+    }
+    if (stars || coins) {
+      html += '<div class="ad-pair">' +
+        '<button type="button" class="ad-collect" id="ad-collect">Collect</button>' +
+        '<button type="button" class="ad-offer double" id="ad-double">' + AD_ICON + '<span><b>2x rewards</b><small>' +
+        (stars ? SR.GEM + ' ' + stars * 2 + ' &nbsp;' : '') + SR.COIN + ' ' + SR.fmtNum(coins * 2) + '</small></span><i class="ad-badge">AD</i></button></div>';
+    }
+    el.innerHTML = html;
+    el.classList.toggle('hidden', !html);
+    var dbl = $('ad-double'), col = $('ad-collect'), rm = $('ad-rematch');
+    function settle(msg, win) {
+      var pair = el.querySelector('.ad-pair');
+      if (pair) pair.outerHTML = '<p class="ad-done' + (win ? ' win' : '') + '">' + msg + '</p>';
+    }
+    if (col) col.addEventListener('click', function () { SR.audio.play('click'); settle('\u2713 Rewards collected'); });
+    if (dbl) dbl.addEventListener('click', function () {
+      SR.audio.play('click');
+      dbl.disabled = true; if (col) col.disabled = true;
+      SR.ads.rewarded('double').then(function (ok) {
+        if (!ok) { dbl.disabled = false; if (col) col.disabled = false; return; }
+        data().stars += stars; data().coins += coins; save(); refreshStars();
+        SR.audio.play('reward');
+        $('result-stars').querySelectorAll('.gem-loot b, .coin-loot b').forEach(function (b) {
+          var gem = b.parentNode.classList.contains('gem-loot');
+          b.textContent = '+' + (gem ? stars * 2 : SR.fmtNum(coins * 2));
+          b.parentNode.classList.add('doubled');
+        });
+        settle('Rewards doubled!', true);
+      });
+    });
+    if (rm) rm.addEventListener('click', function () {
+      SR.audio.play('click');
+      rm.disabled = true;
+      SR.ads.rewarded('rematch').then(function (ok) {
+        if (!ok) { rm.disabled = false; return; }
+        var s = JSON.parse(again.snap);
+        s.t.rm = again.round; // one rematch per round
+        data().tournament = s.t; data().cupMap = s.map; save();
+        openCup(); var b = $('btn-cup-play'); if (b) b.click();
+      });
+    });
   }
 
   // Result screen: what the match paid, and the XP bar filling up (with a
@@ -1307,19 +1371,38 @@
     var s = data().stats, pct = s.matches ? Math.round(s.wins / s.matches * 100) : 0, pf = data().profile, need = SR.XP.need(pf.level);
     $('stats-profile').innerHTML = '<span class="avatar big">' + SR.profile.avatar(pf.avatar) + '</span>' +
       '<span class="sp-who"><b>' + esc(pf.name || 'Player') + '</b><span class="h-lvl"><em>Lv. ' + pf.level + '</em><span class="xp-bar"><i style="width:' + Math.round(pf.xp / need * 100) + '%"></i></span></span>' +
-      '<small>' + SR.fmtNum(pf.xp) + ' / ' + SR.fmtNum(need) + ' XP · ' + SR.fmtNum(pf.total) + ' XP in total</small></span>' +
+      '<small>' + SR.fmtNum(pf.xp) + ' / ' + SR.fmtNum(need) + ' XP<span class="sp-tot"> · ' + SR.fmtNum(pf.total) + ' XP in total</span></small></span>' +
       '<span class="st-cur">' + SR.gems(data().stars) + SR.coinsHtml(data().coins) + '</span>';
-    var rows = [['Matches', s.matches, 'm'], ['Wins', s.wins + ' <small>(' + pct + '%)</small>', 'w'], ['Sets won', s.sets, 's'], ['Points won', SR.fmtNum(s.points), 'p'],
-      ['Kills', s.kills, 'k'], ['Aces', s.aces, 'a'], ['Blocks', s.blocks, 'b'], ['Best win streak', s.best, 'r']];
-    $('stats-list').innerHTML = rows.map(function (r) { return '<div class="stat st-' + r[2] + '"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('');
+    // Win-rate ring with the match record beside it.
+    $('stats-hero').innerHTML = '<div class="sh-ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="r-bg" cx="60" cy="60" r="50"/>' +
+      (pct ? '<circle class="r-fg" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="' + pct + ' 100"/>' : '') + '</svg>' +
+      '<span class="sh-mid"><b>' + pct + '%</b><small>Win rate</small></span></div>' +
+      '<div class="sh-rec">' + [['Matches', s.matches, ''], ['Wins', s.wins, 'w'], ['Losses', Math.max(0, s.matches - s.wins), 'l'], ['Best streak', s.best, 'r']].map(function (r) {
+        return '<div class="sh-row ' + r[2] + '"><span>' + r[0] + '</span><b>' + SR.fmtNum(r[1]) + '</b></div>';
+      }).join('') + '</div>';
+    var IC = {
+      s: '<rect x="4" y="13" width="16" height="6" rx="2"/><rect x="6" y="5" width="12" height="6" rx="2"/>',
+      p: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.8"/>',
+      k: '<path d="M13.5 2.5L5.5 13.5h6l-1.5 8 8.5-11.5h-6z"/>',
+      a: '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',
+      b: '<path d="M7 11V6.5a1.5 1.5 0 0 1 3 0V11M10 10V5a1.5 1.5 0 0 1 3 0v5M13 10V6a1.5 1.5 0 0 1 3 0v6M16 9.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.5a6 6 0 0 1-5-2.7L4 14.5a1.5 1.5 0 0 1 2.4-1.8L7 13.5"/>',
+      v: '<path d="M4 20h16"/><path d="M7 16.5v-5M12 16.5V7M17 16.5v-8"/>'
+    };
+    var rows = [['Sets won', s.sets, 's'], ['Points won', SR.fmtNum(s.points), 'p'], ['Kills', s.kills, 'k'],
+      ['Aces', s.aces, 'a'], ['Blocks', s.blocks, 'b'], ['Per match', s.matches ? Math.round(s.points / s.matches) : 0, 'v']];
+    $('stats-list').innerHTML = rows.map(function (r) {
+      return '<div class="st-tile st-' + r[2] + '"><span class="st-ic"><svg viewBox="0 0 24 24" aria-hidden="true">' + IC[r[2]] + '</svg></span><b>' + r[1] + '</b><small>' + r[0] + '</small></div>';
+    }).join('');
     // Matches with each team you have played as.
     var bt = s.byTeam || {}, ids = Object.keys(bt).filter(function (id) { return bt[id].m > 0 && (id !== 'custom' || SR.customTeam()); });
     ids.sort(function (a, b) { return bt[b].m - bt[a].m; });
-    $('stats-teams').innerHTML = ids.length ? '<div class="stt-head"><span>Your teams</span><span>Played</span><span>Won</span><span>Win %</span></div>' + ids.map(function (id) {
+    $('stats-teams').innerHTML = ids.length ? ids.map(function (id) {
       var t = team(id), r = bt[id], wp = Math.round(r.w / r.m * 100);
-      return '<div class="stt-row"><span class="stt-name"><span class="jersey" style="background:' + t.color + ';color:' + t.trim + '">' + esc(t.short) + '</span>' + esc(t.name) + '</span>' +
-        '<span>' + r.m + '</span><span>' + r.w + '</span><span class="stt-pct"><i style="width:' + wp + '%"></i><b>' + wp + '%</b></span></div>';
-    }).join('') : '<p class="muted small">Play a match to see stats for each team you use.</p>';
+      return '<div class="tm-row"><span class="jersey" style="background:' + t.color + ';color:' + t.trim + '">' + esc(t.short) + '</span>' +
+        '<span class="tm-txt"><b>' + esc(t.name) + '</b><small>' + r.m + ' played · ' + r.w + ' won</small></span>' +
+        '<span class="tm-pct' + (wp >= 50 ? ' up' : '') + '">' + wp + '%</span>' +
+        '<span class="tm-bar"><i style="width:' + wp + '%;background:' + t.color + '"></i></span></div>';
+    }).join('') : '<p class="st-empty">Play a match to see stats for each team you use.</p>';
     renderTrophies();
   }
 
@@ -1335,7 +1418,9 @@
     var lg = SR.LEAGUES.map(function (L, i) { return tile(SR.trophyArt('league', i), L.name + ' Trophy', 'Win the ' + L.name, T.lw[i] || 0, L.place); }).join('');
     var cp = SR.CUPS.map(function (c, i) { return tile(SR.trophyArt('cup', i), c.name, 'Win the ' + c.name, T.cw[i] || 0, c.place); }).join('');
     var sp = SR.SPECIAL_TROPHIES.map(function (d, i) { return tile(SR.trophyArt('special', i), d.name, d.how, d.n(data()), ''); }).join('');
-    var medals = '<div class="tr-medals"><span class="md md-g"><i></i>League titles <b>' + T.league + '</b></span><span class="md md-s"><i></i>2nd place <b>' + T.silver + '</b></span><span class="md md-b"><i></i>3rd place <b>' + T.bronze + '</b></span><span class="md md-c"><i></i>Cups <b>' + T.cup + '</b></span></div>';
+    var medals = '<div class="tr-medals">' + [['g', 'Titles', T.league], ['s', '2nd', T.silver], ['b', '3rd', T.bronze], ['c', 'Cups', T.cup]].map(function (m) {
+      return '<span class="md md-' + m[0] + '"><i></i><b>' + m[2] + '</b><small>' + m[1] + '</small></span>';
+    }).join('') + '</div>';
     $('stats-trophies').innerHTML = medals +
       '<h4>Leagues</h4><div class="trophy-grid">' + lg + '</div>' +
       '<h4>Tournaments</h4><div class="trophy-grid">' + cp + '</div>' +
@@ -1473,8 +1558,8 @@
       var armed = false;
       on('btn-reset', function () {
         var b = $('btn-reset');
-        if (!armed) { armed = true; b.textContent = 'Click again to erase everything'; setTimeout(function () { armed = false; b.textContent = 'Reset progress'; }, 3000); return; }
-        armed = false; b.textContent = 'Reset progress';
+        if (!armed) { armed = true; b.textContent = 'Tap again to erase everything'; b.classList.add('armed'); setTimeout(function () { armed = false; b.textContent = 'Reset progress'; b.classList.remove('armed'); }, 3000); return; }
+        armed = false; b.textContent = 'Reset progress'; b.classList.remove('armed');
         SR.save.reset(); renderStats(); refreshStars(); refreshCareer();
         // Back to the very first launch: ask the name again.
         if (SR.profile) SR.profile.ask(true);

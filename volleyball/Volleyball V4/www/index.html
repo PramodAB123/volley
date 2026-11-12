@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -460,65 +460,73 @@
       <div class="panel stats-panel">
         <h2><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button>Stats</h2>
         <div id="stats-profile" class="st-prof"></div>
-        <h3>Team stats</h3>
-        <div id="stats-list" class="stats"></div>
-        <div id="stats-teams" class="st-teams"></div>
-        <h3 class="tc-head">Trophy cabinet <span id="trophy-count" class="tc-count"></span></h3>
-        <div id="stats-trophies" class="trophy-cab"></div>
-        <div class="row">
-          <button class="btn ghost" data-back>Back</button>
-          <button id="btn-reset" class="btn danger">Reset progress</button>
+        <div class="seg st-tabs" role="tablist" aria-label="Stats pages">
+          <button id="st-tab-ov" type="button" role="tab" class="on" aria-selected="true" data-pane="st-pane-ov">Overview</button>
+          <button id="st-tab-tr" type="button" role="tab" aria-selected="false" data-pane="st-pane-tr">Trophies <span id="trophy-count" class="tc-count"></span></button>
         </div>
+        <div id="st-pane-ov" class="st-pane" role="tabpanel">
+          <div id="stats-hero" class="st-hero"></div>
+          <div id="stats-list" class="st-tiles"></div>
+          <h3>Your teams</h3>
+          <div id="stats-teams" class="st-teams"></div>
+        </div>
+        <div id="st-pane-tr" class="st-pane hidden" role="tabpanel">
+          <div id="stats-trophies" class="trophy-cab"></div>
+        </div>
+        <div class="st-foot"><button id="btn-reset" class="st-reset" type="button">Reset progress</button></div>
       </div>
     </section>
 
     <section id="scr-settings" class="screen hidden">
-      <div class="panel settings-panel">
+      <div class="panel settings-panel set2">
         <h2><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button>Settings</h2>
-        <h3>Player</h3>
         <div id="set-profile" class="set-prof"></div>
-        <h3>Game</h3>
-        <label class="field">Match length <select id="set-format"></select></label>
-        <label class="field">Difficulty <select id="set-diff"></select></label>
-        <label class="field check"><input id="set-sound" type="checkbox"> Sound effects</label>
-        <label class="field check"><input id="set-music" type="checkbox"> Music</label>
-        <h3>About</h3>
-        <div class="about-box">
-          <div class="about-head">
-            <img src="icons/icon-192.png" alt="" width="56" height="56">
-            <div><b>Spike Rally</b><small>Version <span id="app-version">1.0.1</span></small></div>
+        <div class="set-group">
+          <h3>Sound</h3>
+          <label class="set-row"><span class="sr-ico c-blue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none"/></svg></span><span class="sr-txt"><b>Sound effects</b><small>Hits, whistles and the crowd</small></span><input id="set-sound" class="switch" type="checkbox"></label>
+          <label class="set-row"><span class="sr-ico c-pink" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 17.5V5.5l10-2v12" fill="none"/><circle cx="6.5" cy="17.5" r="2.6"/><circle cx="16.5" cy="15.5" r="2.6"/></svg></span><span class="sr-txt"><b>Music</b><small>Menu and match tracks</small></span><input id="set-music" class="switch" type="checkbox"></label>
+        </div>
+        <div class="set-group">
+          <h3>Match</h3>
+          <label class="set-row"><span class="sr-ico c-green" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5" fill="none"/><path d="M12 9v4.5l3 1.8M9.5 2.8h5" fill="none"/></svg></span><span class="sr-txt"><b>Match length</b><small>Quick matches</small></span><span class="set-sel-wrap"><select id="set-format" class="set-sel"></select></span></label>
+          <div class="set-row stack"><span class="sr-ico c-orange" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V13M10 20V8M16 20v-9M22 20V4" fill="none"/></svg></span><span class="sr-txt"><b>Difficulty</b><small>How strong the other team plays</small></span>
+            <div id="set-diff-seg" class="seg" role="radiogroup" aria-label="Difficulty"></div>
+            <select id="set-diff" class="visually-hidden" tabindex="-1" aria-hidden="true"></select>
           </div>
-          <p>A 6v6 volleyball coaching game. Your players move on their own; you make the calls that decide every rally: the serve, the set, the spike and the block.</p>
-          <ul class="about-list">
-            <li><b>Offline</b><span>Plays anywhere, no internet needed</span></li>
-            <li><b>No ads</b><span>Nothing gets in the way of a rally</span></li>
-            <li><b>No account</b><span>Your progress stays on this phone</span></li>
-          </ul>
-          <p class="muted small">Win matches to earn coins, XP and diamonds. Level up, unlock courts and balls, build your own team and fill your trophy cabinet.</p>
         </div>
-        <div class="row">
-          <button class="btn ghost" data-back>Back</button>
-          <button id="btn-privacy" class="btn" type="button">Privacy policy</button>
+        <div class="set-group">
+          <h3>More</h3>
+          <button id="btn-set-help" class="set-row link" type="button"><span class="sr-ico c-violet" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none"/><path d="M10 8.5v7l5.5-3.5z"/></svg></span><span class="sr-txt"><b>How to play</b><small>Tutorial and rules</small></span><span class="sr-go" aria-hidden="true">›</span></button>
+          <button id="btn-privacy" class="set-row link" type="button"><span class="sr-ico c-teal" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.8l7.5 3v5.6c0 4.8-3.2 8.6-7.5 10-4.3-1.4-7.5-5.2-7.5-10V5.8z" fill="none"/><path d="M8.8 12.2l2.2 2.2 4.4-4.6" fill="none"/></svg></span><span class="sr-txt"><b>Privacy policy</b><small>What the game stores</small></span><span class="sr-go" aria-hidden="true">›</span></button>
         </div>
+        <div class="set-about">
+          <img src="icons/icon-192.png" alt="" width="52" height="52">
+          <div><b>Spike Rally</b><small>Version <span id="app-version">1.0.1</span> · 6v6 volleyball coaching</small></div>
+        </div>
+        <ul class="set-chips" aria-label="About the game">
+          <li>Offline play</li><li>No account</li><li>Ads only if you choose</li>
+        </ul>
       </div>
     </section>
 
     <section id="scr-privacy" class="screen hidden">
       <div class="panel help privacy">
         <h2>Privacy policy</h2>
-        <p class="muted small">Spike Rally for Android · Last updated 6 November 2026</p>
-        <p>Spike Rally is a single-player volleyball game. It works fully offline and does not collect, store on a server, or share any personal data.</p>
+        <p class="muted small">Spike Rally for Android · Last updated 12 November 2026</p>
+        <p>Spike Rally is a single-player volleyball game. It works offline. The game itself does not collect, store on a server, or share any personal data. Optional reward videos are served by Google AdMob (see below).</p>
+        <h3>Ads</h3>
+        <p>You can choose to watch a short video ad to double a match reward or to replay a lost tournament match. Ads are only shown when you tap one of these buttons. They are provided by Google AdMob, which needs an internet connection and may use your device's advertising ID and basic device information to show and measure ads. Google's privacy policy explains how it handles that data: policies.google.com/privacy. You can reset or delete your advertising ID in your phone's Google settings.</p>
         <h3>What the game stores</h3>
         <p>Your progress (your player name and avatar, level, diamonds, coins, unlocked balls, courts and jerseys, career, league and tournament progress, stats, daily reward streak and settings) is saved only on this device, inside the app's own storage. It never leaves your phone. Uninstalling the app or clearing its storage deletes it. You can also wipe it any time with Stats &gt; Reset progress.</p>
         <h3>What the game does not do</h3>
         <ul class="help-rules">
           <li>No accounts, sign-in or online play.</li>
-          <li>No ads, analytics, tracking or crash reporting SDKs.</li>
+          <li>No analytics, tracking or crash reporting SDKs of its own, and no ads unless you choose to watch one.</li>
           <li>No in-app purchases. Diamonds and coins are earned by playing and cannot be bought.</li>
-          <li>No internet access is used. The app asks for no permissions such as location, camera, microphone, contacts or files.</li>
+          <li>The internet is only used to load the ads you choose to watch. The app asks for no permissions such as location, camera, microphone, contacts or files.</li>
         </ul>
         <h3>Children</h3>
-        <p>The game is not directed at children under 13. Because it collects no personal data, it does not knowingly collect data from anyone, of any age.</p>
+        <p>The game is not directed at children under 13. The game itself collects no personal data from anyone, of any age.</p>
         <h3>Changes and contact</h3>
         <p>If this policy changes, the new version will ship with an app update and be posted at the policy web address on the Google Play listing. Questions: see the developer contact on the Google Play listing.</p>
         <div class="row">
@@ -561,10 +569,11 @@
         <h2 id="result-title">Victory!</h2>
         <p id="result-sub" class="lead"></p>
         <p id="result-sets" class="sets"></p>
+        <p id="result-notes"></p>
         <p id="result-stats" class="muted"></p>
         <div id="result-stars" class="res-loot"></div>
         <div id="result-xp" class="res-xp"></div>
-        <p id="result-notes"></p>
+        <div id="result-ad" class="res-ad hidden"></div>
         <button id="result-daily" class="daily-teaser hidden" type="button"></button>
         <div class="row center result-btns">
           <button id="btn-result-next" class="btn primary hidden" type="button" data-i18n-skip>Play again</button>
@@ -653,6 +662,7 @@
   <script src="js/render.js"></script>
   <script src="js/input.js"></script>
   <script src="js/trophies.js"></script>
+  <script src="js/ads.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/custom.js"></script>
   <script src="js/daily.js"></script>
@@ -660,6 +670,7 @@
   <script src="js/demo.js"></script>
   <script src="js/profile.js"></script>
   <script src="js/android.js"></script>
+  <script src="js/polish.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
