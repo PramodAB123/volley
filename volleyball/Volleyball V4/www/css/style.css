@@ -2425,3 +2425,128 @@ img.lg-t { width: 58px; height: 60px; }
   .dday.big .dd-info { align-items: center; text-align: center; }
   .daily-foot { margin-top: 10px; }
 }
+
+/* ===== 2026-11-12 hands-on tutorial (js/demo.js) =====
+   A slim coach strip instead of the old text panel, and a picture-first
+   How to Play screen. */
+.demo.tut { gap: 7px; background: linear-gradient(180deg, #111c33, #0a1222); }
+.demo.tut.bottom { padding: 10px max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); border-radius: 18px 18px 0 0; }
+.tut-top { display: flex; align-items: center; gap: 8px; flex: none; }
+.tut-steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; flex: 1 1 auto; min-width: 0; }
+.tut-steps li { flex: 1 1 0; min-width: 0; }
+.tut-steps button {
+  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; border: 0; border-radius: 12px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.06); color: #8b9ab3; font: 800 10.5px/1.1 system-ui, sans-serif; letter-spacing: 0.02em; position: relative;
+}
+.tut-steps .ts-ico { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.08); }
+.tut-steps svg, .tut-mood svg, .tk-ico svg { width: 60%; height: 60%; fill: currentColor; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.tut-steps button.on { background: rgba(255, 210, 63, 0.16); color: #ffd23f; }
+.tut-steps button.on .ts-ico { background: #ffd23f; color: #241a00; box-shadow: 0 0 0 3px rgba(255, 210, 63, 0.25); animation: tut-beat 1.4s ease-in-out infinite; }
+.tut-steps button.done { color: #7ee0a0; }
+.tut-steps button.done .ts-ico { background: #2fbf71; color: #fff; }
+.tut-steps button.done::after { content: '\2713'; position: absolute; top: 1px; right: 6px; font-size: 10px; color: #7ee0a0; }
+@keyframes tut-beat { 50% { transform: scale(1.1); } }
+.tut-eye { flex: none; height: 34px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 10px; background: transparent; color: #c9d6ea; font: 800 12px system-ui, sans-serif; cursor: pointer; }
+.demo.tut .demo-x { margin-left: 0; flex: none; }
+.demo.tut .demo-progress { height: 3px; }
+.demo.tut .demo-progress span { background: linear-gradient(90deg, #2fbf71, #ffd23f); }
+.tut-row { display: flex; align-items: stretch; gap: 6px; flex: 1 1 auto; min-height: 0; }
+.tut-card {
+  flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 6px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07); border: 2px solid transparent; transition: background 0.2s, border-color 0.2s;
+}
+.tut-mood { flex: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #2f6fe0; color: #fff; }
+.tut-say { margin: 0; font: 900 17px/1.2 system-ui, sans-serif; color: #fff; letter-spacing: 0.01em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.tut-card.you { background: rgba(255, 210, 63, 0.14); border-color: #ffd23f; animation: tut-glow 1.2s ease-in-out infinite; }
+.tut-card.you .tut-mood { background: #ffd23f; color: #241a00; }
+.tut-card.you .tut-say { color: #ffe27a; }
+.tut-card.win { background: rgba(47, 191, 113, 0.18); border-color: #2fbf71; }
+.tut-card.win .tut-mood { background: #2fbf71; }
+.tut-card.win .tut-say { color: #9ff0c0; font-size: 20px; }
+.tut-card.bad { background: rgba(229, 72, 77, 0.16); border-color: #e5484d; }
+.tut-card.bad .tut-mood { background: #e5484d; }
+.tut-card.pop { animation: tut-pop 0.35s ease-out; }
+.tut-card.you.pop { animation: tut-pop 0.35s ease-out, tut-glow 1.2s ease-in-out 0.35s infinite; }
+.tut-card.bad.pop { animation: tut-shake 0.4s ease-out; }
+@keyframes tut-pop { from { transform: scale(0.94); opacity: 0.3; } to { transform: none; opacity: 1; } }
+@keyframes tut-glow { 50% { box-shadow: 0 0 0 4px rgba(255, 210, 63, 0.18); } }
+@keyframes tut-shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+.tut-btn { flex: none; min-width: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.09); color: #fff; font: 800 14px system-ui, sans-serif; cursor: pointer; }
+.tut-btn.icon { padding: 0; font-size: 17px; }
+.tut-btn.skip { color: #c9d6ea; }
+.demo.tut:not(.watch) #demo-play { display: none; }
+.demo.tut.narrow .tut-btn.skip { padding: 0 9px; }
+.demo.tut.narrow .tut-say { font-size: 15.5px; }
+.demo.tut.narrow .tut-steps small { font-size: 9.5px; }
+.tut-end {
+  position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 12px 16px max(12px, env(safe-area-inset-bottom)); border-radius: inherit; background: linear-gradient(180deg, #16305e, #0d1a33); animation: tut-pop 0.4s ease-out;
+}
+.tut-end.hidden { display: none; }
+.tut-done { display: flex; align-items: center; gap: 10px; font: 900 20px system-ui, sans-serif; color: #fff; }
+.tut-star { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #ffd23f; color: #7a4b00; font-size: 24px; animation: tut-beat 1s ease-in-out infinite; }
+.tut-end-btns { display: flex; gap: 8px; width: 100%; max-width: 420px; }
+.tut-end-btns .btn { flex: 1 1 0; min-height: 44px; }
+.tut-end-btns .btn:first-child { flex-grow: 1.6; }
+.demo.tut.side { gap: 12px; }
+.demo.tut.side .tut-steps { flex-wrap: wrap; }
+.demo.tut.side .tut-row { flex-direction: column; flex: none; }
+.demo.tut.side .tut-card { padding: 12px; min-height: 76px; }
+.demo.tut.side .tut-btn { min-height: 42px; }
+
+/* How to Play screen: one big button, five skill tiles, rules folded away. */
+.tut-help { display: flex; flex-direction: column; gap: 12px; }
+.tut-help h2 { margin-bottom: 2px; }
+.tut-hero {
+  display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px; border: 0; border-radius: 20px; cursor: pointer; text-align: left; color: #fff; font: inherit;
+  background: linear-gradient(135deg, #ff8a3d, #e5484d 55%, #b0247a); box-shadow: 0 10px 28px rgba(229, 72, 77, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.tut-hero:active { transform: scale(0.98); }
+.th-court { flex: none; position: relative; width: 84px; height: 60px; border-radius: 10px; background: #f28a3a; border: 3px solid #fff; overflow: hidden; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25); }
+.th-net { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 4px; margin-left: -2px; background: #fff; }
+.th-ball { position: absolute; width: 13px; height: 13px; border-radius: 50%; background: #ffd23f; border: 2px solid #2453a6; top: 36px; left: 14px; animation: th-fly 2.2s ease-in-out infinite; }
+.th-tap { position: absolute; right: 12px; top: 18px; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #fff; animation: th-tap 2.2s ease-out infinite; }
+@keyframes th-fly { 0%, 10% { left: 14px; top: 36px; } 50% { left: 40px; top: 4px; } 85%, 100% { left: 60px; top: 22px; } }
+@keyframes th-tap { 0%, 60% { transform: scale(0.4); opacity: 0; } 75% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
+.th-txt { flex: 1 1 auto; display: flex; flex-direction: column; gap: 3px; }
+.th-txt b { font-size: 21px; font-weight: 900; }
+.th-txt small { font-size: 13.5px; opacity: 0.9; font-weight: 700; }
+.th-go { flex: none; width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #fff; color: #e5484d; font-size: 18px; padding-left: 3px; box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6); animation: th-ping 1.6s ease-out infinite; }
+@keyframes th-ping { 70% { box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); } }
+.tut-or { margin: 0; text-align: center; font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.tut-skills { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.tut-skill {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 4px 10px; border: 0; border-radius: 16px; cursor: pointer; font: inherit;
+  background: var(--btn); color: var(--text); text-align: center;
+}
+.tut-skill:active { transform: scale(0.96); }
+.tk-ico { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #fff; }
+.s-serve .tk-ico { background: linear-gradient(135deg, #2f6fe0, #1b3f8f); }
+.s-set .tk-ico { background: linear-gradient(135deg, #12a594, #0b6b60); }
+.s-spike .tk-ico { background: linear-gradient(135deg, #ff8a3d, #e5484d); }
+.s-block .tk-ico { background: linear-gradient(135deg, #7c5cd6, #4a2fa0); }
+.s-read .tk-ico { background: linear-gradient(135deg, #e0a800, #a87000); }
+.tut-skill b { font-size: 14px; font-weight: 900; }
+.tut-skill small { font-size: 11px; line-height: 1.2; color: var(--muted); font-weight: 700; }
+.tut-watch { align-self: center; font-size: 14px; }
+.tut-rules { border-radius: 14px; background: var(--btn); padding: 0 14px; }
+.tut-rules summary { cursor: pointer; padding: 12px 0; font-weight: 900; list-style: none; display: flex; justify-content: space-between; }
+.tut-rules summary::-webkit-details-marker { display: none; }
+.tut-rules summary::after { content: '+'; font-size: 18px; line-height: 1; }
+.tut-rules[open] summary::after { content: '\2212'; }
+.help .tut-rules ul { margin: 0 0 12px; padding-left: 18px; }
+.help .tut-rules li { margin-bottom: 5px; font-size: 14px; }
+@media (max-width: 460px) {
+  .tut-skills { grid-template-columns: repeat(6, 1fr); }
+  .tut-skill { grid-column: span 2; }
+  .tut-skill:nth-child(4) { grid-column: 2 / span 2; }
+  .th-court { width: 66px; height: 50px; }
+  .th-txt b { font-size: 19px; }
+}
+@media (max-width: 400px) {
+  .th-court { display: none; }
+  .tut-end-btns .btn { white-space: nowrap; padding-left: 8px; padding-right: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tut-card.you, .tut-steps button.on .ts-ico, .th-ball, .th-tap, .th-go, .tut-star { animation: none; }
+}

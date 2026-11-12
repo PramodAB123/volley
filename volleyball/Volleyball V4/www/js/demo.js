@@ -1,14 +1,15 @@
-// How to play demo: short scripted rallies on the real engine, with a caption
-// panel explaining each skill. In Try it mode the rally slows down and waits
-// for you to make each call; in Watch mode a director makes the calls with an
-// on-screen pointer. rally.script fixes the dice so every scene plays out
-// the way its caption says (see the `script` checks in rally.js).
+// How to play: a hands-on tutorial on the real engine. In Try it mode (the
+// default) the rally freezes at each call, the court dims except for the spot
+// to tap, a finger shows where, and one short line says what to do; the step
+// moves on as soon as you get it right. Watch mode plays the same scenes by
+// itself. rally.script fixes the dice so every scene plays out as planned
+// (see the `script` checks in rally.js).
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var D = SR.demo = { active: false };
   var game = null, rally = null, from = 'help';
   var ch = 0, bi = 0, started = false, bt = 0, waitT = 0, retries = 0, playing = true;
-  var mode = 'try', calls = [], nudged = 0;
+  var mode = 'try', calls = [], nudged = 0, waiting = false, finished = false;
   var ptr = { x: 0, y: 0, a: 0, tapAt: -9, seen: false }, spec = null;
 
   // ---- helpers for chapter scripts ----------------------------------------
@@ -41,99 +42,70 @@
   }
 
   // ---- the chapters ---------------------------------------------------------
+  // Each beat: say = the one short line (both modes), you = Try it: the step is
+  // done when this returns true, youSay = what to do, youWrong = after a wrong
+  // call, win = the success line on the last beat. aim = where the finger and
+  // the spotlight go ({ w: [x, y] } court spot, { zone: 1 } their whole court,
+  // { head: i } a hitter's number, { btn: id } a block button).
+
+  var THEIR_COURT = { zone: 1 };
 
   var CH = [
     {
-      name: 'Coach', title: 'You are the coach',
-      body: 'You coach the team on the near side of the net. Your players run, pass, set and jump by themselves. You make the four calls that decide each rally: the serve, the set, the attack and the block.',
-      stage: 'idle',
-      beats: [
-        { say: 'This is your team, on the near side of the net.', aim: { w: [4.6, 4.5] }, dur: 3.2 },
-        { say: 'This is the other team, across the net.', aim: { w: [13.4, 4.5] }, dur: 3.2 },
-        { say: 'Next: each call, played out in a real rally.', dur: 2.4, end: true }
-      ]
-    },
-    {
-      name: 'Serve', title: 'Serve: aim and power',
-      body: 'Aim anywhere on their court, then serve while the power bar swings. A harder serve is tougher to pass but less accurate. A serve into the gap between two passers can win the point outright.',
-      keys: { pc: 'Move the mouse to aim, then click or press Space', touch: 'Tap the spot on their court to serve there' },
+      name: 'Serve', icon: 'serve',
       server: 0, script: { noDig: 1 },
       beats: [
-        { wait: prompt('serve'), say: 'Move the pointer over their court. The red ring shows where the serve will go.', aim: aimAt, dur: 3.6,
+        { wait: prompt('serve'), say: 'Aim your serve at their court', aim: aimAt, dur: 3,
           during: sweep([[13.5, 4.5], [15.6, 2.4], [15.2, 7.0], [12.6, 4.8]]),
-          you: function (r) { return !!r.toss || r.state !== 'serve'; }, youAim: null, youSlow: 1,
-          youSay: 'Your turn: move over their court to aim (the red ring), then click, tap or press Space while the power bar is about two thirds full.' },
-        { say: 'The power bar on the left swings up and down. Serve when it is about two thirds full.', aim: aimAt, dur: 2.2,
-          ready: powerReady(0.56, 0.7), act: function (r) { r.humanServe(); }, youSkip: true },
-        { wait: dead, say: 'Ace! The serve dropped in before their passers could reach it.', dur: 2.8, end: true }
+          you: function (r) { return !!r.toss || r.state !== 'serve'; }, youAim: THEIR_COURT, youSlow: 1,
+          youSay: 'Tap their court to serve' },
+        { say: 'Serve!', aim: aimAt, dur: 1.2, ready: powerReady(0.56, 0.7), act: function (r) { r.humanServe(); }, youSkip: true },
+        { wait: dead, say: 'Ace!', win: 'Ace!', dur: 2.2, end: true }
       ]
     },
     {
-      name: 'Set', title: 'Set: pick your hitter',
-      body: 'When your team passes, numbers appear over your front-row hitters. Pick one before your setter touches the ball, or the setter decides for you. Then, while the set is in the air, tap where the spike should land: every spike is a Power hit straight at that spot. Pick no spot and your hitter misses the ball.',
-      keys: { pc: 'Click a player or press 1 to 3, then click a spot', touch: 'Tap a numbered player, then a spot' },
+      name: 'Set', icon: 'set',
       server: 1, script: { cpuServe: EASY_SERVE, noDig: 1 },
       beats: [
-        { wait: inPlay, slow: 0.6, say: 'They serve. Your players pass on their own, up to your setter.', dur: 1.4 },
-        { wait: prompt('hitter'), slow: 0.05, say: 'Numbers pop up over your hitters. Pick number 1, your left-side hitter.', aim: { head: 0 }, dur: 3, act: function (r) { r.pickHitterIndex(0); },
-          you: function () { return called('hitter'); }, youSay: 'Your turn: numbers pop up over your hitters. Tap any of them (or press 1, 2 or 3) to choose who gets the set.' },
-        tapSpot(13.4, 4.5, 'The set is up. Tap where the spike should land: open floor, away from their defenders and off the lines.', 'Your turn: the set is up. Tap where the spike should land on their court: open floor, away from their defenders.'),
-        { wait: dead, say: 'Kill! A Power spike into open court.', dur: 2.4, end: true }
+        { wait: inPlay, slow: 0.6, say: 'Your team passes it up', dur: 1.2 },
+        { wait: prompt('hitter'), slow: 0.05, say: 'Pick a hitter', aim: { head: 0 }, dur: 2, act: function (r) { r.pickHitterIndex(0); },
+          you: function () { return called('hitter'); }, youSay: 'Tap a number to set that hitter' },
+        tapSpot(13.4, 4.5, 'Aim the spike', 'Tap where to spike'),
+        { wait: dead, say: 'Kill!', win: 'Kill!', dur: 2, end: true }
       ]
     },
     {
-      name: 'Spike', title: 'Spike: one Power hit',
-      body: 'Every spike is a Power hit: the fastest, hardest swing, straight at the spot you pick. While the set is in the air, tap open floor on their court, away from the blockers and defenders. Aiming right on the lines is risky, and no spot means your hitter misses.',
-      keys: { pc: 'Click a spot on their court while the set is up', touch: 'Tap a spot on their court while the set is up' },
+      name: 'Spike', icon: 'spike',
       server: 1, script: { cpuServe: EASY_SERVE, noDig: 1 },
       beats: [
-        { wait: prompt('hitter'), fast: 2, slow: 0.08, say: 'Set your right-side hitter (3).', aim: { head: 2 }, dur: 1.5, act: function (r) { r.pickHitterIndex(2); },
-          you: function () { return called('hitter'); }, youSay: 'Your turn: set your right-side hitter (3). Tap the numbered player, or press the number.' },
-        tapSpot(16.2, 7.6, 'Aim for the open deep corner, away from their blockers.', 'Your turn: tap the open deep corner of their court, away from their blockers.'),
-        { slow: 0.25, say: 'The red ring marks the spot. Your hitter swings with full power.', dur: 1.2 },
-        { wait: dead, say: 'Power spike into the corner. Kill!', dur: 2.4, end: true }
+        { wait: prompt('hitter'), fast: 2, slow: 0.08, say: 'Set hitter 3', aim: { head: 2 }, dur: 1.4, act: function (r) { r.pickHitterIndex(2); },
+          you: function () { return called('hitter'); }, youSay: 'Tap hitter 3', youWrong: 'Tap number 3' },
+        tapSpot(16.2, 7.6, 'Hit the open corner', 'Tap the open corner'),
+        { wait: dead, say: 'Corner kill!', win: 'Corner kill!', dur: 2, end: true }
       ]
     },
     {
-      name: 'Block', title: 'Block: commit to a side',
-      body: 'When they pass, call your block before their setter sets. Commit Left, Middle or Right to stack all three blockers there. Guess right and the hitter meets a wall; guess wrong and the net is wide open.',
-      keys: { pc: 'Press 1 to 3, or click a button or a B zone', touch: 'Tap Left, Middle or Right' },
+      name: 'Block', icon: 'block',
       server: 0, script: { cpuHitter: 'right', block: 'stuff' },
       beats: [
-        { wait: prompt('serve'), say: 'This time you serve and they attack.', aim: aimAt, dur: 1.6, during: sweep(SERVE_TO_PASSER), act: function (r) { r.humanServe(); } },
-        { wait: prompt('block'), slow: 0.05, say: 'Their hitters glow orange. You expect the set to go to the hitter on your left: commit Left.', aim: { btn: 'left' }, dur: 3.2, act: function (r) { r.pickBlock('left'); },
-          you: function () { return called('block', 'left'); }, youSay: 'Your turn: their hitters glow orange. You expect the set to go to the hitter on your left, so commit Left (tap Left or press 1).',
-          youWrong: 'In this rally the set goes to the hitter on your left. Commit Left (tap Left or press 1).' },
-        { slow: 0.3, say: 'All three blockers slide over before the set.', dur: 1.6 },
-        { wait: dead, say: 'Stuff block! You read it right.', dur: 2.6, end: true }
+        { wait: prompt('serve'), say: 'You serve, they attack', aim: aimAt, dur: 1.4, during: sweep(SERVE_TO_PASSER), act: function (r) { r.humanServe(); } },
+        { wait: prompt('block'), slow: 0.05, say: 'Block left', aim: { btn: 'left' }, dur: 2, act: function (r) { r.pickBlock('left'); },
+          you: function () { return called('block', 'left'); }, youSay: 'Tap LEFT to block', youWrong: 'The set goes left: tap LEFT' },
+        { slow: 0.3, say: 'Wall up!', dur: 1.2 },
+        { wait: dead, say: 'Stuff block!', win: 'Stuff block!', dur: 2.2, end: true }
       ]
     },
     {
-      name: 'Read', title: 'Read and dig',
-      body: 'Not sure where the set is going? Read keeps your blockers home: two of them watch the set and jump with the hitter. If the spike gets past, your back row digs it. Make no hitter call and your setter chooses for you, but where the spike goes is always your call.',
-      keys: { pc: 'Press 4 or click Read', touch: 'Tap Read' },
+      name: 'Read', icon: 'read',
       server: 0, script: { cpuHitter: 'left', cpuAim: [2.2, 4.3] },
       beats: [
-        { wait: prompt('serve'), say: 'You serve again.', aim: aimAt, dur: 1.4, during: sweep(SERVE_TO_PASSER), act: function (r) { r.humanServe(); } },
-        { wait: prompt('block'), slow: 0.05, say: 'This time, pick Read to react to the set instead of guessing.', aim: { btn: 'read' }, dur: 2.8, act: function (r) { r.pickBlock('read'); },
-          you: function () { return called('block', 'read'); }, youSay: 'Your turn: not sure where the set goes? Pick Read (tap Read or press 4) so your blockers react to the set.',
-          youWrong: 'This step is about Read. Tap Read or press 4.' },
-        { wait: their, slow: 0.12, say: 'The spike gets past the block, but your back row is already moving to dig it.', aim: { w: [2.2, 4.3] }, dur: 1.8 },
-        { wait: prompt('hitter'), enter: function (r) { r.script.noDig = 1; }, slow: 0.5, say: 'No hitter call this time: your setter picks who gets the set.', dur: 1.2 },
-        { wait: prompt('target'), slow: 0.05, say: 'The spike is still yours to aim: tap open floor on their court.', aim: { w: [13.4, 4.5] }, dur: 2.2,
-          act: function (r) { r.pickTarget({ x: 13.4, y: 4.5 }, false); },
-          you: function (r) { return called('target') || !!r.ui.attackTarget; },
-          youSay: 'Your turn: the setter chose the hitter, but you aim the spike. Tap open floor on their court.' },
-        { wait: dead, say: 'Point! Dug, set and put away.', dur: 2.8, end: true }
-      ]
-    },
-    {
-      name: 'Scoring', title: 'Scoring and rules',
-      body: '<ul><li>Rally scoring: every rally wins a point, whoever served.</li><li>Win each set by two. Before a match, choose 5, 11 or 15 points and 1, 3 or 5 sets.</li><li>Win a rally on their serve and you take the serve; your team rotates one spot.</li><li>Press P or Esc to pause. Wins earn stars to spend in the Shop.</li></ul>',
-      stage: 'idle', last: true,
-      beats: [
-        { say: 'The scoreboard: points in white, sets in gold. The small ball marks who serves.', aim: { board: true }, dur: 4 },
-        { say: 'You are ready. Play a match, or try any skill again.', dur: 0.1 }
+        { wait: prompt('serve'), say: 'Serve again', aim: aimAt, dur: 1.2, during: sweep(SERVE_TO_PASSER), act: function (r) { r.humanServe(); } },
+        { wait: prompt('block'), slow: 0.05, say: 'Not sure? Read it', aim: { btn: 'read' }, dur: 2, act: function (r) { r.pickBlock('read'); },
+          you: function () { return called('block', 'read'); }, youSay: 'Not sure? Tap READ', youWrong: 'Tap READ' },
+        { wait: their, slow: 0.12, say: 'Dig!', aim: { w: [2.2, 4.3] }, dur: 1.4 },
+        { wait: prompt('hitter'), enter: function (r) { r.script.noDig = 1; }, slow: 0.5, say: 'Your setter picks', dur: 1 },
+        tapSpot(13.4, 4.5, 'Aim the spike', 'Tap where to spike'),
+        { wait: dead, say: 'Point!', win: 'Point!', dur: 2.2, end: true }
       ]
     }
   ];
@@ -167,18 +139,19 @@
     }
   }
 
-  function go(i) {
+  function go(i, again) {
     ch = Math.max(0, Math.min(CH.length - 1, i));
-    bi = 0; started = false; bt = 0; waitT = 0; spec = null;
+    bi = 0; started = false; bt = 0; waitT = 0; spec = null; waiting = false; finished = false;
     stage(CH[ch]);
     panel();
+    if (again) say('Let’s try that again', 'bad');
   }
 
   // ---- director ---------------------------------------------------------------
 
   D.tick = function (dt) {
     if (!game || SR.game !== game) { if (D.active) D.stop(true); return; }
-    if (!playing) return;
+    if (!playing || finished) return;
     var c = CH[ch], b = c.beats[bi];
     if (!b) { rally.loopScale = 1; return; }
     if (!started) {
@@ -188,7 +161,7 @@
         waitT += dt;
         // Off script (the rally ended early or stalled): replay the scene.
         if ((rally.state === 'dead' && b.wait !== dead && rally.stateT > 0.4) || waitT > 16) {
-          if (retries++ < 2) go(ch); else next();
+          if (retries++ < 2) go(ch, true); else next();
         }
         return;
       }
@@ -197,17 +170,24 @@
       rally.loopScale = b.slow || 1;
       spec = b.aim || null;
       if (yours(b)) {
-        // Hold the moment almost still until you make the call.
+        // Freeze the moment until you make the call.
         rally.loopScale = b.youSlow || (b.slow < 1 ? 0.015 : 1);
         if (b.youAim !== undefined) spec = b.youAim;
-        say(b.youSay || b.say);
-      } else say(b.say);
+        waiting = true;
+        say(b.youSay || b.say, 'you');
+      } else if (b.end) {
+        say(b.win || b.say, 'win');
+        SR.audio.play('reward');
+        markDone(ch);
+      } else say(b.say, 'info');
     }
     if (yours(b)) {
       if (!b.you(rally)) {
-        if (calls.length > nudged) { nudged = calls.length; if (b.youWrong) say(b.youWrong); }
+        if (calls.length > nudged) { nudged = calls.length; if (b.youWrong) say(b.youWrong, 'bad'); }
         return;
       }
+      waiting = false;
+      SR.audio.play('emote');
       if (b.end) { retries = 0; next(); return; }
       bi++; started = false; waitT = 0; spec = null;
       if (!c.beats[bi]) rally.loopScale = 1;
@@ -226,124 +206,193 @@
   function yours(b) { return mode === 'try' && !!b.you; }
 
   function next() {
-    if (ch < CH.length - 1) go(ch + 1);
+    if (ch < CH.length - 1) go(ch + 1); else finish();
   }
 
-  // ---- pointer ----------------------------------------------------------------
+  function finish() {
+    finished = true; waiting = false; spec = null;
+    if (rally) rally.loopScale = 1;
+    markDone(CH.length - 1);
+    $('demo').classList.add('done');
+    $('demo-end').classList.remove('hidden');
+    SR.audio.play('reward');
+    var q = $('demo-quick'); if (q) try { q.focus({ preventScroll: true }); } catch (e) { /* old WebView */ }
+  }
 
+  // ---- on-court hints ----------------------------------------------------------
+
+  // Where the hint points: a screen spot, plus a shape to light up.
   function resolve(s, v) {
     if (!s) return null;
     if (typeof s === 'function') s = s(rally);
     if (!s) return null;
-    if (s.w) { var q = v.proj(s.w[0], s.w[1], 0); return { x: q.x + v.panX, y: q.y }; }
+    if (s.zone) {
+      var L = SR.COURT.L, W = SR.COURT.W, N = SR.COURT.NET_X;
+      var poly = [[N, 0], [L, 0], [L, W], [N, W]].map(function (c) { var q = v.proj(c[0], c[1], 0); return [q.x + v.panX, q.y]; });
+      var m = v.proj((N + L) / 2, W / 2, 0);
+      return { x: m.x + v.panX, y: m.y, poly: poly };
+    }
+    if (s.w) { var q = v.proj(s.w[0], s.w[1], 0); return { x: q.x + v.panX, y: q.y, r: 54 }; }
     if (s.btn) {
       var b = v.buttons.find(function (o) { return o.id === s.btn; });
-      return b ? { x: b.x + b.w / 2, y: b.y + b.h / 2 } : null;
+      return b ? { x: b.x + b.w / 2, y: b.y + b.h / 2, rect: [b.x - 6, b.y - 6, b.w + 12, b.h + 12] } : null;
     }
     if (s.head !== undefined) {
       var h = rally.ui.hitters[s.head], hd = h && v.heads.find(function (o) { return o.p === h.p; });
-      return hd ? { x: hd.x, y: hd.y - 30 } : null;
+      return hd ? { x: hd.x, y: hd.y - 4, r: 44 } : null;
     }
-    if (s.board) { var k = Math.min(v.portrait ? 1.25 : 1, (v.W - 20) / 500); return { x: v.W / 2 - 62 * k, y: 10 + 40 * k }; }
     return null;
   }
 
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+
+  // Dim the court except the spot to tap.
+  function spotlight(ctx, v, t, a, now) {
+    var pulse = 1 + 0.06 * Math.sin(now * 5);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.beginPath();
+    ctx.rect(0, 0, v.W, v.H);
+    if (t.poly) { ctx.moveTo(t.poly[0][0], t.poly[0][1]); for (var i = t.poly.length - 1; i > 0; i--) ctx.lineTo(t.poly[i][0], t.poly[i][1]); ctx.closePath(); }
+    else if (t.rect) { var R = t.rect; ctx.moveTo(R[0], R[1]); ctx.lineTo(R[0], R[1] + R[3]); ctx.lineTo(R[0] + R[2], R[1] + R[3]); ctx.lineTo(R[0] + R[2], R[1]); ctx.closePath(); }
+    else { ctx.moveTo(t.x + t.r * pulse, t.y); ctx.arc(t.x, t.y, t.r * pulse, 0, Math.PI * 2, true); }
+    ctx.fillStyle = 'rgba(4, 8, 18, 0.55)';
+    ctx.fill('evenodd');
+    // A bright pulsing outline round the lit area.
+    ctx.beginPath();
+    if (t.poly) { ctx.moveTo(t.poly[0][0], t.poly[0][1]); t.poly.forEach(function (p) { ctx.lineTo(p[0], p[1]); }); ctx.closePath(); }
+    else if (t.rect) roundRect(ctx, t.rect[0], t.rect[1], t.rect[2], t.rect[3], 14);
+    else ctx.arc(t.x, t.y, t.r * pulse, 0, Math.PI * 2);
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255, 210, 63, ' + (0.65 + 0.35 * Math.sin(now * 5)) + ')';
+    ctx.shadowColor = '#ffd23f'; ctx.shadowBlur = 14;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // A cartoon hand that taps the spot, with ripples on every tap.
+  function hand(ctx, x, y, a, now, press) {
+    var cyc = (now * 1.1) % 1, down = cyc < 0.18 ? cyc / 0.18 : cyc < 0.36 ? 1 - (cyc - 0.18) / 0.18 : 0;
+    if (press) down = 1;
+    for (var k = 0; k < 2; k++) {
+      var e = ((now * 1.1) + k * 0.5) % 1;
+      ctx.beginPath(); ctx.arc(x, y, 8 + 36 * e, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.7 * (1 - e) * a) + ')'; ctx.lineWidth = 3; ctx.stroke();
+    }
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(x + 6, y + 8 - 10 * (1 - down));
+    ctx.rotate(-0.35);
+    ctx.scale(1 - 0.08 * down, 1 - 0.08 * down);
+    ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
+    ctx.beginPath();
+    // index finger, then the fist with a thumb
+    roundRect(ctx, -7, -2, 14, 36, 7);
+    ctx.moveTo(-9, 22);
+    ctx.bezierCurveTo(-9, 18, -4, 17, 4, 18);
+    ctx.lineTo(18, 19); ctx.bezierCurveTo(26, 20, 27, 26, 26, 33);
+    ctx.lineTo(24, 44); ctx.bezierCurveTo(23, 50, 18, 53, 11, 53);
+    ctx.lineTo(1, 53); ctx.bezierCurveTo(-6, 53, -9, 48, -10, 42);
+    ctx.lineTo(-17, 30); ctx.bezierCurveTo(-19, 26, -14, 22, -10, 26);
+    ctx.closePath();
+    ctx.fillStyle = '#ffffff'; ctx.fill('nonzero');
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    ctx.lineWidth = 2.5; ctx.strokeStyle = '#0b1220'; ctx.lineJoin = 'round';
+    ctx.beginPath(); roundRect(ctx, -7, -2, 14, 36, 7); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(7, 18); ctx.lineTo(18, 19); ctx.bezierCurveTo(26, 20, 27, 26, 26, 33);
+    ctx.lineTo(24, 44); ctx.bezierCurveTo(23, 50, 18, 53, 11, 53);
+    ctx.lineTo(1, 53); ctx.bezierCurveTo(-6, 53, -9, 48, -10, 42);
+    ctx.lineTo(-17, 30); ctx.bezierCurveTo(-19, 26, -14, 22, -10, 26); ctx.lineTo(-7, 30);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   D.draw = function (ctx, v) {
-    var now = performance.now() / 1000, t = resolve(spec, v);
+    var now = performance.now() / 1000, t = resolve(spec, v), coach = mode === 'try' && waiting;
     if (t) {
       if (!ptr.seen) { ptr.x = t.x + 60; ptr.y = t.y + 80; ptr.seen = true; }
-      var k = Math.min(1, 0.16 * (playing ? 1 : 0.6));
+      var k = Math.min(1, 0.18 * (playing ? 1 : 0.6));
       ptr.x += (t.x - ptr.x) * k; ptr.y += (t.y - ptr.y) * k;
-      ptr.a = Math.min(mode === 'try' ? 0.5 : 1, ptr.a + 0.08);
+      ptr.a = Math.min(1, ptr.a + 0.08);
     } else {
-      ptr.a = Math.max(0, ptr.a - 0.06);
+      ptr.a = Math.max(0, ptr.a - 0.08);
       if (ptr.a === 0) ptr.seen = false;
     }
+    if (coach && t) { spotlight(ctx, v, t, ptr.a, now); hand(ctx, ptr.x, ptr.y, ptr.a, now, false); return; }
     var tap = now - ptr.tapAt;
     if (tap < 0.6) {
       var e = tap / 0.6;
       ctx.beginPath(); ctx.arc(ptr.x, ptr.y, 10 + 34 * e, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(255,210,63,' + (1 - e) + ')'; ctx.lineWidth = 4 * (1 - e) + 1; ctx.stroke();
     }
-    if (ptr.a <= 0) return;
-    var press = tap < 0.18 ? 0.85 : 1;
-    ctx.save();
-    ctx.globalAlpha = ptr.a;
-    ctx.translate(ptr.x, ptr.y); ctx.scale(press, press);
-    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
-    if (SR.touch) {
-      // A fingertip: soft disc with a bright core.
-      ctx.beginPath(); ctx.arc(0, 0, 17, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
-    } else {
-      // A mouse arrow with its tip on the target.
-      ctx.beginPath();
-      ctx.moveTo(0, 0); ctx.lineTo(0, 26); ctx.lineTo(6.5, 20); ctx.lineTo(11, 30); ctx.lineTo(15, 28); ctx.lineTo(10.5, 18.5); ctx.lineTo(19, 18.5);
-      ctx.closePath();
-      ctx.fillStyle = '#fff'; ctx.fill();
-      ctx.shadowBlur = 0; ctx.lineWidth = 2; ctx.strokeStyle = '#0b1220'; ctx.lineJoin = 'round'; ctx.stroke();
-    }
-    ctx.restore();
+    // Watch mode: the hand glides to each call and taps it.
+    if (ptr.a > 0 && mode === 'watch' && t) hand(ctx, ptr.x, ptr.y, ptr.a * 0.95, 0.5, tap < 0.2);
   };
 
-  // ---- caption panel ------------------------------------------------------------
+  // ---- coach card ---------------------------------------------------------------
 
-  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  var ICON = {
+    serve: '<svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4.2"/><path d="M5 21c1.5-4 4-6 7-6s5.5 2 7 6" fill="none"/></svg>',
+    set: '<svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="3.3"/><path d="M6 20l3-7M18 20l-3-7M8.5 12.5c1-1.7 2.2-2.5 3.5-2.5s2.5.8 3.5 2.5" fill="none"/></svg>',
+    spike: '<svg viewBox="0 0 24 24"><path d="M13 2L5 13h6l-1 9 8-12h-6z"/></svg>',
+    block: '<svg viewBox="0 0 24 24"><path d="M4 4h4v16H4zM10 4h4v16h-4zM16 4h4v16h-4z"/></svg>',
+    read: '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none"/><circle cx="12" cy="12" r="3.2"/></svg>'
+  };
+  var MOOD = {
+    you: '<svg viewBox="0 0 24 24"><path d="M9 11V4.5a1.5 1.5 0 0 1 3 0V10l5.2 1.2c1 .2 1.7 1.2 1.6 2.2l-.6 5.1A2.6 2.6 0 0 1 15.6 21h-4.4c-.8 0-1.6-.4-2.1-1L5 15.2a1.5 1.5 0 0 1 2.2-2L9 15z"/></svg>',
+    win: '<svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5" fill="none"/></svg>',
+    bad: '<svg viewBox="0 0 24 24"><path d="M12 3v11M12 18.5v.5" fill="none"/></svg>',
+    info: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'
+  };
 
-  function say(text) {
+  function say(text, mood) {
     if (!text) return;
-    var el = $('demo-now');
-    el.textContent = text;
-    el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+    var card = $('demo-card');
+    mood = mood || 'info';
+    $('demo-now').textContent = text;
+    $('demo-ico').innerHTML = MOOD[mood];
+    card.className = 'tut-card ' + mood;
+    void card.offsetWidth; card.classList.add('pop');
+  }
+
+  function markDone(i) {
+    var b = document.querySelectorAll('#demo-chapters button')[i];
+    if (b) { b.classList.add('done'); b.classList.remove('on'); }
   }
 
   function panel() {
-    var c = CH[ch];
-    $('demo-count').textContent = (ch + 1) + ' / ' + CH.length;
-    $('demo-title').textContent = c.title;
-    $('demo-body').innerHTML = c.body.charAt(0) === '<' ? c.body : '<p>' + esc(c.body) + '</p>';
-    var k = c.keys;
-    $('demo-keys').innerHTML = k ? '<span><b>PC</b>' + esc(k.pc) + '</span><span><b>Phone</b>' + esc(k.touch) + '</span>' : '';
-    $('demo-keys').classList.toggle('hidden', !k);
-    $('demo-now').textContent = '';
-    $('demo-bar').style.width = ((ch + 1) / CH.length * 100) + '%';
-    $('demo-prev').disabled = ch === 0;
-    $('demo-next').classList.toggle('hidden', !!c.last);
-    $('demo-end').classList.toggle('hidden', !c.last);
+    $('demo').classList.remove('done');
+    $('demo-end').classList.add('hidden');
+    $('demo-bar').style.width = (ch / CH.length * 100) + '%';
     document.querySelectorAll('#demo-chapters button').forEach(function (b, i) {
       b.classList.toggle('on', i === ch); b.classList.toggle('done', i < ch);
       if (i === ch) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
     });
-    // On a phone the chapter chips scroll sideways: keep the current one in view.
-    var list = $('demo-chapters'), cur = list.querySelector('button.on');
-    if (cur && list.scrollWidth > list.clientWidth) {
-      list.scrollLeft += cur.getBoundingClientRect().left - list.getBoundingClientRect().left - (list.clientWidth - cur.offsetWidth) / 2;
-    }
-    $('demo').classList.toggle('last', !!c.last);
-    $('demo-scroll').scrollTop = 0;
+    $('demo-next').innerHTML = ch < CH.length - 1 ? 'Skip<span aria-hidden="true"> ›</span>' : 'Finish<span aria-hidden="true"> ›</span>';
+    say(CH[ch].name, 'info');
   }
 
   function setPlaying(on) {
     playing = on;
     if (game) game.paused = !on;
     var b = $('demo-play');
-    b.innerHTML = on ? '❚❚<span class="lbl"> Pause</span>' : '▶<span class="lbl"> Play</span>';
+    b.innerHTML = on ? '❚❚' : '▶';
     b.setAttribute('aria-label', on ? 'Pause' : 'Play');
   }
 
-  // Captions take a strip on the right on wide screens, at the bottom otherwise.
+  // The coach card sits in a slim strip along the bottom (on the right on wide screens).
   D.layout = function (vw, vh) {
     var el = $('demo'), side = vw / vh >= 1.25 && vw >= 640;
     el.classList.toggle('side', side); el.classList.toggle('bottom', !side);
     if (side) {
-      var w = Math.round(Math.min(380, Math.max(260, vw * 0.3)));
+      var w = Math.round(Math.min(320, Math.max(240, vw * 0.26)));
       el.style.width = w + 'px'; el.style.height = '';
-      el.classList.toggle('narrow', w < 320);
       return { w: vw - w, h: vh };
     }
-    var h = Math.round(Math.min(310, Math.max(220, vh * 0.36)));
+    var h = Math.round(Math.min(168, Math.max(136, vh * 0.18)));
     el.style.height = h + 'px'; el.style.width = '';
     el.classList.toggle('narrow', vw < 340);
     return { w: vw, h: vh - h };
@@ -352,13 +401,13 @@
   function setMode(m) {
     mode = m === 'watch' ? 'watch' : 'try';
     D.tryMode = mode === 'try';
-    document.querySelectorAll('#demo-mode button').forEach(function (b) {
-      var on = b.getAttribute('data-mode') === mode;
-      b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on));
-    });
+    $('demo').classList.toggle('watch', mode === 'watch');
+    var t = $('demo-mode');
+    if (t) { t.textContent = mode === 'watch' ? 'Let me try' : 'Watch'; t.setAttribute('aria-label', mode === 'watch' ? 'Switch to Try it mode' : 'Watch the demo play itself'); }
   }
 
-  D.start = function (origin, m) {
+  // at: the chapter to begin with (the skill tiles on the help screen).
+  D.start = function (origin, m, at) {
     from = origin || 'help';
     setMode(m);
     SR.ui.show(null);
@@ -376,12 +425,12 @@
     retries = 0;
     setPlaying(true);
     SR.resize();
-    go(0);
+    go(at || 0);
   };
 
-  // quiet: the match was replaced elsewhere (e.g. an online invite), so just tidy up.
+  // quiet: the match was replaced elsewhere, so just tidy up.
   D.stop = function (quiet) {
-    D.active = false;
+    D.active = false; waiting = false; finished = false;
     $('demo').classList.add('hidden');
     if (rally) rally.loopScale = 1;
     if (SR.game === game) SR.game = null;
@@ -394,38 +443,38 @@
   function init() {
     var list = $('demo-chapters');
     list.innerHTML = CH.map(function (c, i) {
-      return '<li><button type="button" title="' + c.title + '"><span>' + (i + 1) + '</span>' + c.name + '</button></li>';
+      return '<li><button type="button" aria-label="Step ' + (i + 1) + ': ' + c.name + '"><span class="ts-ico" aria-hidden="true">' + ICON[c.icon] + '</span><small>' + c.name + '</small></button></li>';
     }).join('');
     list.querySelectorAll('button').forEach(function (b, i) {
       b.addEventListener('click', function () { SR.audio.play('click'); retries = 0; go(i); setPlaying(true); });
     });
-    function on(id, fn) { $(id).addEventListener('click', function () { SR.audio.play('click'); fn(); }); }
-    on('demo-prev', function () { retries = 0; go(ch - 1); setPlaying(true); });
-    on('demo-next', function () { retries = 0; go(ch + 1); setPlaying(true); });
+    function on(id, fn) { var el = $(id); if (el) el.addEventListener('click', function () { SR.audio.play('click'); fn(); }); }
+    on('demo-next', function () { retries = 0; next(); setPlaying(true); });
     on('demo-play', function () { setPlaying(!playing); });
     on('demo-replay', function () { retries = 0; go(ch); setPlaying(true); });
     on('demo-exit', function () { D.stop(); });
     on('demo-again', function () { retries = 0; go(0); setPlaying(true); });
-    document.querySelectorAll('#demo-mode button').forEach(function (b) {
-      b.addEventListener('click', function () { SR.audio.play('click'); setMode(b.getAttribute('data-mode')); retries = 0; go(ch); setPlaying(true); });
-    });
+    on('demo-done', function () { D.stop(); });
+    on('demo-mode', function () { setMode(mode === 'watch' ? 'try' : 'watch'); retries = 0; go(ch); setPlaying(true); });
     on('demo-quick', function () { D.stop(true); SR.ui.show('scr-menu'); $('btn-quick').click(); });
-    on('demo-help', function () { D.stop(true); SR.ui.show('scr-help'); });
-    // Tapping the court pauses and resumes.
-    $('game').addEventListener('pointerup', function () { if (D.active && mode === 'watch') setPlaying(!playing); });
+    // Watch mode: tapping the court pauses and resumes.
+    $('game').addEventListener('pointerup', function () { if (D.active && mode === 'watch' && !finished) setPlaying(!playing); });
     window.addEventListener('keydown', function (e) {
       if (!D.active) return;
       var t = e.target && e.target.tagName;
-      if (e.key === 'ArrowRight') { go(ch + 1); setPlaying(true); }
+      if (e.key === 'ArrowRight') { next(); setPlaying(true); }
       else if (e.key === 'ArrowLeft') { go(ch - 1); setPlaying(true); }
       else if (e.key === ' ' && t !== 'BUTTON' && mode === 'watch') setPlaying(!playing);
       else if (e.key === 'Escape') D.stop();
       else return;
       e.preventDefault();
     });
-    if ($('btn-demo')) on('btn-demo', function () { D.start('help', 'try'); });
-    if ($('btn-demo-watch')) on('btn-demo-watch', function () { D.start('help', 'watch'); });
-    if ($('btn-demo-2')) on('btn-demo-2', function () { D.start('help', 'try'); });
+    on('btn-demo', function () { D.start('help', 'try'); });
+    on('btn-demo-watch', function () { D.start('help', 'watch'); });
+    // Skill tiles on the help screen start the tutorial at that skill.
+    document.querySelectorAll('[data-demo-at]').forEach(function (b) {
+      b.addEventListener('click', function () { SR.audio.play('click'); D.start('help', 'try', +b.getAttribute('data-demo-at')); });
+    });
   }
 
   window.addEventListener('load', init);
