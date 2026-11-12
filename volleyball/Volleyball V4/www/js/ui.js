@@ -936,7 +936,7 @@
       CM.unlocked || tr.cup ? (CM.unlocked + 1) + ' / ' + nc + ' cups open' : nc + ' cups to win';
     if ($('shop-prog')) $('shop-prog').textContent = 'Skills, balls, courts and more';
     if ($('career-new')) $('career-new').classList.toggle('hidden', !!C);
-    if ($('career-prog') && !C) $('career-prog').textContent = 'Conquer ' + n + ' islands, become champion';
+    if ($('career-prog') && !C) $('career-prog').textContent = 'Conquer ' + n + ' islands';
   }
 
   function openCareer() {

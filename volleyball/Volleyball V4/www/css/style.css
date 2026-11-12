@@ -3048,3 +3048,29 @@ button.mp-card:active { transform: scale(0.98); }
 }
 @media (min-aspect-ratio: 5/4) { .home-scr .home-hero.home-modes { grid-column: 2; grid-row: 4 / span 2; } }
 @media (max-width: 370px) { .home-scr .home-hero.home-modes .tile b { font-size: 20px; } }
+
+/* ===== 2026-11-12 Picture cards: Career, Multiplayer, Daily Challenge,
+   League and Tournament use art cut from Ghanu's home mockup
+   (img/home/card-*.webp). Text, badges, progress and arrows stay live on top. ===== */
+.home-scr .home-hero .tile.t-career, .home-scr .home-hero .tile.t-online, .home-scr .home-hero .tile.t-league, .home-scr .home-hero .tile.t-cup {
+  background-color: #1a1f5a; background-size: cover; background-position: center top; background-repeat: no-repeat; }
+.home-scr .home-hero .tile.t-career { background-image: linear-gradient(180deg, transparent 38%, rgba(4, 40, 110, 0.55) 70%, rgba(3, 30, 90, 0.8)), url(../img/home/card-career.webp); }
+.home-scr .home-hero .tile.t-online { background-image: linear-gradient(180deg, transparent 40%, rgba(40, 14, 110, 0.55) 70%, rgba(30, 10, 90, 0.8)), url(../img/home/card-online.webp);
+  border-color: rgba(200, 160, 255, 0.95) !important; box-shadow: 0 0 0 1px rgba(40, 10, 90, 0.6), 0 0 22px rgba(160, 100, 255, 0.55), 0 12px 26px rgba(0, 0, 0, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.4) !important; }
+.home-scr .home-hero .tile.t-league { background-image: linear-gradient(180deg, transparent 45%, rgba(50, 20, 120, 0.55) 72%, rgba(40, 12, 100, 0.8)), url(../img/home/card-league.webp); }
+.home-scr .home-hero .tile.t-cup { background-image: linear-gradient(180deg, transparent 45%, rgba(110, 40, 10, 0.5) 72%, rgba(100, 30, 0, 0.75)), url(../img/home/card-cup.webp); }
+.home-scr .home-hero .tile.t-career::before, .home-scr .t-online::before { display: none; }
+.home-scr .t-isle, .home-scr .t-vs, .home-scr .t-trophy { display: none; }
+.t-online .t-arrow { background: linear-gradient(180deg, #b28cff, #7a3ff0); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 0 0 2px rgba(255, 255, 255, 0.55), 0 0 12px rgba(180, 140, 255, 0.8); }
+.home-scr .home-hero .tile b, .home-scr .home-hero .tile small { text-shadow: 0 2px 0 rgba(0, 10, 60, 0.6), 0 0 10px rgba(0, 0, 40, 0.55); }
+/* Text sits on the lower part of the picture, the art keeps the top. */
+.home-scr .home-hero.duo .tile, .home-scr .home-hero.home-modes .tile { justify-content: flex-end; }
+/* Daily Challenge: the picture strip; its own clipboard is in the art. */
+.home-scr .chal-strip { min-height: 72px; background-color: #2a1d6a;
+  background-image: linear-gradient(90deg, transparent 15%, rgba(30, 14, 90, 0.35) 55%, rgba(30, 14, 90, 0.15)), url(../img/home/card-daily.webp) !important;
+  background-size: cover !important; background-position: left center !important;
+  border-color: rgba(215, 160, 255, 0.9) !important; box-shadow: 0 0 18px rgba(170, 110, 255, 0.45), 0 10px 22px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important; }
+.home-scr .chal-strip .ct-ico { visibility: hidden; width: 52px; height: 48px; }
+.home-scr .chal-strip .dt-txt b { font-style: italic; text-shadow: 0 2px 0 rgba(20, 0, 60, 0.6), 0 0 10px rgba(0, 0, 40, 0.5) !important; }
+.home-scr .chal-strip .dt-txt small { text-shadow: 0 1px 3px rgba(0, 0, 30, 0.8); }
+.home-scr .chal-strip .cs-prog { background: rgba(10, 8, 40, 0.75); box-shadow: inset 0 0 0 1.5px rgba(200, 170, 255, 0.75), 0 0 10px rgba(170, 120, 255, 0.35); }
