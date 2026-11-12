@@ -29,7 +29,9 @@
       // Daily challenge: day = day number of today's tries, last = last day won.
       challenge: { day: 0, done: false, tries: 0, streak: 0, last: 0, total: 0, best: 0 },
       // Custom team (js/custom.js): bought once for stars, then edited freely.
-      custom: JSON.parse(JSON.stringify(SR.CUSTOM.base))
+      custom: JSON.parse(JSON.stringify(SR.CUSTOM.base)),
+      // Skill packs (js/skills.js): owned ids, the ids switched on, and slots.
+      skills: { owned: [], on: [], slots: SR.SKILLS.slots }
     };
   }
 
@@ -133,6 +135,13 @@
     pf.xp = Math.min(num(pf.xp), SR.XP.need(pf.level) - 1);
     pf.total = num(pf.total);
     d.custom = cleanCustom(d.custom);
+    // Skill packs: only known ids, each once; switched-on ones must be owned
+    // and fit the slots.
+    if (!obj(d.skills)) d.skills = def.skills;
+    var sk = d.skills, known = function (id, i, a) { return typeof id === 'string' && !!SR.skillById(id) && a.indexOf(id) === i; };
+    sk.owned = Array.isArray(sk.owned) ? sk.owned.filter(known) : [];
+    sk.slots = Math.max(SR.SKILLS.slots, Math.min(SR.SKILLS.maxSlots, num(sk.slots, SR.SKILLS.slots)));
+    sk.on = (Array.isArray(sk.on) ? sk.on.filter(known) : []).filter(function (id) { return sk.owned.indexOf(id) >= 0; }).slice(0, sk.slots);
     customOn = d.custom.unlocked;
     ['owned', 'equipped', 'settings', 'stats', 'trophies', 'daily', 'challenge', 'leagueMap', 'cupMap'].forEach(function (k) { if (!obj(d[k])) d[k] = def[k]; });
     Object.keys(def.owned).forEach(function (kind) {

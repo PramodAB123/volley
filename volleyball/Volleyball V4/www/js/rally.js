@@ -56,6 +56,13 @@
       return { prompt: null, aim: { x: t === 0 ? 13.5 : 4.5, y: 4.5 }, power: 0, hitters: [], hitterChoice: null, attackTarget: null, tip: false, shot: 'power', blockThreats: [], blockCall: 'read' };
     });
     this.ui = this.uis[0];
+    // Skill packs switched on in the Shop: only for the team you control
+    // against the CPU (opts.human === 0). The demo's script turns them off.
+    var on = opts.human === 0 && !opts.demo && SR.skills ? SR.skills.active() : [];
+    this.sk = [{}, {}];
+    on.forEach(function (id) { this.sk[0][id] = true; }, this);
+    this.run = [0, 0];       // points won in a row (charges the special smash)
+    this.charged = [false, false];
     this.commit = 'read';
     this.players = [[], []];
     for (var team = 0; team < 2; team++) {
@@ -66,13 +73,31 @@
           x: 0, y: 0, z: 0, tx: 0, ty: 0, lock: false, jumpAt: -9, dive: 0,
           vx: 0, vy: 0, phase: 0, act: null, jumpKind: null, delayUntil: 0, face: team === 0 ? 1 : -1,
           yaw: team === 0 ? 0 : Math.PI, contactAt: 0, contactKind: null,
-          speed: 4.2 + spd / 100 * 2.6
+          speed: (4.2 + spd / 100 * 2.6) * (this.sk[team].feet ? 1.07 : 1)
         });
       }
     }
   };
 
   var R = SR.Rally.prototype;
+
+  // Is skill pack `id` on for `team`? Never in the scripted demo.
+  R.skill = function (team, id) { return !this.script && !!this.sk[team][id]; };
+  // The special smash `team` has switched on (a skill pack with special: true), or null.
+  R.special = function (team) {
+    if (this.script) return null;
+    for (var id in this.sk[team]) { var k = SR.skillById(id); if (k && k.special) return k; }
+    return null;
+  };
+  // Per smash: dig = pass quality change for the diggers, block = chance of a
+  // block touch (x), noStuff = a touch only slows it, freeze = late reaction (s).
+  var SMASH = {
+    fire:    { speed: 1.12, dig: -0.2,  block: 0.5, noStuff: true, word: 'FIRE SMASH',   color: '#ff9b3d' },
+    water:   { speed: 1.05, dig: -0.4,  block: 0.6, word: 'WATER SPLASH', color: '#7fd6ff' },
+    ice:     { speed: 1.05, dig: -0.1,  block: 0.5, freeze: 0.35, word: 'ICE SMASH', color: '#dff6ff' },
+    wind:    { speed: 1.08, dig: -0.1,  block: 0.5, swerve: 0.65, word: 'WIND SMASH', color: '#b8f5dc' },
+    thunder: { speed: 1.15, dig: -0.25, block: 0, word: 'THUNDER SMASH', color: '#6fd0ff' }
+  };
 
   R.all = function () { return this.players[0].concat(this.players[1]); };
   R.pos = function (p) { return this.m.posOf(p.team, p.idx); };
@@ -173,9 +198,10 @@
     p.lock = false;
     var cp = { x: this.ball.x, y: this.ball.y, z: this.ball.z };
     var scatter = (0.3 + 1.0 * power) * (1.3 - rt.serve / 100);
+    if (this.skill(s, 'ace')) scatter *= 0.55;
     var tgt = { x: aim.x + gauss() * scatter, y: aim.y + gauss() * scatter, z: 0 };
     var T = 1.6 - 0.65 * power;
-    var errChance = 0.03 + power * 0.1 * (1.3 - rt.serve / 100);
+    var errChance = (0.03 + power * 0.1 * (1.3 - rt.serve / 100)) * (this.skill(s, 'ace') ? 0.4 : 1);
     if (this.script) { tgt = this.keepIn(1 - s, { x: aim.x + gauss() * scatter * 0.2, y: aim.y + gauss() * scatter * 0.2, z: 0 }); errChance = 0; }
     if (Math.random() < errChance) {
       if (Math.random() < 0.5) { tgt = { x: C.NET_X + dir * 0.6, y: clamp(tgt.y, 0.5, 8.5), z: 1.0 }; }
@@ -265,20 +291,20 @@
     if (tc === null || tc > f.landT - 0.04) tc = f.landT - 0.06;
     var pc = P.at(f.p0, f.v, tc);
     if ((team === 0) !== (pc.x < C.NET_X)) { tc = f.landT - 0.06; pc = P.at(f.p0, f.v, tc); }
-    var best = null, bestArr = 1e9;
+    var best = null, bestArr = 1e9, quick = this.skill(team, 'feet'), reach = REACH + (quick ? 0.1 : 0);
     this.players[team].forEach(function (p) {
       if (p === self.server && self.state === 'serve') return;
-      var arr = REACT + Math.max(0, dist(p, pc) - REACH) / p.speed;
+      var arr = REACT + (self.freeze || 0) + Math.max(0, dist(p, pc) - reach) / p.speed;
       // A player still in the air (blocking) can only play it after landing.
       var down = p.jumpAt + 0.75 + 0.12 - self.t;
-      if (down > 0) arr = Math.max(arr, down + Math.max(0, dist(p, pc) - REACH) / p.speed);
+      if (down > 0) arr = Math.max(arr, down + Math.max(0, dist(p, pc) - reach) / p.speed);
       if (arr < bestArr) { bestArr = arr; best = p; }
     });
     if (!best) return;
     var stretch = false;
     if (bestArr > tc + 0.02) {
       // Try a dive just before the ball hits the floor.
-      var t2 = f.landT - 0.03, p2 = P.at(f.p0, f.v, t2), arr2 = REACT + Math.max(0, dist(best, p2) - REACH - 0.6) / best.speed;
+      var t2 = f.landT - 0.03, p2 = P.at(f.p0, f.v, t2), arr2 = REACT + (this.freeze || 0) + Math.max(0, dist(best, p2) - reach - (quick ? 0.9 : 0.6)) / best.speed;
       arr2 += Math.max(0, best.jumpAt + 0.87 - this.t);
       if (arr2 > t2 + 0.15) return; // nobody gets there
       tc = t2; pc = p2; stretch = true;
@@ -304,7 +330,10 @@
     var spd = P.speed(P.vel(f.v, f.t));
     var rating = this.m.ratings[team].pass;
     var serveHeat = (this.lastOffense && this.lastOffense.type === 'serve') ? this.servePower * 0.22 : 0;
-    var q = clamp(0.28 + rating / 100 * 0.62 + rnd(-0.22, 0.22) - Math.max(0, spd - 11) * 0.022 - (o.stretch ? 0.2 : 0) + (o.bonus || 0) - serveHeat, 0, 1);
+    // Power Spike: a spike from that team is harder to dig. Perfect Set: cleaner passes.
+    var lo = this.lastOffense, heat = lo && lo.type === 'attack' && lo.team !== team && this.skill(lo.team, 'power') ? 0.1 : 0;
+    var sk = this.skill(team, 'set') ? 0.1 : 0;
+    var q = clamp(0.28 + rating / 100 * 0.62 + rnd(-0.22, 0.22) - Math.max(0, spd - 11) * 0.022 - (o.stretch ? 0.2 : 0) + (o.bonus || 0) - serveHeat - heat + sk, 0, 1);
     if (this.script) q = 0.85;
     p.lock = false;
     p.contactAt = 0;
@@ -424,7 +453,7 @@
     }
     ua.prompt = null;
     var rt = this.m.ratings[team];
-    var qs = clamp(0.35 + rt.pass / 100 * 0.4 + this.passQ * 0.25 + rnd(-0.15, 0.15), 0, 1);
+    var qs = clamp(0.35 + rt.pass / 100 * 0.4 + this.passQ * 0.25 + rnd(-0.15, 0.15) + (this.skill(team, 'set') ? 0.1 : 0), 0, 1);
     if (this.script) qs = 0.92;
     var e = 1 - qs, hx = clamp(HIT[pick.slot][0] + gauss() * e * 0.7, 6.5, 8.7), hy = clamp(HIT[pick.slot][1] + gauss() * e * 0.7, 0.3, 8.7);
     var hw = world(team, hx, hy), tgt = { x: hw.x, y: hw.y, z: 2.8 + rt.attack / 100 * 0.3 };
@@ -521,7 +550,15 @@
     var l = local(def, tgt.x, tgt.y), edge = Math.min(l.x, l.y, C.W - l.y);
     var errChance = 0.04 + S.err + (1 - qs) * 0.1 - (rt.attack - 75) * 0.002 + (edge < 0.5 ? (0.5 - edge) * 0.3 : 0);
     var scatter = (0.2 + (1 - qs) * 0.8 + (1 - rt.attack / 100) * 0.6) * S.scatter;
+    if (this.skill(team, 'set')) errChance -= 0.03;
+    // Special smash (charged by points in a row): flies true, plus its own power.
+    var sp = this.charged[team] && this.special(team), smash = sp ? SMASH[sp.id] : null;
+    if (smash) {
+      this.charged[team] = false; errChance = 0; scatter *= 0.4;
+      if (smash.swerve) { var os = this.openSpot(team); tgt.x += (os.x - tgt.x) * smash.swerve; tgt.y += (os.y - tgt.y) * smash.swerve; }
+    }
     tgt.x += gauss() * scatter; tgt.y += gauss() * scatter;
+    if (smash) tgt = this.keepIn(def, tgt); // a smash always lands in
     var netErr = false, sc = this.script;
     if (sc) { tgt = this.keepIn(def, { x: aim.x + (tgt.x - aim.x) * 0.25, y: aim.y + (tgt.y - aim.y) * 0.25, z: 0 }); errChance = 0; }
     if (Math.random() < errChance) {
@@ -529,6 +566,8 @@
       else tgt = this.pushOut(def, tgt);
     }
     var vs = (16 + rt.attack * 0.09) * (0.78 + 0.22 * qs) * (S.speed || 1);
+    if (this.skill(team, 'power')) vs *= 1.1;
+    if (smash) vs = Math.max(vs * smash.speed, sp.id === 'thunder' ? 25 : 22);
     var d3 = Math.sqrt(Math.pow(tgt.x - cp.x, 2) + Math.pow(tgt.y - cp.y, 2) + Math.pow(tgt.z - cp.z, 2));
     var T = d3 / vs;
     if (!netErr) T = P.clearNet(cp, tgt, T, 0.12);
@@ -539,7 +578,8 @@
     this.formation(team, 'defense');
     SR.audio.play('spike');
     // How hard the spike is (0-1): a strong hitter on a good set lights it up.
-    this.fx('spike', { pos: cp, shot: shot, power: Math.round(clamp((vs - 18) / 6, 0, 1) * 100) / 100 });
+    this.fx('spike', { pos: cp, shot: shot, power: smash ? 1 : Math.round(clamp((vs - 18) / 6, 0, 1) * 100) / 100,
+      elem: smash ? sp.elem : null, word: smash ? smash.word : null, color: smash ? smash.color : null });
     if (netErr) return;
 
     var f = this.flight, tn = P.crossX(f.p0, f.v, C.NET_X);
@@ -549,17 +589,21 @@
         if (self.isFront(b) && Math.abs(b.y - cross.y) < 0.9 && Math.abs(b.x - C.NET_X) < 1.2) nb++;
       });
       var rd = this.m.ratings[def];
-      var pTouch = cross.z < 3.45 ? Math.min(0.85, nb * 0.22 * (rd.block / 75) * (1.15 - rt.attack / 200) * S.block * (this.blockBonus || 1)) : 0;
+      var wall = this.skill(def, 'wall');
+      var pTouch = cross.z < 3.45 ? Math.min(0.85, nb * 0.22 * (rd.block / 75) * (1.15 - rt.attack / 200) * S.block * (this.blockBonus || 1) * (wall ? 1.2 : 1)) : 0;
+      if (smash) pTouch *= smash.block;
       if (sc) pTouch = sc.block ? 1 : 0;
       if (Math.random() < pTouch) {
-        var r = Math.random(), outcome;
-        outcome = r < 0.28 ? 'stuff' : r < 0.78 ? 'soft' : 'out';
+        var r = Math.random(), outcome, stuff = smash && smash.noStuff ? 0 : wall ? 0.38 : 0.28;
+        outcome = r < stuff ? 'stuff' : r < 0.78 ? 'soft' : 'out';
         if (sc) outcome = sc.block;
         this.at(tn, function () { self.blockResult(outcome, def, cross); });
         return;
       }
     }
-    this.planReception(def, S.dig || 0);
+    this.freeze = smash && smash.freeze || 0;
+    this.planReception(def, (S.dig || 0) + (smash ? smash.dig : 0));
+    this.freeze = 0;
   };
 
   // The hitter swings at nothing and the ball drops onto their own floor.
@@ -648,7 +692,14 @@
 
     var name = this.m.teams[winner].name, color = this.m.teams[winner].color;
     var label = { ace: 'ACE!', kill: 'KILL!', block: 'BLOCK!', point: 'POINT' }[kind] || (reason === 'net' ? 'NET' : 'OUT');
-    this.say(label, name, color, 1.5);
+    // Points in a row charge Thunder Smash (kept until the next spike).
+    this.run[winner]++; this.run[1 - winner] = 0;
+    var ready = false;
+    var spc = this.special(winner);
+    if (spc && !this.charged[winner] && this.run[winner] >= SR.SKILLS.smashStreak) {
+      this.charged[winner] = ready = true; this.run[winner] = 0;
+    }
+    this.say(label, ready ? spc.name.toUpperCase() + ' READY' : name, ready ? spc.color : color, ready ? 1.9 : 1.5);
     SR.audio.play('bounce');
     SR.audio.play('whistle');
     this.fx('land', { pos: { x: b.x, y: b.y }, kind: kind, reason: reason });

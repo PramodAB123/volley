@@ -51,7 +51,7 @@ SR.teamById = function (id) {
 // Skill points: every rating starts at `min`, `total` is shared out between
 // the five, none above `max`. The default (78 each) matches a top club.
 SR.CUSTOM = {
-  price: 20,
+  price: 60,
   min: 60, max: 90, total: 390, step: 2,
   stats: [['attack', 'Attack'], ['block', 'Block'], ['pass', 'Pass'], ['serve', 'Serve'], ['speed', 'Speed']],
   colors: ['#e5484d', '#ff6b35', '#f5a524', '#e0b100', '#7cc142', '#2f9e44', '#12a594', '#1fb6d6', '#2f6fe0', '#3b3fbf', '#7c5cd6', '#d9468f', '#607086', '#1f2633', '#f4f4f4'],
@@ -138,9 +138,9 @@ SR.DIFFICULTY = {
 SR.SHOP = {
   balls: [
     { id: 'classic', name: 'Classic',  price: 0, main: '#f4d03f', stripe: '#2453a6' },
-    { id: 'sunset',  name: 'Sunset',   price: 6, main: '#ff8a3d', stripe: '#ffffff' },
-    { id: 'neon',    name: 'Neon',     price: 10, main: '#b6ff3b', stripe: '#ff3bb0' },
-    { id: 'mono',    name: 'Mono',     price: 16, main: '#f5f5f5', stripe: '#1d1d1d' },
+    { id: 'sunset',  name: 'Sunset',   price: 18, main: '#ff8a3d', stripe: '#ffffff' },
+    { id: 'neon',    name: 'Neon',     price: 30, main: '#b6ff3b', stripe: '#ff3bb0' },
+    { id: 'mono',    name: 'Mono',     price: 48, main: '#f5f5f5', stripe: '#1d1d1d' },
     // Bought with coins (earned in every match) instead of diamonds.
     { id: 'aqua',    name: 'Aqua',     coins: 600, main: '#5ee7ff', stripe: '#1452a8' },
     { id: 'berry',   name: 'Berry',    coins: 900, main: '#d9468f', stripe: '#ffe14d' },
@@ -169,14 +169,14 @@ SR.SHOP = {
   ],
   courts: [
     { id: 'maple', name: 'Arena',  price: 0, floor: '#2e7a4f', court: '#f28a3a', zone: '#ec7c2b', line: '#ffffff', wall: '#10261b', seat: '#ef7d2d', riser: '#173324' },
-    { id: 'ocean', name: 'Ocean',  price: 6, floor: '#2d7a5a', court: '#2f6fa8', zone: '#285f94', line: '#ffffff', wall: '#0e1f33', seat: '#2f6fa8', riser: '#101c2c' },
-    { id: 'clay',  name: 'Clay',   price: 10, floor: '#3f5d3a', court: '#b5583a', zone: '#a24b30', line: '#fff3e6', wall: '#2a160e', seat: '#b5583a', riser: '#26150e' },
-    { id: 'night', name: 'Night',  price: 16, floor: '#1b1530', court: '#2b2150', zone: '#352866', line: '#53f3ff', wall: '#09060f', seat: '#6b3fd1', riser: '#120c22', glow: true },
+    { id: 'ocean', name: 'Ocean',  price: 18, floor: '#2d7a5a', court: '#2f6fa8', zone: '#285f94', line: '#ffffff', wall: '#0e1f33', seat: '#2f6fa8', riser: '#101c2c' },
+    { id: 'clay',  name: 'Clay',   price: 30, floor: '#3f5d3a', court: '#b5583a', zone: '#a24b30', line: '#fff3e6', wall: '#2a160e', seat: '#b5583a', riser: '#26150e' },
+    { id: 'night', name: 'Night',  price: 48, floor: '#1b1530', court: '#2b2150', zone: '#352866', line: '#53f3ff', wall: '#09060f', seat: '#6b3fd1', riser: '#120c22', glow: true },
     // Themed courts with floor art (motifs in render.js).
-    { id: 'galaxy', name: 'Galaxy',       price: 20, motif: 'galaxy', floor: '#05040f', court: '#1a1446', zone: '#221a5c', line: '#c7b8ff', wall: '#020108', seat: '#7c5cff', riser: '#0a0820', accent: '#ff4fd8', glow: true },
-    { id: 'lava',   name: 'Lava Pit',     price: 24, motif: 'lava',   floor: '#1a0a06', court: '#3a1a12', zone: '#4a2016', line: '#ffb347', wall: '#0c0402', seat: '#ff5a1f', riser: '#200c06', accent: '#ff5a1f', glow: true },
-    { id: 'candy',  name: 'Candy Land',   price: 30, motif: 'candy',  floor: '#ffc2e0', court: '#7cc6f5', zone: '#6ab8ea', line: '#ffffff', wall: '#3a1030', seat: '#ff5fa2', riser: '#2a0c22', accent: '#ff5fa2' },
-    { id: 'arcade', name: 'Retro Arcade', price: 40, motif: 'pixels', floor: '#101018', court: '#24245a', zone: '#2c2c70', line: '#7dff6b', wall: '#05050a', seat: '#ff4d6d', riser: '#0c0c18', accent: '#ffd23f', glow: true }
+    { id: 'galaxy', name: 'Galaxy',       price: 60, motif: 'galaxy', floor: '#05040f', court: '#1a1446', zone: '#221a5c', line: '#c7b8ff', wall: '#020108', seat: '#7c5cff', riser: '#0a0820', accent: '#ff4fd8', glow: true },
+    { id: 'lava',   name: 'Lava Pit',     price: 72, motif: 'lava',   floor: '#1a0a06', court: '#3a1a12', zone: '#4a2016', line: '#ffb347', wall: '#0c0402', seat: '#ff5a1f', riser: '#200c06', accent: '#ff5a1f', glow: true },
+    { id: 'candy',  name: 'Candy Land',   price: 90, motif: 'candy',  floor: '#ffc2e0', court: '#7cc6f5', zone: '#6ab8ea', line: '#ffffff', wall: '#3a1030', seat: '#ff5fa2', riser: '#2a0c22', accent: '#ff5fa2' },
+    { id: 'arcade', name: 'Retro Arcade', price: 120, motif: 'pixels', floor: '#101018', court: '#24245a', zone: '#2c2c70', line: '#7dff6b', wall: '#05050a', seat: '#ff4d6d', riser: '#0c0c18', accent: '#ffd23f', glow: true }
   ]
 };
 
@@ -286,6 +286,31 @@ SR.AVATARS = [
   { id: 'a6', skin: '#d9a77c', hair: '#3a2a6b', style: 'bun', bg: ['#d9468f', '#7c5cd6'], band: '#3bf0a0' }
 ];
 
+// Skill packs (js/skills.js): bought once in the Shop, then switched on in
+// one of your skill slots (2 to start, a 3rd for `slotPrice` diamonds). They
+// only help the team you control in offline matches against the CPU, never the CPU, and the
+// tutorial plays without them. Effects are applied in rally.js (R.skill).
+SR.SKILLS = {
+  slots: 2, maxSlots: 3, slotPrice: 60,
+  // Win `smashStreak` points in a row to charge your special smash.
+  smashStreak: 3,
+  list: [
+    { id: 'ace',     name: 'Ace Serve',     coins: 1000, color: '#38b6ff', text: 'Serves land closer to your aim, with half the serve faults.' },
+    { id: 'power',   name: 'Power Spike',   coins: 1400, color: '#ff6b35', text: 'Harder, faster spikes that are tougher to dig.' },
+    { id: 'feet',    name: 'Quick Feet',    coins: 1800, color: '#3bf0a0', text: 'Your players run faster and dive farther to save more balls.' },
+    { id: 'wall',    name: 'Iron Wall',     price: 42,   color: '#9fb7cf', text: 'More blocks, and more of them are stuff blocks.' },
+    { id: 'set',     name: 'Perfect Set',   price: 54,   color: '#ffd23f', text: 'Better passes and sets, and fewer spike errors.' },
+    // Special smashes: only one can be on. Win `smashStreak` points in a row
+    // to charge it; your next spike is that smash (elem = its look in fx.js).
+    { id: 'fire',    name: 'Fire Smash',          price: 60, color: '#ff5a1f', special: true, elem: 'fire',    text: 'A blazing spike that burns through blocks: they can only slow it down.' },
+    { id: 'water',   name: 'Water Splash Smash',  price: 66, color: '#2fa8ff', special: true, elem: 'water',   text: 'A tidal spike that soaks the floor. Defenders slip and their digs fly wild.' },
+    { id: 'ice',     name: 'Ice Smash',           price: 72, color: '#9fe0ff', special: true, elem: 'ice',     text: 'A frozen spike that freezes the defence for a moment, so they react late.' },
+    { id: 'wind',    name: 'Wind Smash',          price: 78, color: '#3bf0a0', special: true, elem: 'wind',    text: 'A cyclone spike that swerves away from defenders into open floor.' },
+    { id: 'thunder', name: 'Thunder Smash',       price: 90, color: '#7c5cff', special: true, elem: 'thunder', text: 'The fastest spike in the game. Lightning carries it over every block.' }
+  ]
+};
+SR.skillById = function (id) { return SR.SKILLS.list.find(function (k) { return k.id === id; }) || null; };
+
 SR.STARS = { quickWin: 1, leagueWin: 1, leagueTitle: 3, cupWin: 1, cupTitle: 5, careerStage: 2, careerFinal: 5 };
 
 // Career: every court in the game, one after another. Each stage is a court
@@ -342,6 +367,10 @@ SR.LEAGUES = [
 
 // Tournaments: six cups on a world tour (Tournament map), eight teams each,
 // the final on the cup's own court. Reach the final to unlock the next cup.
+// Tournaments get harder round by round: added to the cup's CPU difficulty
+// boost in the quarter-final, semi-final and final.
+SR.CUP_RAMP = [0, 5, 10];
+SR.CUP_RAMP_LABEL = ['Warm-up', 'Tougher', 'Toughest'];
 SR.CUPS = [
   { id: 'beach',     name: 'Beach Cup',      place: 'Sunset Coast',   diff: 'easy',   final: 'rays',    win: 1, title: 5,  color: '#ff8a3d' },
   { id: 'blossom',   name: 'Blossom Cup',    place: 'Sakura Gardens', diff: 'normal', final: 'blossom', win: 1, title: 6,  color: '#ff6fa3' },

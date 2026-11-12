@@ -149,14 +149,14 @@
 
   // ---- matches ------------------------------------------------------------
 
-  function startMatch(home, away, venue, difficulty, format) {
+  function startMatch(home, away, venue, difficulty, format, boost) {
     var s = data().settings;
     show(null);
     if (mode === 'quick') { lastQuick = { home: home, away: away }; if (SR.ARENAS[s.quickCourt]) venue = s.quickCourt; }
     home = SR.kitTeam(home, away);
     // A custom team that looks like the opponent swaps its jersey and trim.
     if (home.custom && SR.colorGap(home.color, away.color) < 90 && SR.colorGap(home.trim, away.color) >= 90) home = Object.assign({}, home, { color: home.trim, trim: home.color });
-    SR.game = new SR.Game({ home: home, away: away, format: format || s.format, difficulty: difficulty || s.difficulty, human: 0, mode: mode, venue: venue || null, onEnd: finishMatch });
+    SR.game = new SR.Game({ home: home, away: away, format: format || s.format, difficulty: difficulty || s.difficulty, boost: boost || 0, human: 0, mode: mode, venue: venue || null, onEnd: finishMatch });
   }
 
   // Quick match: Random starts at once with two random teams; Choose team
@@ -748,9 +748,9 @@
       nx.className = 'cup-next';
       nx.innerHTML = '<div class="cup-vs"><span class="cv me">' + crest(me) + '<b>' + me.short + '</b></span><span class="cv-x">VS</span><span class="cv">' + crest(opp) + '<b>' + opp.short + '</b></span></div>' +
         '<span class="cpick-thumb">' + thumbImg(vid) + '</span>' +
-        '<span class="venue-text"><small>' + CUP_ONE[T.round] + ' · vs ' + opp.name + '</small><b>' + (a ? a.name : '') + '</b><span>' + host + ' · <i class="cwin">Win ' + SR.GEM + ' ' + CP.win + (T.round === 2 ? ' + ' + CP.title : '') + '</i></span></span>' +
+        '<span class="venue-text"><small>' + CUP_ONE[T.round] + ' · vs ' + opp.name + ' · <i class="cup-ramp r' + T.round + '">' + SR.CUP_RAMP_LABEL[T.round] + '</i></small><b>' + (a ? a.name : '') + '</b><span>' + host + ' · <i class="cwin">Win ' + SR.GEM + ' ' + CP.win + (T.round === 2 ? ' + ' + CP.title : '') + '</i></span></span>' +
         '<button id="btn-cup-play" type="button" class="btn primary">Play</button>';
-      on('btn-cup-play', function () { startMatch(me, opp, vid, CP.diff); });
+      on('btn-cup-play', function () { startMatch(me, opp, vid, CP.diff, null, SR.CUP_RAMP[T.round] || 0); });
       thumbQueue.push(vid);
       setTimeout(pumpThumbs, 0);
     } else {
@@ -932,7 +932,7 @@
       LM.unlocked || tr.league ? (LM.unlocked + 1) + ' / ' + nl + ' leagues open' : nl + ' leagues to climb';
     if ($('cup-prog')) $('cup-prog').textContent = T && !T.champion ? curCup().name.replace(' Cup', '') + ' · ' + CUP_ONE[T.round] :
       CM.unlocked || tr.cup ? (CM.unlocked + 1) + ' / ' + nc + ' cups open' : nc + ' cups to win';
-    if ($('shop-prog')) $('shop-prog').textContent = 'Balls, courts, kits and more';
+    if ($('shop-prog')) $('shop-prog').textContent = 'Skills, balls, courts and more';
     if ($('career-new')) $('career-new').classList.toggle('hidden', !!C);
     if ($('career-prog') && !C) $('career-prog').textContent = 'Conquer ' + n + ' islands and become a champion!';
   }
@@ -1293,6 +1293,7 @@
   // ---- shop, stats, settings ----------------------------------------------
 
   function renderShop() {
+    if (SR.skills) SR.skills.shopCard($('shop-skills'));
     if (SR.custom) SR.custom.shopCard($('shop-custom'));
     ['balls', 'courts', 'kits'].forEach(function (kind) {
       var box = $('shop-' + kind), key = { balls: 'ball', courts: 'court', kits: 'kit' }[kind];

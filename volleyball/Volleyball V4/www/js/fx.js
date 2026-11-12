@@ -8,7 +8,9 @@
 //            bolt strikes the ball at contact and again where it lands
 //   ice      spikes with the Frost ball equipped
 //   wind     hard jump serves, and spikes with the Jungle ball
-// Elements are only looks; they never change the rally.
+//   water    the Water Splash Smash skill pack (droplets and a splash)
+// The skill packs' special smashes (js/skills.js) pick their element; the
+// rally applies their powers. Otherwise elements are only looks.
 (function () {
   function rnd(a, b) { return a + Math.random() * (b - a); }
   function few(n) { return Math.max(1, Math.round(n * (SR.lowFx ? 0.5 : 1))); }
@@ -19,9 +21,10 @@
     fire:    ['#ffd23f', '#ff9b3d', '#ff5a1f', '#e8380d'],
     thunder: ['#ffffff', '#cfefff', '#6fd0ff', '#3f8cff'],
     ice:     ['#ffffff', '#e6f7ff', '#9fe0ff', '#5ab8f0'],
-    wind:    ['#ffffff', '#e8fff4', '#b8f5dc', '#7fe0c0']
+    wind:    ['#ffffff', '#e8fff4', '#b8f5dc', '#7fe0c0'],
+    water:   ['#ffffff', '#bfeaff', '#5cc4ff', '#1f7fe0']
   };
-  var CRACK = { fire: '#ff7a2b', thunder: '#7fdcff', ice: '#dff6ff', wind: '#c9fff0' };
+  var CRACK = { fire: '#ff7a2b', thunder: '#7fdcff', ice: '#dff6ff', wind: '#c9fff0', water: '#7fd6ff' };
 
   function ballElem() {
     try { return BALL_ELEM[SR.save.data.equipped.ball] || 'fire'; } catch (e) { return 'fire'; }
@@ -133,6 +136,11 @@
         for (var g = 0; g < 3; g++) this.gusts.push({ x: p.x, y: p.y, z: p.z, dx: 1, dy: 0, dz: 0, life: -g * 0.06, max: 0.45, r: 0.5 + g * 0.25, flat: true });
         this.burst(p, few(16 * m), c, 6, 2, 0.4, 0.05, 1, 'spark');
         this.flash = 0.1; this.flashColor = '#efffff';
+      } else if (el === 'water') {
+        this.burst(p, few(22 * m), c, 5, 3, 0.55, 0.08, 7, 'glow');
+        this.burst(p, few(10 * m), ['#ffffff', '#bfeaff'], 3, 2, 0.4, 0.16, 0, 'glow');
+        for (var w = 0; w < 2; w++) this.gusts.push({ x: p.x, y: p.y, z: p.z, dx: 1, dy: 0, dz: 0, life: -w * 0.07, max: 0.45, r: 0.45 + w * 0.3, flat: true, water: true });
+        this.flash = 0.12; this.flashColor = '#cfeeff';
       }
     },
 
@@ -159,6 +167,18 @@
         this.burst(g, few(22), c, 3.5, 5, 0.9, 0.11, 7, 'shard');
         this.burst(g, few(8), ['#e6f7ff', '#9fe0ff'], 1.8, 1, 0.6, 0.25, 0, 'glow');
         this.flash = Math.max(this.flash, 0.12); this.flashColor = '#e6f7ff';
+      } else if (el === 'water') {
+        // A splash: rings of water and a crown of droplets thrown up high.
+        this.ring(p, '#5cc4ff', 3.0, 0.7);
+        this.ring(p, '#ffffff', 2.0, 0.6, 0.06);
+        this.ring(p, '#9fe0ff', 1.2, 0.5, 0.14);
+        for (var d = 0; d < few(34); d++) {
+          var da = Math.random() * Math.PI * 2, dv = rnd(1.2, 3.4);
+          this.parts.push({ x: p.x, y: p.y, z: 0.05, vx: Math.cos(da) * dv, vy: Math.sin(da) * dv, vz: rnd(3, 6.5),
+            life: 0, max: rnd(0.6, 1.0), color: c[d % c.length], size: rnd(0.07, 0.14), grav: 11, k: 'glow' });
+        }
+        this.flash = Math.max(this.flash, 0.12); this.flashColor = '#bfeaff';
+        this.shake = Math.max(this.shake, 10);
       } else if (el === 'wind') {
         this.ring(p, '#ffffff', 2.6, 0.5);
         this.ring(p, '#b8f5dc', 1.9, 0.55, 0.08);
@@ -176,7 +196,7 @@
     trail: function (b, v, dt) {
       var el = this.elem;
       if (!el || dt <= 0) return;
-      var rate = { fire: 70, thunder: 30, ice: 34, wind: 14 }[el] * (SR.lowFx ? 0.5 : 1);
+      var rate = ({ fire: 70, thunder: 30, ice: 34, wind: 14, water: 50 }[el] || 20) * (SR.lowFx ? 0.5 : 1);
       this.emitAcc += dt * rate;
       var c = PAL[el];
       while (this.emitAcc >= 1) {
@@ -193,6 +213,9 @@
         } else if (el === 'ice') {
           this.parts.push({ x: p.x, y: p.y, z: p.z, vx: v.x * 0.05 + rnd(-0.5, 0.5), vy: v.y * 0.05 + rnd(-0.5, 0.5), vz: rnd(-0.2, 0.6),
             life: 0, max: rnd(0.45, 0.7), color: c[Math.floor(Math.random() * 4)], size: rnd(0.05, 0.08), grav: 3, k: 'shard', rot: Math.random() * 6.3 });
+        } else if (el === 'water') {
+          this.parts.push({ x: p.x, y: p.y, z: p.z, vx: v.x * 0.06 + rnd(-0.8, 0.8), vy: v.y * 0.06 + rnd(-0.8, 0.8), vz: rnd(0, 1.2),
+            life: 0, max: rnd(0.3, 0.55), color: c[1 + Math.floor(Math.random() * 3)], size: rnd(0.05, 0.11), grav: 9, k: 'glow' });
         } else if (el === 'wind') {
           var l = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z) || 1;
           this.gusts.push({ x: b.x, y: b.y, z: b.z, dx: v.x / l, dy: v.y / l, dz: v.z / l, life: 0, max: 0.4, r: 0.35 });
@@ -212,19 +235,21 @@
         this.burst(p, 6, ['#ffffff'], 1.0, 1.0, 0.3, 0.04, 3);
       } else if (name === 'spike') {
         var pw = d.power === undefined ? 0.6 : d.power;
-        var el = pw >= THUNDER_AT ? 'thunder' : ballElem();
+        // A special smash (skill pack) brings its own element and callout.
+        var el = d.elem && PAL[d.elem] ? d.elem : pw >= THUNDER_AT ? 'thunder' : ballElem();
         this.setElem(el);
         this.burst(p, 14, ['#fff7c2', '#ffffff'], 4, 2.5, 0.35, 0.05, 6);
         this.strike(p, el, true);
-        this.shake = Math.max(this.shake, el === 'thunder' ? 8 : 4);
-        this.hitStop = el === 'thunder' ? 0.1 : 0.06;
+        if (d.word) this.word(p, d.word, d.color || '#ffffff');
+        this.shake = Math.max(this.shake, el === 'thunder' || d.word ? 8 : 4);
+        this.hitStop = el === 'thunder' || d.word ? 0.1 : 0.06;
         this.punch = 1;
       } else if (name === 'block') {
         // The spike's element shatters on the hands.
         var be = this.elem || 'ice';
         this.setElem(null);
         this.burst(p, 16, ['#9fd4ff', '#ffffff', '#5aa9ff'], 4, 2.5, 0.5, 0.07, 6);
-        this.burst(p, few(14), PAL[be], 4.5, 3, 0.55, 0.09, 6, be === 'fire' ? 'glow' : be === 'ice' ? 'shard' : 'spark');
+        this.burst(p, few(14), PAL[be], 4.5, 3, 0.55, 0.09, 6, be === 'fire' || be === 'water' ? 'glow' : be === 'ice' ? 'shard' : 'spark');
         this.shake = Math.max(this.shake, 6);
         this.hitStop = 0.08;
         this.punch = Math.max(this.punch, 0.8);

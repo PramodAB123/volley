@@ -3,10 +3,11 @@
   var STEP = 1 / 120;
 
   SR.Game = function (cfg) {
-    var boost = (SR.DIFFICULTY[cfg.difficulty] || SR.DIFFICULTY.normal).boost;
+    // cfg.boost: extra CPU strength on top (tournament rounds get harder).
+    var boost = (SR.DIFFICULTY[cfg.difficulty] || SR.DIFFICULTY.normal).boost + (Number(cfg.boost) || 0);
     this.cfg = cfg;
     this.match = new SR.Match(cfg.home, cfg.away, cfg.format, cfg.human === 0 ? boost : 0);
-    this.rally = new SR.Rally(this.match, { human: cfg.human, onPoint: this.onPoint.bind(this) });
+    this.rally = new SR.Rally(this.match, { human: cfg.human, demo: !!cfg.demo, onPoint: this.onPoint.bind(this) });
     this.paused = false;
     this.hover = null;
     this.shift = false;

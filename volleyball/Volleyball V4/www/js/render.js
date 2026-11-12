@@ -728,6 +728,18 @@
         ctx.globalAlpha = 0.75; ctx.strokeStyle = st ? '#e8fff4' : '#ffffff'; ctx.lineWidth = Math.max(1.5, rad * 0.32); ctx.stroke();
       }
       ctx.globalAlpha = 0.5; glow(ctx, '#e8fff4', qb.x, qb.y, rad * 2.2);
+    } else if (el === 'water') {
+      // A rolling wave: deep blue body, a bright crest and bubbles along it.
+      strokePts(ctx, pts, '#1f7fe0', rad * 2.6, 0.32);
+      strokePts(ctx, pts, '#5cc4ff', rad * 1.3, 0.6);
+      var wv = [];
+      for (i = 0; i < pts.length; i++) { q = pts[i]; wv.push({ x: q.x, y: q.y - Math.sin(t * 22 + i * 1.1) * rad * 0.5 * (i / pts.length) }); }
+      strokePts(ctx, wv, '#ffffff', Math.max(1, rad * 0.35), 0.85);
+      for (i = 1; i < pts.length - 1; i += 2) {
+        q = pts[i]; ctx.globalAlpha = 0.7 * q.k; ctx.strokeStyle = '#e6f7ff'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(q.x + Math.sin(t * 9 + i) * rad * 0.8, q.y + Math.cos(t * 7 + i) * rad * 0.6, Math.max(1.5, rad * 0.28 * q.k), 0, 6.3); ctx.stroke();
+      }
+      ctx.globalAlpha = 0.75; glow(ctx, '#5cc4ff', qb.x, qb.y, rad * 3);
     }
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
@@ -887,7 +899,7 @@
         var k = g.life / g.max, q = proj(g.x, g.y, g.z), R = Math.max(3, g.r * (0.6 + 1.4 * k) * q.s), ang = 0, sq = 0.38;
         if (g.flat) sq = 0.3;
         else { var e = proj(g.x + g.dx * 0.5, g.y + g.dy * 0.5, g.z + g.dz * 0.5); ang = Math.atan2(e.y - q.y, e.x - q.x); }
-        ctx.globalAlpha = 0.55 * (1 - k); ctx.strokeStyle = '#e8fff4'; ctx.lineWidth = Math.max(1.2, 2.4 * (1 - k));
+        ctx.globalAlpha = 0.55 * (1 - k); ctx.strokeStyle = g.water ? '#7fd6ff' : '#e8fff4'; ctx.lineWidth = Math.max(1.2, 2.4 * (1 - k));
         ctx.beginPath(); ctx.ellipse(q.x, q.y, R * sq, R, ang, 0, Math.PI * 2); ctx.stroke();
       });
       fx.bolts.forEach(function (bo) { drawBolt(ctx, bo); });
@@ -1325,7 +1337,7 @@
       drawScoreboard(ctx, game);
       if (ui.prompt === 'serve') { drawPower(ctx, ui.power); hint(ctx, SR.touch ? 'Tap their court to aim and serve' : 'Aim on their court, click or tap to serve (Space)'); }
       else if (ui.prompt === 'hitter') hint(ctx, ui.hitterChoice ? 'Hitter chosen' : SR.touch ? 'Tap a numbered player to set them' : 'Pick your hitter: click a player or press 1-' + ui.hitters.length);
-      else if (ui.prompt === 'target') hint(ctx, ui.attackTarget ? shotName + ' locked in' : SR.touch ? 'Tap their court where the spike should land' : 'Click their court where the spike should land');
+      else if (ui.prompt === 'target') hint(ctx, rally.charged && rally.charged[0] && rally.special(0) ? rally.special(0).name + (ui.attackTarget ? ' locked in' : '! Tap where it should land') : ui.attackTarget ? shotName + ' locked in' : SR.touch ? 'Tap their court where the spike should land' : 'Click their court where the spike should land');
       else if (ui.prompt === 'block') {
         hint(ctx, SR.touch ? 'Call the block: commit to a side, or Read the set' : 'Call the block (1-4 or tap a B zone): commit to a side, or Read the set');
         this.buttons = buttonRow(ctx, [{ id: 'left', label: 'Left' }, { id: 'middle', label: 'Middle' }, { id: 'right', label: 'Right' }, { id: 'read', label: 'Read' }], ui.blockCall, 'block');

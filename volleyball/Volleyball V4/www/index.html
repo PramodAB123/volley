@@ -236,7 +236,7 @@
         <div class="home-grid">
           <button id="btn-league" class="feat f-league" type="button"><span class="f-ico"><svg viewBox="0 0 64 56" aria-hidden="true"><g fill="#ffd23f" stroke="#b86e00" stroke-width="1"><path d="M10 14c-6 8-6 20 2 28 2-8 0-20-2-28z"/><path d="M6 24c-3 7 0 15 7 19-1-7-3-14-7-19z"/><path d="M54 14c6 8 6 20-2 28-2-8 0-20 2-28z"/><path d="M58 24c3 7 0 15-7 19 1-7 3-14 7-19z"/></g><path d="M20 6h24v10c0 8-5.4 14-12 14s-12-6-12-14z" fill="#ffd23f" stroke="#b86e00" stroke-width="1.4"/><path d="M20 9h-5c0 6 3 9.5 7 10M44 9h5c0 6-3 9.5-7 10" fill="none" stroke="#ffd23f" stroke-width="2.6" stroke-linecap="round"/><path d="M29 30h6v7h-6z" fill="#e8a400"/><path d="M22 37h20l2 7H20z" fill="#ffd23f" stroke="#b86e00" stroke-width="1"/><rect x="19" y="44" width="26" height="5" rx="1.5" fill="#8a4b00"/><path d="M32 10.5l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#fff8d6"/></svg></span><b>League</b><small id="league-prog"></small><i class="f-shine" aria-hidden="true"></i></button>
           <button id="btn-cup" class="feat f-cup" type="button"><span class="f-ico"><svg viewBox="0 0 64 56" aria-hidden="true"><path d="M18 4h28v14c0 9-6.3 16-14 16s-14-7-14-16z" fill="#ffd23f" stroke="#b86e00" stroke-width="1.4"/><path d="M18 8H10c0 8 4 13 10 14M46 8h8c0 8-4 13-10 14" fill="none" stroke="#ffd23f" stroke-width="3.2" stroke-linecap="round"/><path d="M28 33h8v8h-8z" fill="#e8a400"/><path d="M20 41h24l2.5 7h-29z" fill="#ffd23f" stroke="#b86e00" stroke-width="1"/><rect x="16" y="47.5" width="32" height="5" rx="1.5" fill="#8a4b00"/><path d="M25 8c0 7 1 12 4.6 16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".6"/><path d="M32 9.5l2 4 4.4.6-3.2 3.1.8 4.4-4-2.1-4 2.1.8-4.4-3.2-3.1 4.4-.6z" fill="#fff8d6"/></svg></span><b>Tournament</b><small id="cup-prog"></small><i class="f-shine" aria-hidden="true"></i></button>
-          <button id="btn-shop" class="feat f-shop" type="button"><span class="f-ico"><svg viewBox="0 0 64 56" aria-hidden="true"><path d="M24 18v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/><path d="M12 17h40l-3.5 35h-33z" fill="#e9fff6"/><path d="M12 17h40l-.8 7H12.8z" fill="#b9f3da"/><path d="M32 26l3 6.2 6.8.9-5 4.8 1.2 6.8-6-3.2-6 3.2 1.2-6.8-5-4.8 6.8-.9z" fill="#ffd23f" stroke="#c98a00" stroke-width="1" stroke-linejoin="round"/><circle cx="24" cy="20" r="2" fill="#0f766e"/><circle cx="40" cy="20" r="2" fill="#0f766e"/></svg></span><b>Shop</b><small id="shop-prog">Get players, kits and more</small><i class="f-shine" aria-hidden="true"></i></button>
+          <button id="btn-shop" class="feat f-shop" type="button"><span class="f-ico"><svg viewBox="0 0 64 56" aria-hidden="true"><path d="M24 18v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/><path d="M12 17h40l-3.5 35h-33z" fill="#e9fff6"/><path d="M12 17h40l-.8 7H12.8z" fill="#b9f3da"/><path d="M32 26l3 6.2 6.8.9-5 4.8 1.2 6.8-6-3.2-6 3.2 1.2-6.8-5-4.8 6.8-.9z" fill="#ffd23f" stroke="#c98a00" stroke-width="1" stroke-linejoin="round"/><circle cx="24" cy="20" r="2" fill="#0f766e"/><circle cx="40" cy="20" r="2" fill="#0f766e"/></svg></span><b>Shop</b><small id="shop-prog">Skills, balls, courts and more</small><i class="f-shine" aria-hidden="true"></i></button>
         </div>
 
         <button id="btn-team" class="strip team-strip" type="button"></button>
@@ -388,6 +388,8 @@
       <div class="panel">
         <h2><button class="top-back" type="button" data-back aria-label="Back to menu"><span aria-hidden="true">‹</span> Back</button>Shop <span class="shop-bal"><span class="stars-badge inline"><i class="gem" aria-hidden="true"></i><span data-stars>0</span></span><span class="stars-badge inline coin-badge"><i class="coin" aria-hidden="true"></i><span data-coins>0</span></span></span></h2>
         <p class="muted">Every match earns coins and XP. Wins, titles, level-ups and daily gifts give diamonds. Spend both here.</p>
+        <h3 id="shop-skills-h">Skill packs</h3>
+        <div id="shop-skills"></div>
         <h3>Custom team</h3>
         <div id="shop-custom"></div>
         <h3>Balls</h3>
@@ -665,6 +667,7 @@
   <script src="js/ads.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/custom.js"></script>
+  <script src="js/skills.js"></script>
   <script src="js/daily.js"></script>
   <script src="js/challenge.js"></script>
   <script src="js/demo.js"></script>

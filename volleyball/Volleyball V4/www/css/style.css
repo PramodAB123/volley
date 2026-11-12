@@ -2749,3 +2749,46 @@ img.lg-t { width: 58px; height: 60px; }
 @media (max-width: 360px) { .st-hero { gap: 10px; padding: 10px; } .sh-ring { width: 96px; height: 96px; } .sh-mid b { font-size: 23px; } .sh-row { padding: 5px 8px; font-size: 13px; } }
 .st-tabs .tc-count { white-space: nowrap; }
 @media (max-width: 380px) { .stats-panel .sp-tot { display: none; } }
+
+/* ===== 2026-11-12 skill packs (js/skills.js): Shop section ===== */
+.sk-head { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(170, 180, 255, 0.22); font-size: 13px; line-height: 1.35; color: #d6dcff; }
+.sk-head b { color: #fff; }
+.sk-slots { display: flex; gap: 5px; flex: none; }
+.sk-slots i { width: 14px; height: 14px; border-radius: 4px; border: 2px solid rgba(255, 210, 63, 0.7); }
+.sk-slots i.full { background: #ffd23f; box-shadow: 0 0 8px rgba(255, 210, 63, 0.6); }
+.sk-note { margin: 8px 2px 0; padding: 7px 10px; border-radius: 10px; background: rgba(255, 159, 28, 0.15); color: #ffd38a; font-size: 13px; font-weight: 700; }
+.sk-sub { margin: 14px 2px 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: #8f9cff; }
+.sk-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
+.sk-card { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 76px; padding: 10px 12px; text-align: left; cursor: pointer; font: inherit; color: #fff;
+  border-radius: 16px; border: 1.5px solid rgba(170, 180, 255, 0.22); background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)); }
+.sk-card.locked .sk-ico { filter: saturate(0.55) brightness(0.8); }
+.sk-card.active { border-color: #ffd23f; background: linear-gradient(180deg, rgba(255, 210, 63, 0.16), rgba(255, 210, 63, 0.05)); box-shadow: 0 0 0 3px rgba(255, 210, 63, 0.14); }
+.sk-card.special.active { border-color: #b9a8ff; background: linear-gradient(180deg, rgba(124, 92, 255, 0.28), rgba(124, 92, 255, 0.08)); box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.2), 0 0 18px rgba(124, 92, 255, 0.25); }
+.sk-card:active { transform: translateY(1px); }
+.sk-ico { flex: none; display: grid; place-items: center; width: 50px; height: 50px; border-radius: 14px;
+  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.45), transparent 55%), var(--sk); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25), 0 4px 10px rgba(0, 0, 0, 0.3); }
+.sk-ico svg { width: 34px; height: 34px; }
+.sk-ico.big { width: 72px; height: 72px; margin: 0 auto; border-radius: 20px; }
+.sk-ico.big svg { width: 50px; height: 50px; }
+.sk-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.sk-txt b { font-size: 15px; font-weight: 900; display: flex; align-items: center; gap: 6px; }
+.sk-txt span { font-size: 12.5px; line-height: 1.3; color: #c2c9f2; }
+.sk-lock { display: inline-block; width: 11px; height: 12px; border-radius: 2px; background: #8f9cff; position: relative; top: 1px; }
+.sk-lock::before { content: ''; position: absolute; left: 2px; top: -5px; width: 7px; height: 7px; border: 2px solid #8f9cff; border-bottom: 0; border-radius: 5px 5px 0 0; box-sizing: border-box; }
+.sk-btn { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 7px 11px; border-radius: 11px; font-size: 13.5px; font-weight: 900; white-space: nowrap; }
+.sk-btn .gem, .sk-btn .coin { width: 15px; height: 15px; }
+.sk-btn.buy.p-coin { background: rgba(245, 160, 0, 0.16); color: #ffc14d; border: 1px solid rgba(245, 160, 0, 0.45); }
+.sk-btn.buy.p-gem { background: rgba(56, 182, 255, 0.15); color: #7fd0ff; border: 1px solid rgba(56, 182, 255, 0.45); }
+.sk-btn.off { background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid rgba(255, 255, 255, 0.25); }
+.sk-btn.on { background: #ffd23f; color: #2d1b00; }
+.sk-btn.on::before { content: '\2713'; font-weight: 900; }
+.sk-card.special .sk-btn.on { background: #b9a8ff; color: #1a0f45; }
+.slot-card { margin-top: 10px; border-style: dashed; border-color: rgba(255, 210, 63, 0.5); }
+.slot-card .sk-ico { --sk: rgba(255, 210, 63, 0.25); }
+@media (max-width: 380px) { .sk-list { grid-template-columns: 1fr; } .sk-card { gap: 10px; padding: 9px 10px; } .sk-ico { width: 44px; height: 44px; } .sk-ico svg { width: 30px; height: 30px; } .sk-txt span { font-size: 12px; } }
+
+/* 2026-11-12 tournament rounds get harder: label in the next-match bar */
+.cup-ramp { font-style: normal; font-weight: 900; }
+.cup-ramp.r0 { color: #7cf0b0; }
+.cup-ramp.r1 { color: #ffc14d; }
+.cup-ramp.r2 { color: #ff7a7a; }
