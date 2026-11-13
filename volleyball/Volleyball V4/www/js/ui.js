@@ -156,7 +156,15 @@
     home = SR.kitTeam(home, away);
     // A custom team that looks like the opponent swaps its jersey and trim.
     if (home.custom && SR.colorGap(home.color, away.color) < 90 && SR.colorGap(home.trim, away.color) >= 90) home = Object.assign({}, home, { color: home.trim, trim: home.color });
-    SR.game = new SR.Game({ home: home, away: away, format: format || s.format, difficulty: difficulty || s.difficulty, boost: boost || 0, human: 0, mode: mode, venue: venue || null, onEnd: finishMatch });
+    SR.game = new SR.Game({ home: home, away: away, format: format || s.format, difficulty: difficulty || s.difficulty, boost: boost || 0, human: 0, mode: mode, venue: venue || null, hustle: bigMatch(), onEnd: finishMatch });
+  }
+  // Big matches, where receivers chase every serve and dive to rescue it:
+  // the top two leagues and tournaments, a league's last round and a tournament final.
+  function bigMatch() {
+    var L = data().league, T = data().tournament;
+    if (mode === 'league' && L) return (L.lid || 0) >= SR.LEAGUES.length - 2 || L.round === L.rounds.length - 1;
+    if (mode === 'cup' && T) return (T.cid || 0) >= SR.CUPS.length - 2 || T.round === 2;
+    return false;
   }
 
   // Quick match: Random starts at once with two random teams; Choose team

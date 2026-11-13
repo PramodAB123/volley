@@ -7,7 +7,7 @@
     var boost = (SR.DIFFICULTY[cfg.difficulty] || SR.DIFFICULTY.normal).boost + (Number(cfg.boost) || 0);
     this.cfg = cfg;
     this.match = new SR.Match(cfg.home, cfg.away, cfg.format, cfg.human === 0 ? boost : 0);
-    this.rally = new SR.Rally(this.match, { human: cfg.human, demo: !!cfg.demo, onPoint: this.onPoint.bind(this) });
+    this.rally = new SR.Rally(this.match, { human: cfg.human, demo: !!cfg.demo, hustle: !!cfg.hustle, onPoint: this.onPoint.bind(this) });
     this.paused = false;
     this.hover = null;
     this.shift = false;

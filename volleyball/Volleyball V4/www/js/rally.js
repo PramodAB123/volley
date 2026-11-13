@@ -35,6 +35,7 @@
     this.human = opts.human;          // 0 = you control team 0, 'both' = online, -1 = CPU plays both
     this.humans = [opts.human === 0 || opts.human === 'both', opts.human === 'both'];
     this.onPoint = opts.onPoint || function () {};
+    this.hustle = !!opts.hustle;      // big matches: receivers chase and rescue aces
     this.t = 0;
     this.state = 'idle';
     this.stateT = 0;
@@ -291,14 +292,16 @@
     if (tc === null || tc > f.landT - 0.04) tc = f.landT - 0.06;
     var pc = P.at(f.p0, f.v, tc);
     if ((team === 0) !== (pc.x < C.NET_X)) { tc = f.landT - 0.06; pc = P.at(f.p0, f.v, tc); }
-    var best = null, bestArr = 1e9, quick = this.skill(team, 'feet'), reach = REACH + (quick ? 0.1 : 0);
+    var best = null, bestArr = 1e9, second = null, secondArr = 1e9, quick = this.skill(team, 'feet'), reach = REACH + (quick ? 0.1 : 0);
+    var isServe = this.hustle && this.lastOffense && this.lastOffense.type === 'serve' && !out;
     this.players[team].forEach(function (p) {
       if (p === self.server && self.state === 'serve') return;
       var arr = REACT + (self.freeze || 0) + Math.max(0, dist(p, pc) - reach) / p.speed;
       // A player still in the air (blocking) can only play it after landing.
       var down = p.jumpAt + 0.75 + 0.12 - self.t;
       if (down > 0) arr = Math.max(arr, down + Math.max(0, dist(p, pc) - reach) / p.speed);
-      if (arr < bestArr) { bestArr = arr; best = p; }
+      if (arr < bestArr) { second = best; secondArr = bestArr; bestArr = arr; best = p; }
+      else if (arr < secondArr) { secondArr = arr; second = p; }
     });
     if (!best) return;
     var stretch = false;
@@ -306,7 +309,15 @@
       // Try a dive just before the ball hits the floor.
       var t2 = f.landT - 0.03, p2 = P.at(f.p0, f.v, t2), arr2 = REACT + (this.freeze || 0) + Math.max(0, dist(best, p2) - reach - (quick ? 0.9 : 0.6)) / best.speed;
       arr2 += Math.max(0, best.jumpAt + 0.87 - this.t);
-      if (arr2 > t2 + 0.15) return; // nobody gets there
+      // A serve just out of reach: a flat-out dive can still rescue it now and then.
+      var rescue = isServe && arr2 <= t2 + 0.5 && Math.random() < (quick ? 0.6 : 0.45);
+      if (arr2 > t2 + 0.15 && !rescue) {
+        // Nobody gets there. On a serve the nearest receiver still chases it
+        // and throws in a late dive, and the next one runs in behind, so an
+        // ace never finds them standing still.
+        if (isServe) { this.chaseAce(best, f, L); if (second) this.backUp(second, L, best); }
+        return;
+      }
       tc = t2; pc = p2; stretch = true;
     }
     // Stand so the ball meets the forearm platform out in front, not the chest.
@@ -317,15 +328,81 @@
       sx = pc.x - ddx / dl * 0.95; sy = pc.y - ddy / dl * 0.95;
     }
     best.lock = true; best.tx = sx; best.ty = sy;
+    if (isServe && second) this.backUp(second, pc, best);
     best.contactAt = this.t + tc - f.t; best.contactKind = stretch ? 'dive' : 'pass';
     best.contactPt = { x: pc.x, y: pc.y, z: pc.z };
     this.at(tc, function () { self.touch1(best, { stretch: stretch, bonus: bonus }); });
+  };
+
+  // The second receiver runs in behind the first, ready to cover the ball.
+  R.backUp = function (p, at, first) {
+    var dx = at.x - first.x, dy = at.y - first.y, dl = Math.sqrt(dx * dx + dy * dy) || 1;
+    // Beside and behind the first receiver, on the side away from them.
+    var bx = at.x - (p.team === 0 ? 1 : -1) * 1.3, by = at.y + (p.y > first.y ? 1 : -1) * 1.1;
+    if (dl > 0.3) { bx -= dx / dl * 0.4; by -= dy / dl * 0.4; }
+    p.lock = true; p.tx = clamp(bx, 0.3, C.L - 0.3); p.ty = clamp(by, 0.3, C.W - 0.3);
+    p.backup = true;
+    this.backups = (this.backups || []).concat([p]);
+  };
+  R.releaseBackups = function () {
+    (this.backups || []).forEach(function (p) { if (p.backup) { p.backup = false; p.lock = false; } });
+    this.backups = [];
+  };
+
+  // A shanked serve: the nearest teammate sprints after it and dives. If they
+  // get there in time it is sometimes rescued and sent back over the net.
+  R.rescueShank = function (team, passer) {
+    var f = this.flight, self = this;
+    if (!f) return;
+    var t2 = f.landT - 0.06, pc = P.at(f.p0, f.v, t2), L = P.at(f.p0, f.v, f.landT), quick = this.skill(team, 'feet');
+    var best = null, bestArr = 1e9;
+    this.players[team].forEach(function (c) {
+      if (c === passer) return;
+      var arr = REACT + Math.max(0, dist(c, pc) - REACH - (quick ? 0.9 : 0.6)) / c.speed;
+      if (arr < bestArr) { bestArr = arr; best = c; }
+    });
+    if (!best) return;
+    var rescue = bestArr <= t2 + 0.2 && Math.random() < (quick ? 0.7 : 0.55);
+    if (!rescue) { this.chaseAce(best, f, L); return; }
+    var dx = pc.x - best.x, dy = pc.y - best.y, dl = Math.sqrt(dx * dx + dy * dy) || 1;
+    best.lock = true; best.tx = pc.x - dx / dl * 0.95; best.ty = pc.y - dy / dl * 0.95;
+    best.contactAt = this.t + t2 - f.t; best.contactKind = 'dive';
+    best.contactPt = { x: pc.x, y: pc.y, z: pc.z };
+    this.at(t2, function () {
+      if (self.state !== 'rally') return;
+      var cp = { x: self.ball.x, y: self.ball.y, z: Math.max(0.3, self.ball.z) };
+      best.lock = false; best.contactAt = 0; best.dive = 1; best.contactPt = cp;
+      self.act(best, 'dive', 0.9);
+      self.touches[team] = 2;
+      self.lastTouch = team;
+      self.rescues = (self.rescues || 0) + 1;
+      SR.audio.play('pass');
+      self.fx('touch', { pos: cp });
+      self.say('SAVE!', '', self.m.teams[team].color, 0.9);
+      self.freeBall(team, cp);
+    });
+  };
+
+  // An ace the receivers can't reach: run at the ball and dive for it as it lands.
+  R.chaseAce = function (p, f, L) {
+    var self = this, dx = L.x - p.x, dy = L.y - p.y, dl = Math.sqrt(dx * dx + dy * dy) || 1;
+    var t2 = f.landT - 0.05;
+    // Run to a spot short of the landing point and finish with a full-length dive.
+    p.lock = true; p.tx = L.x - dx / dl * Math.min(dl, 1.1); p.ty = L.y - dy / dl * Math.min(dl, 1.1);
+    p.contactAt = this.t + t2 - f.t; p.contactKind = 'dive';
+    p.contactPt = { x: L.x, y: L.y, z: 0.25 };
+    this.at(t2 - 0.12, function () {
+      if (self.state !== 'rally') return;
+      p.dive = 1; p.missDive = self.t;
+      self.act(p, 'dive', 0.9);
+    });
   };
 
   // ---- touches ------------------------------------------------------------
 
   R.touch1 = function (p, o) {
     if (this.state !== 'rally') return;
+    this.releaseBackups();
     var team = p.team, f = this.flight;
     var spd = P.speed(P.vel(f.v, f.t));
     var rating = this.m.ratings[team].pass;
@@ -352,6 +429,7 @@
       var w = Math.random() < 0.5 ? world(team, rnd(-3, -1), l.y + rnd(-2, 2)) : world(team, rnd(1, 7), l.y < 4.5 ? rnd(-3, -1.2) : rnd(10.2, 12));
       this.launch(cp, { x: w.x, y: w.y, z: 0 }, 1.1);
       this.formation(team, 'defense');
+      if (this.hustle && serveHeat > 0) this.rescueShank(team, p);
       return;
     }
     if (q < 0.3 && Math.random() < 0.3) { this.freeBall(team, cp); return; }
@@ -678,7 +756,8 @@
     var v = f ? P.vel(f.v, f.t) : { x: 0, y: 0, z: -3 };
     this.bounce = { x: b.x, y: b.y, z: 0, vx: v.x * 0.5, vy: v.y * 0.5, vz: Math.abs(v.z) * 0.45 };
     this.flight = null;
-    this.all().forEach(function (p) { p.lock = false; });
+    this.all().forEach(function (p) { p.lock = false; p.backup = false; });
+    this.backups = [];
     this.formation(0, 'base');
     this.formation(1, 'base');
     var me = this, t0 = this.t;
@@ -688,7 +767,12 @@
       p.tx = w.x; p.ty = w.y;
       p.act = { type: 'cheer', t: t0 + 0.35 + Math.random() * 0.15, dur: 1.0 };
     });
-    this.players[1 - winner].forEach(function (p) { me.act(p, 'sad', 1.0 + Math.random() * 0.4); p.contactAt = 0; });
+    this.players[1 - winner].forEach(function (p) {
+      // A player who just dove for an ace stays down a moment before the head drops.
+      if (p.missDive && t0 - p.missDive < 0.4) { p.act = { type: 'sad', t: t0 + 0.75, dur: 1.0 }; p.delayUntil = t0 + 0.7; }
+      else me.act(p, 'sad', 1.0 + Math.random() * 0.4);
+      p.missDive = 0; p.contactAt = 0;
+    });
 
     var name = this.m.teams[winner].name, color = this.m.teams[winner].color;
     var label = { ace: 'ACE!', kill: 'KILL!', block: 'BLOCK!', point: 'POINT' }[kind] || (reason === 'net' ? 'NET' : 'OUT');
