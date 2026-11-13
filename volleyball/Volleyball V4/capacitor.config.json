@@ -3,7 +3,7 @@
   "appName": "Spike Rally",
   "webDir": "www",
   "backgroundColor": "#0b1220",
-  "loggingBehavior": "debug",
+  "loggingBehavior": "none",
   "android": {
     "backgroundColor": "#0b1220",
     "allowMixedContent": false,

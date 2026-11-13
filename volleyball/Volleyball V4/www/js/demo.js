@@ -216,7 +216,8 @@
     $('demo').classList.add('done');
     $('demo-end').classList.remove('hidden');
     SR.audio.play('reward');
-    var q = $('demo-quick'); if (q) try { q.focus({ preventScroll: true }); } catch (e) { /* old WebView */ }
+    var q = $('demo-quick'); if (q) q.textContent = D.training ? 'Play your first match' : 'Play a match';
+    if (q) try { q.focus({ preventScroll: true }); } catch (e) { /* old WebView */ }
   }
 
   // ---- on-court hints ----------------------------------------------------------
@@ -407,8 +408,10 @@
   }
 
   // at: the chapter to begin with (the skill tiles on the help screen).
-  D.start = function (origin, m, at) {
+  D.start = function (origin, m, at, training) {
     from = origin || 'help';
+    D.training = !!training;
+    $('demo').classList.toggle('training', D.training);
     setMode(m);
     SR.ui.show(null);
     $('hud').classList.add('hidden');
@@ -438,6 +441,9 @@
     clearFx();
     SR.resize();
     if (!quiet) SR.ui.show(from === 'menu' ? 'scr-menu' : 'scr-help');
+    // After the first-launch training: the daily gift greets them on the menu.
+    if (D.training && !quiet && SR.daily && SR.ui.current() === 'scr-menu') SR.daily.onMenu();
+    D.training = false;
   };
 
   function init() {
@@ -456,7 +462,8 @@
     on('demo-again', function () { retries = 0; go(0); setPlaying(true); });
     on('demo-done', function () { D.stop(); });
     on('demo-mode', function () { setMode(mode === 'watch' ? 'try' : 'watch'); retries = 0; go(ch); setPlaying(true); });
-    on('demo-quick', function () { D.stop(true); SR.ui.show('scr-menu'); $('btn-quick').click(); });
+    // A new player's first match after training is a quick one-set match with a random team.
+    on('demo-quick', function () { var t = D.training; D.stop(true); SR.ui.show('scr-menu'); $(t && $('btn-quick-random') ? 'btn-quick-random' : 'btn-quick').click(); });
     // Watch mode: tapping the court pauses and resumes.
     $('game').addEventListener('pointerup', function () { if (D.active && mode === 'watch' && !finished) setPlaying(!playing); });
     window.addEventListener('keydown', function (e) {

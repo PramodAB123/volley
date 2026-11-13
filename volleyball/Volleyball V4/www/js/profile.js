@@ -283,6 +283,15 @@
     else if (SR.ui.current() === 'scr-menu' && SR.daily) SR.daily.onMenu();
   }
 
+  // A new player goes from the name dialog straight into the training.
+  function firstTraining() {
+    var d = SR.save.data;
+    if (d.trained || !SR.demo || (d.stats && d.stats.matches > 0)) { if (SR.ui.current() === 'scr-menu' && SR.daily) SR.daily.onMenu(); return; }
+    d.trained = true;
+    SR.ui.save();
+    SR.demo.start('menu', 'try', 0, true);
+  }
+
   function init() {
     if (!$('name-dlg')) return;
     $('name-ok').addEventListener('click', done);
@@ -299,11 +308,12 @@
     go('btn-home-demo', function () { SR.ui.show('scr-help'); var h = document.querySelector('#scr-help .panel'); if (h) h.scrollTop = 0; });
     refresh();
     // First launch: ask the name before anything else.
-    if (!prof().name && !/[?&]demo/.test(location.search)) ask(true);
+    if (!prof().name && !/[?&]demo/.test(location.search)) ask(true, firstTraining);
   }
 
   SR.profile = {
     init: init,
+    firstTraining: firstTraining,
     refresh: refresh,
     avatar: avatar,
     addXp: addXp,

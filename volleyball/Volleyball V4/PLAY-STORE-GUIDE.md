@@ -82,7 +82,7 @@ Google keeps the real app signing key for you (**Play App Signing**, on by defau
 **App access** – *All functionality is available without any access restrictions.*
 
 **Content rating** (IARC questionnaire)
-- Email: yours. Category: **Game**.
+- Email: oddoragames@gmail.com. Category: **Game**.
 - Violence, blood, fear, sexuality, nudity, bad language, drugs, alcohol, tobacco, gambling, simulated gambling: **No** to all.
 - Does the game let users interact or exchange content (chat, online play)? **No**.
 - Does it share the user's location with others? **No**.
@@ -143,7 +143,7 @@ Serve, set, spike. Can you win the whole career?
 **Phone screenshots** (2 to 8): `store/screenshots/phone-landscape/` (1920 × 1080) and/or `store/screenshots/phone-portrait/` (1080 × 1920). Landscape shots are what Google prefers for games.
 **7-inch and 10-inch tablet screenshots**: `store/screenshots/tablet-landscape/` (2560 × 1440).
 **Category**: Game > **Sports**. Tags: Sports, Volleyball, Casual, Offline, Single player.
-**Contact details**: an email address (required, shown publicly). Website: `https://spikerally.buzz` (optional).
+**Contact details**: oddoragames@gmail.com (required, shown publicly). Website: `https://spikerally.buzz` (optional).
 
 Store listing rules to keep: no "free", "#1", "best" or "new" in the app name or icon, no fake reviews or rankings in images, screenshots must show the real game (they do).
 

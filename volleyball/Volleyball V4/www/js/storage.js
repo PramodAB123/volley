@@ -12,6 +12,7 @@
       profile: { name: '', avatar: 'a1', level: 1, xp: 0, total: 0 },
       owned: { balls: ['classic'], courts: ['maple'], kits: ['team'] },
       equipped: { ball: 'classic', court: 'maple', kit: 'team' },
+      trained: false,
       settings: { format: 'standard', difficulty: 'normal', sound: true, music: true, sharp: true, hd: false, team: 'hawks' },
       stats: { matches: 0, wins: 0, points: 0, aces: 0, kills: 0, blocks: 0, errors: 0, sets: 0, best: 0, streak: 0, byTeam: {} },
       // The League screen's trophy cabinet; seasons = last finishes, newest first.
@@ -127,6 +128,8 @@
     var def = defaults();
     d.stars = num(d.stars);
     d.coins = num(d.coins);
+    // Training shows once, and never to players who already played.
+    d.trained = d.trained === true || !!(d.stats && d.stats.matches > 0);
     if (!obj(d.profile)) d.profile = def.profile;
     var pf = d.profile;
     pf.name = SR.playerName(pf.name);

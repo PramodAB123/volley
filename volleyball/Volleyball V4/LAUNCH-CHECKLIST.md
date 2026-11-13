@@ -36,6 +36,7 @@
 ## Play Console answers (App content)
 
 - **Privacy policy URL:** https://spikerally.buzz/app-privacy.html
+- **Developer contact email (shown on the store page):** oddoragames@gmail.com
 - **Ads:** Yes, the app contains ads.
 - **App access:** All functionality is available without special access.
 - **Target audience:** 13 and over only. Not designed for children, so don't opt into Families.

@@ -505,6 +505,7 @@
         if (N.conn !== c) return;
         N.lastRecv = now();
         var msg;
+        if (typeof e.data !== 'string' || e.data.length > MAX_MSG) return;
         try { msg = JSON.parse(e.data); } catch (err) { return; }
         if (msg && typeof msg === 'object') onData(msg);
       };
@@ -992,7 +993,12 @@
     if (c) attach(c);
   }
 
+  // Everything from the other phone is checked before use: a broken or
+  // tampered message is dropped instead of crashing the game.
+  var MAX_MSG = 65536;
+  function isNum(v) { return typeof v === 'number' && isFinite(v); }
   function onData(msg) {
+    if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string' || msg.t.length > 16) return;
     if (msg.t === 'ping') { if (num(msg.s)) send({ t: 'pong', s: msg.s }); return; }
     if (msg.t === 'pong') {
       if (num(msg.s)) { var rt = now() - msg.s; if (rt >= 0 && rt < 10000) N.rtt = N.rtt ? N.rtt + (rt - N.rtt) * 0.3 : rt; }
@@ -1072,13 +1078,18 @@
       SR.game = new GuestGame(N.myTeam, N.oppTeam, N.format, N.court);
       return;
     }
-    if (msg.t === 's' && SR.game && SR.game.cfg.online === 'guest') { SR.game.rally.push(msg); return; }
-    if (msg.t === 'ev' && SR.game && SR.game.cfg.online === 'guest') { SR.game.rally.addEvents(msg.e || []); return; }
+    if (msg.t === 's' && SR.game && SR.game.cfg.online === 'guest') { if (isNum(msg.T)) SR.game.rally.push(msg); return; }
+    if (msg.t === 'ev' && SR.game && SR.game.cfg.online === 'guest') { if (Array.isArray(msg.e)) SR.game.rally.addEvents(msg.e.slice(0, 64)); return; }
     if (msg.t === 'end') {
+      if (N.phase !== 'playing' && N.phase !== 'rejoining') return;
+      var sets = Array.isArray(msg.sets) ? msg.sets : [0, 0];
+      var setN = function (v) { return isNum(v) ? Math.max(0, Math.min(9, Math.floor(v))) : 0; };
       N.phase = 'over';
-      var hist = (msg.history || []).map(function (s) { return [s[1], s[0]]; });
-      var st = (msg.stats && msg.stats[1]) || { aces: 0, kills: 0, blocks: 0, errors: 0 };
-      finishOnline({ me: N.myTeam, opp: N.oppTeam, mySets: msg.sets[1], oppSets: msg.sets[0], history: hist, stats: st });
+      var hist = (Array.isArray(msg.history) ? msg.history.slice(0, 9) : []).filter(function (s) { return Array.isArray(s) && isNum(s[0]) && isNum(s[1]); })
+        .map(function (s) { return [Math.floor(s[1]), Math.floor(s[0])]; });
+      var st0 = msg.stats && msg.stats[1], st = { aces: 0, kills: 0, blocks: 0, errors: 0 };
+      if (st0 && typeof st0 === 'object') Object.keys(st).forEach(function (k) { if (isNum(st0[k])) st[k] = Math.max(0, Math.min(999, Math.floor(st0[k]))); });
+      finishOnline({ me: N.myTeam, opp: N.oppTeam, mySets: setN(sets[1]), oppSets: setN(sets[0]), history: hist, stats: st });
     }
   }
 

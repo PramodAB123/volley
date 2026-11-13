@@ -1670,7 +1670,7 @@
         armed = false; b.textContent = 'Reset progress'; b.classList.remove('armed');
         SR.save.reset(); renderStats(); refreshStars(); refreshCareer();
         // Back to the very first launch: ask the name again.
-        if (SR.profile) SR.profile.ask(true);
+        if (SR.profile) SR.profile.ask(true, SR.profile.firstTraining);
       });
       // The map's curve depends on its width.
       var lastW = 0;
