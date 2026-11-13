@@ -229,7 +229,9 @@
 
   // ---- relay (backup path) --------------------------------------------------
 
-  function topic(rest) { return 'spikerally/v1/' + N.code + '/' + rest; }
+  // Topics carry a hash of the room code, never the code itself (see relay.js).
+  function roomCipher() { return SR.relay.Cipher(N.code); }
+  function topic(rest) { return 'spikerally/v1/' + roomCipher().tag + '/' + rest; }
   function relayUrls() {
     var c = SR.NET_CONFIG || {};
     return c.relays || ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081/mqtt'];
@@ -255,7 +257,7 @@
     if (!SR.relay || !relayUrls().length) return;
     // The last will clears the "room is open" mark if the host vanishes; the hub
     // dials dropped brokers again and puts the mark back.
-    var h = N.hub = new SR.relay.Hub(relayUrls(), { topic: topic('room'), payload: '', retain: true }, { keep: true });
+    var h = N.hub = new SR.relay.Hub(relayUrls(), { topic: topic('room'), payload: '', retain: true }, { keep: true, cipher: roomCipher() });
     var code = N.code;
     h.roomTopic = topic('room');
     h.subscribe(topic('h'));
@@ -289,7 +291,7 @@
     closeHub();
     N.relayRoom = null;
     if (!SR.relay || !relayUrls().length) return;
-    var h = N.hub = new SR.relay.Hub(relayUrls(), null, { keep: true }), code = N.code, first = true;
+    var h = N.hub = new SR.relay.Hub(relayUrls(), null, { keep: true, cipher: roomCipher() }), code = N.code, first = true;
     var inbox = 'g/' + h.id;
     h.subscribe(topic(inbox));
     h.subscribe(topic('room'));

@@ -17,7 +17,7 @@
 // field by field below, so nothing else from the provider's reply slips
 // through). Errors are never echoed back or logged. Never put the keys in the
 // game's JS files or commit a .env file (.gitignore blocks those).
-const ALLOWED = /^(https?:\/\/)?((www\.)?spikerally\.buzz|[a-z0-9-]+\.vercel\.app|localhost(:\d+)?|127\.0\.0\.1(:\d+)?)(\/|$)/i;
+const ALLOWED = /^(https?:\/\/)?((www\.)?spikerally\.buzz|volley[a-z0-9-]*\.vercel\.app|localhost(:\d+)?|127\.0\.0\.1(:\d+)?)(\/|$)/i;
 
 async function cloudflare(id, token) {
   const r = await fetch('https://rtc.live.cloudflare.com/v1/turn/keys/' + encodeURIComponent(id) + '/credentials/generate-ice-servers', {

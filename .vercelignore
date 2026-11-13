@@ -1,0 +1,11 @@
+# Only the website (Volleyball V1) and the api folder go to Vercel.
+# The other builds, store files and promo art stay private.
+volleyball/Volleyball V2
+volleyball/Volleyball V3
+volleyball/Volleyball V3 GamePix
+volleyball/Volleyball V4
+volleyball/Spike Rally Server
+promo
+SETUP.md
+.github
+volleyball/Volleyball V1/brand/generate.py
