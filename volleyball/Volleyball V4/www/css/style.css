@@ -3131,3 +3131,36 @@ button.mp-card:active { transform: scale(0.98); }
   .h-art.h-photo { -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 84%, transparent 100%), linear-gradient(0deg, transparent 0%, #000 18%);
     mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 84%, transparent 100%), linear-gradient(0deg, transparent 0%, #000 18%); -webkit-mask-composite: source-in; mask-composite: intersect; }
 }
+/* 2026-11-13 Settings alignment: Match length and Difficulty both sit on a
+   full-width line under their label, lined up with the text; the Difficulty
+   buttons are equal and level (no stray divider or drop shadow); the footer
+   is centred. */
+.set2 .set-row.stack { row-gap: 10px; }
+.set2 .set-row.stack .set-sel-wrap { flex: 1 1 100%; max-width: none; margin-left: 52px; }
+.set2 .set-row.stack .set-sel { height: 44px; font-size: 14.5px; }
+.set2 .seg { flex: 1 1 100%; width: auto; margin: 0 0 0 52px; border: 0; overflow: visible; box-sizing: border-box; }
+.set2 .seg button + button { border-left: 0; }
+.set2 .seg button { min-height: 40px; }
+.set2 .seg button.on { box-shadow: inset 0 -3px 0 rgba(180, 106, 0, 0.9); }
+.set2 .set-row.stack .sr-txt b { white-space: normal; }
+.set2 .set-about { justify-content: center; text-align: left; padding-top: 2px; }
+.set2 .set-chips { justify-content: center; }
+/* 2026-11-13 Language + Daily reminders rows */
+.set2 .set-hint { margin: -4px 2px 10px 52px; font-size: 12.5px; line-height: 1.4; color: #ffcf7a; }
+/* Persian reads right to left: each line takes its direction from its text
+   (the layout itself stays as it is). */
+html[data-lang="fa"] :is(p, b, small, span, button, h2, h3, h4, li, label, em, strong, div) { unicode-bidi: plaintext; }
+/* Long or space-free labels (German, Polish, Japanese, Khmer...): the text
+   column takes the room left beside the icon and wraps there, instead of
+   dropping under the icon or running under the switch. */
+.set2 .set-row.stack .sr-txt { flex: 1 1 0; }
+.set2 .set-row .sr-txt b { white-space: normal; }
+.set2 .set-row .sr-txt b, .set2 .set-row .sr-txt small { overflow-wrap: anywhere; }
+/* Home bar labels in longer languages: smaller, and never wider than the
+   button (an ellipsis instead of touching the next one). */
+.h-nav-btn { min-width: 0; }
+.h-nav-btn > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html:is([data-lang="de"], [data-lang="pl"], [data-lang="vi"], [data-lang="fr"], [data-lang="es"], [data-lang="it"], [data-lang="pt"], [data-lang="id"]) .h-nav-btn { font-size: 11.5px; letter-spacing: -0.2px; }
+/* Back buttons and screen titles stay on one line in every language. */
+.top-back { white-space: nowrap; flex: 0 0 auto; }
+#scr-shop .panel > h2 { white-space: nowrap; }

@@ -13,7 +13,8 @@
       owned: { balls: ['classic'], courts: ['maple'], kits: ['team'] },
       equipped: { ball: 'classic', court: 'maple', kit: 'team' },
       trained: false,
-      settings: { format: 'standard', difficulty: 'normal', sound: true, music: true, sharp: true, hd: false, team: 'hawks' },
+      fmt53: true,
+      settings: { format: 'p5s3', difficulty: 'normal', sound: true, music: true, sharp: true, hd: false, team: 'hawks', lang: 'auto', notify: true },
       stats: { matches: 0, wins: 0, points: 0, aces: 0, kills: 0, blocks: 0, errors: 0, sets: 0, best: 0, streak: 0, byTeam: {} },
       // The League screen's trophy cabinet; seasons = last finishes, newest first.
       // lw[i] / cw[i] = titles won in league i / cup i (each has its own trophy).
@@ -162,8 +163,13 @@
     var s = d.settings;
     if (!isTeam(s.team)) s.team = def.settings.team;
     if (!SR.DIFFICULTY[s.difficulty]) s.difficulty = def.settings.difficulty;
+    // 2026-11-13: the default match is now best of 3 sets to 5 points; saves
+    // still on the old default (best of 3 to 15) move over once.
+    if (d.fmt53 !== true) { d.fmt53 = true; if (s.format === 'standard' || s.format === 'p15s3') s.format = 'p5s3'; }
     if (typeof s.format !== 'string' || (!SR.FORMATS[s.format] && SR.formatOf(s.format) === SR.FORMATS.standard)) s.format = def.settings.format;
     if (typeof s.sound !== 'boolean') s.sound = s.sound !== false && s.sound !== 'false';
+    if (typeof s.lang !== 'string' || !(s.lang === 'auto' || (SR.LANGS || []).some(function (l) { return l[0] === s.lang; }))) s.lang = 'auto';
+    if (typeof s.notify !== 'boolean') s.notify = s.notify !== false && s.notify !== 'false';
     if (typeof s.music !== 'boolean') s.music = s.music !== false && s.music !== 'false';
     if (typeof s.sharp !== 'boolean') s.sharp = s.sharp !== false && s.sharp !== 'false';
     // 2026-11-13: Sharp graphics is off by default (settings.hd, a new key, so it
@@ -217,7 +223,7 @@
       var raw = null;
       try {
         raw = window.localStorage.getItem(KEY);
-        if (raw) this.data = clean(merge(defaults(), JSON.parse(raw)));
+        if (raw) { var r = JSON.parse(raw); if (r && typeof r === 'object' && r.fmt53 !== true) r.fmt53 = false; this.data = clean(merge(defaults(), r)); }
       } catch (e) {
         // storage blocked: play without saves. A save that can't be read is
         // kept aside first (once), so the next write doesn't erase it for good.

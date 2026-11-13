@@ -1087,10 +1087,20 @@
   function hint(ctx, text) {
     var fs = Math.round(15 * UI), lh = fs + 7, maxW = W - 28;
     ctx.font = '600 ' + fs + 'px system-ui, sans-serif';
-    var words = text.split(' '), lines = [], cur = '';
+    // Translate the whole sentence first (the lines are cut afterwards).
+    if (SR.t) text = SR.t(text);
+    var lim = maxW - 32, words = text.split(' '), lines = [], cur = '';
+    // Chinese, Japanese, Thai and Khmer have no spaces: a "word" that is
+    // too wide is cut by characters instead.
+    function push(wd, sep) {
+      var t = cur ? cur + sep + wd : wd;
+      if (!cur || ctx.measureText(t).width <= lim) { cur = t; return; }
+      lines.push(cur); cur = wd;
+    }
     words.forEach(function (wd) {
-      var t = cur ? cur + ' ' + wd : wd;
-      if (cur && ctx.measureText(t).width > maxW - 32) { lines.push(cur); cur = wd; } else cur = t;
+      if (ctx.measureText(wd).width <= lim) { push(wd, ' '); return; }
+      var chars = Array.from ? Array.from(wd) : wd.split(''), first = true;
+      chars.forEach(function (ch) { push(ch, first && cur ? ' ' : ''); first = false; });
     });
     lines.push(cur);
     var w = 0;

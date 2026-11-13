@@ -194,6 +194,7 @@
     if (s.index === 6) d.week++;
     d.last = dayKey();
     SR.ui.save();
+    if (SR.notify) SR.notify.claimed();
     SR.audio.play('reward');
     won = r;
     render();

@@ -709,7 +709,7 @@
     N.code = null;
     N.myTeam = team;
     N.token = makeCode() + makeCode();
-    N.format = SR.save.data.settings.format || 'standard';
+    N.format = SR.save.data.settings.format || 'p5s3';
     N.stake = cleanStake(SR.save.data.settings.onlineStake);
     if (N.stake > coinsHave()) N.stake = 0;
     N.held = false;

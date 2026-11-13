@@ -2,7 +2,7 @@
   "name": "spike-rally-android",
   "version": "1.0.0",
   "private": true,
-  "description": "Spike Rally volleyball, Android app build (Capacitor). Single-player, plus online 1 v 1 with a friend.",
+  "description": "Spike Rally volleyball, Android app build (Capacitor). Single-player, plus online 1 v 1 with a friend, in 16 languages, with optional daily reward reminders.",
   "scripts": {
     "sync": "npx cap sync android",
     "open": "npx cap open android"
@@ -12,6 +12,7 @@
     "@capacitor/android": "8.6.0",
     "@capacitor/app": "8.1.2",
     "@capacitor/core": "8.6.0",
+    "@capacitor/local-notifications": "8.3.1",
     "@capacitor/share": "8.0.3"
   },
   "devDependencies": {

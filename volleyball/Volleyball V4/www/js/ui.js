@@ -178,7 +178,7 @@
   function quickRandom() {
     var me = randomTeam(null);
     mode = 'quick';
-    startMatch(me, randomTeam(me), null, null, data().stats.matches ? null : SR.formatId(15, 1));
+    startMatch(me, randomTeam(me));
   }
 
   // The result screen's main button: the next match in the same mode.

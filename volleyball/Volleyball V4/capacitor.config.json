@@ -21,6 +21,10 @@
       "style": "DARK",
       "hidden": true
     },
-    "CapacitorHttp": { "enabled": false }
+    "CapacitorHttp": { "enabled": false },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_notify",
+      "iconColor": "#FFB020"
+    }
   }
 }

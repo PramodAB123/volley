@@ -295,6 +295,7 @@
     part('profile', function () { if (SR.profile) SR.profile.init(); });
     part('android', function () { if (SR.app) SR.app.init(); });
     part('online', function () { if (SR.net) SR.net.init(q); });
+    part('notify', function () { if (SR.notify) SR.notify.init(); });
     window.requestAnimationFrame(frame);
   });
 })();
