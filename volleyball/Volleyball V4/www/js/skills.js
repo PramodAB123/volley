@@ -58,7 +58,8 @@
 
   function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); setTimeout(function () { el.classList.remove('shake'); }, 400); }
 
-  function shopCard(box) {
+  // which: 'skills' | 'smashes' | undefined (both).
+  function shopCard(box, which) {
     if (!box) return;
     var S = SR.SKILLS, used = active().length, slots = sk().slots;
     var dots = '';
@@ -67,8 +68,9 @@
       'Skills help only your team. Special smashes charge after ' + S.smashStreak + ' points in a row, and one can be on at a time.</span></div>' +
       (note ? '<p class="sk-note">' + esc(note) + '</p>' : '');
     var groups = [['Skills', S.list.filter(function (k) { return !k.special; })], ['Special smashes', S.list.filter(function (k) { return k.special; })]];
+    if (which === 'skills') groups = [groups[0]]; else if (which === 'smashes') groups = [groups[1]];
     groups.forEach(function (g) {
-      html += '<h4 class="sk-sub">' + g[0] + '</h4><div class="sk-list">';
+      html += (which ? '' : '<h4 class="sk-sub">' + g[0] + '</h4>') + '<div class="sk-list">';
       g[1].forEach(function (k) {
         var have = owns(k.id), on = have && isOn(k.id), coin = !!k.coins;
         var btn = !have ? '<span class="sk-btn buy ' + (coin ? 'p-coin' : 'p-gem') + '">' + (coin ? SR.COIN : SR.GEM) + ' ' + SR.fmtNum(coin ? k.coins : k.price) + '</span>'
@@ -78,7 +80,7 @@
       });
       html += '</div>';
     });
-    if (slots < S.maxSlots) {
+    if (slots < S.maxSlots && which !== 'smashes') {
       html += '<button type="button" class="sk-card slot-card" data-sk="_slot">' + icon(null) + '<span class="sk-txt"><b>Extra skill slot</b><span>Have ' + (slots + 1) + ' packs on at once.</span></span>' +
         '<span class="sk-btn buy p-gem">' + SR.GEM + ' ' + S.slotPrice + '</span></button>';
     }

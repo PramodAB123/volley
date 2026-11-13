@@ -12,7 +12,7 @@
       profile: { name: '', avatar: 'a1', level: 1, xp: 0, total: 0 },
       owned: { balls: ['classic'], courts: ['maple'], kits: ['team'] },
       equipped: { ball: 'classic', court: 'maple', kit: 'team' },
-      settings: { format: 'standard', difficulty: 'normal', sound: true, music: true, sharp: true, team: 'hawks' },
+      settings: { format: 'standard', difficulty: 'normal', sound: true, music: true, sharp: true, hd: false, team: 'hawks' },
       stats: { matches: 0, wins: 0, points: 0, aces: 0, kills: 0, blocks: 0, errors: 0, sets: 0, best: 0, streak: 0, byTeam: {} },
       // The League screen's trophy cabinet; seasons = last finishes, newest first.
       // lw[i] / cw[i] = titles won in league i / cup i (each has its own trophy).
@@ -163,6 +163,9 @@
     if (typeof s.sound !== 'boolean') s.sound = s.sound !== false && s.sound !== 'false';
     if (typeof s.music !== 'boolean') s.music = s.music !== false && s.music !== 'false';
     if (typeof s.sharp !== 'boolean') s.sharp = s.sharp !== false && s.sharp !== 'false';
+    // 2026-11-13: Sharp graphics is off by default (settings.hd, a new key, so it
+    // starts off for everyone; old 'sharp' is no longer read).
+    if (typeof s.hd !== 'boolean') s.hd = s.hd === true || s.hd === 'true';
     if ('lang' in def.settings && typeof s.lang !== 'string') s.lang = def.settings.lang;
     Object.keys(def.stats).forEach(function (k) { if (k !== 'byTeam') d.stats[k] = num(d.stats[k]); });
     var bt = obj(d.stats.byTeam) ? d.stats.byTeam : {};

@@ -3074,3 +3074,51 @@ button.mp-card:active { transform: scale(0.98); }
 .home-scr .chal-strip .dt-txt b { font-style: italic; text-shadow: 0 2px 0 rgba(20, 0, 60, 0.6), 0 0 10px rgba(0, 0, 40, 0.5) !important; }
 .home-scr .chal-strip .dt-txt small { text-shadow: 0 1px 3px rgba(0, 0, 30, 0.8); }
 .home-scr .chal-strip .cs-prog { background: rgba(10, 8, 40, 0.75); box-shadow: inset 0 0 0 1.5px rgba(200, 170, 255, 0.75), 0 0 10px rgba(170, 120, 255, 0.35); }
+
+/* ===== 2026-11-13 Team screen (bottom bar Team tab): team card, then tabs
+   for Skills, Special smashes, Jerseys and the Custom team. ===== */
+#scr-myteam .panel.tm { width: min(560px, 100%); }
+.tm-hero { position: relative; display: flex; align-items: center; gap: 14px; margin: 4px 0 14px; padding: 14px; border-radius: 20px; overflow: hidden;
+  background: radial-gradient(circle at 12% 30%, rgba(120, 170, 255, 0.45), transparent 50%), linear-gradient(150deg, #3b4fd8, #2a1f8a 60%, #1a1460);
+  border: 1.5px solid rgba(160, 180, 255, 0.55); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+.tm-hero::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(115deg, transparent 0 22px, rgba(255, 255, 255, 0.05) 22px 24px); }
+.tm-kit { position: relative; z-index: 1; flex: none; display: flex; align-items: center; justify-content: center; width: 84px; height: 84px; border-radius: 22px;
+  background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.06) 70%); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.35); }
+.tm-kit svg, .tm-kit .tm-jersey { width: 64px; height: 64px; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35)); }
+.tm-id { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tm-id small { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #c7d0ff; }
+.tm-id b { font-size: 24px; font-weight: 900; font-style: italic; line-height: 1.1; color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 40, 0.5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tm-chips i { font-style: normal; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; color: #fff; background: rgba(0, 0, 0, 0.3); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22); }
+.tm-tabs { position: sticky; top: -18px; z-index: 3; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 -4px 12px; padding: 6px; border-radius: 18px;
+  background: rgba(10, 12, 40, 0.92); box-shadow: inset 0 0 0 1.5px rgba(160, 170, 255, 0.25), 0 8px 18px rgba(0, 0, 0, 0.3); }
+.tm-tabs button { display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: 64px; padding: 8px 2px 6px; border: 0; border-radius: 13px; cursor: pointer; touch-action: manipulation;
+  font: 800 12.5px system-ui, sans-serif; color: #c9d0ff; background: transparent; transition: background 0.15s, color 0.15s; }
+.tm-tabs svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tm-tabs em { font-style: normal; font-size: 10.5px; font-weight: 700; opacity: 0.75; min-height: 1em; }
+.tm-tabs button.on { color: #2a1600; background: linear-gradient(180deg, #ffe066, #ffb703); box-shadow: 0 4px 12px rgba(255, 183, 3, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.6); }
+.tm-tabs button.on em { opacity: 0.85; }
+.tm-lead { margin: 0 2px 12px; font-size: 13.5px; line-height: 1.45; color: #cfd5ff; }
+.tm-pane .sk-head { margin-bottom: 12px; }
+.tm-pane .sk-list { display: grid; gap: 10px; }
+#team-kits.shop-grid { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 380px) { #team-kits.shop-grid { grid-template-columns: repeat(2, 1fr); } .tm-id b { font-size: 21px; } .tm-kit { width: 70px; height: 70px; } }
+/* Shop: the link to the Team screen */
+.shop-team-link { display: flex; align-items: center; gap: 12px; width: 100%; margin: 4px 0 6px; padding: 12px 14px; border: 0; border-radius: 16px; cursor: pointer; color: #fff; text-align: left;
+  background: linear-gradient(150deg, #3b4fd8, #2a1f8a); box-shadow: inset 0 0 0 1.5px rgba(160, 180, 255, 0.5), 0 6px 16px rgba(0, 0, 0, 0.3); font: inherit; }
+.stl-ico { flex: none; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 12px; background: rgba(255, 255, 255, 0.18); }
+.stl-ico svg { width: 24px; height: 24px; fill: none; stroke: #ffd23f; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.stl-txt { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.stl-txt b { font-size: 16px; font-weight: 900; }
+.stl-txt small { font-size: 12.5px; color: #cfd5ff; }
+.shop-team-link .sr-go { font-size: 24px; opacity: 0.8; }
+/* 2026-11-13 Team card shows only the custom team */
+.tm-hero { flex-wrap: wrap; }
+.tm-id { flex: 1 1 0; }
+.tm-stats { margin-top: 6px; font-size: 12px; font-weight: 700; color: #dfe4ff; opacity: 0.85; }
+.tm-chips i.tm-on { color: #10331a; background: #7dffa8; box-shadow: none; }
+.tm-hero.locked .tm-kit { color: #c7d0ff; }
+.tm-hero.locked .tm-kit svg { width: 58px; height: 58px; }
+.tm-act { position: relative; z-index: 1; flex: 1 1 100%; min-height: 46px; border: 0; border-radius: 14px; cursor: pointer; touch-action: manipulation;
+  font: 900 15px system-ui, sans-serif; color: #fff; background: rgba(255, 255, 255, 0.16); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.4); }
+.tm-act.gold { color: #2a1600; background: linear-gradient(180deg, #ffe066, #ffb703); box-shadow: 0 4px 12px rgba(255, 183, 3, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.6); }

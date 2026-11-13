@@ -51,7 +51,7 @@ SR.teamById = function (id) {
 // Skill points: every rating starts at `min`, `total` is shared out between
 // the five, none above `max`. The default (78 each) matches a top club.
 SR.CUSTOM = {
-  price: 60,
+  price: 40,
   min: 60, max: 90, total: 390, step: 2,
   stats: [['attack', 'Attack'], ['block', 'Block'], ['pass', 'Pass'], ['serve', 'Serve'], ['speed', 'Speed']],
   colors: ['#e5484d', '#ff6b35', '#f5a524', '#e0b100', '#7cc142', '#2f9e44', '#12a594', '#1fb6d6', '#2f6fe0', '#3b3fbf', '#7c5cd6', '#d9468f', '#607086', '#1f2633', '#f4f4f4'],

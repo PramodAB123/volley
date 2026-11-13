@@ -138,7 +138,8 @@
       '<span class="muted small">' + (t ? (mine ? 'Your team. ' : '') + 'Level ' + (SR.customCaps(cfg().lvl).lvl + 1) + '. Change the name, colours and skill points any time, and upgrade it with coins.' : 'Build your own club and play it in every offline mode. Upgrade it with coins.') + '</span></span>' +
       '<button type="button" class="btn ' + (t ? 'ghost' : 'primary') + ' ct-shop-btn">' + (t ? PEN + ' Customise' : LOCK + ' Unlock ' + SR.GEM + ' ' + C.price) + '</button></div>';
     box.querySelector('.ct-shop-btn').addEventListener('click', function () {
-      if (t) { SR.audio.play('click'); open(shopBack); } else unlock(shopBack);
+      var back = SR.ui.current() === 'scr-myteam' && SR.ui.openTeam ? function () { SR.ui.openTeam(); } : shopBack;
+      if (t) { SR.audio.play('click'); open(back); } else unlock(back);
     });
   }
   function shopBack() { SR.ui.renderShop(); SR.ui.show('scr-shop'); }

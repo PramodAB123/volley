@@ -1295,10 +1295,11 @@
   // ---- shop, stats, settings ----------------------------------------------
 
   function renderShop() {
-    if (SR.skills) SR.skills.shopCard($('shop-skills'));
-    if (SR.custom) SR.custom.shopCard($('shop-custom'));
+    // 2026-11-13: skills, special smashes, jerseys and the custom team live on
+    // the Team screen; the Shop keeps balls, courts and the diamond swap.
+    renderTeamHub();
     ['balls', 'courts', 'kits'].forEach(function (kind) {
-      var box = $('shop-' + kind), key = { balls: 'ball', courts: 'court', kits: 'kit' }[kind];
+      var box = $(kind === 'kits' ? 'team-kits' : 'shop-' + kind), key = { balls: 'ball', courts: 'court', kits: 'kit' }[kind];
       if (!box) return;
       box.innerHTML = '';
       SR.SHOP[kind].forEach(function (it) {
@@ -1354,6 +1355,59 @@
         ex.appendChild(b);
       });
     }
+  }
+
+  // ---- Team screen (bottom bar Team tab) -------------------------------------
+  // Your club in one place: the team card on top, then tabs for Skills,
+  // Special smashes, Jerseys and the Custom team.
+  var teamTab = 'skills';
+  function myTeam() {
+    var id = data().settings.team, ct = SR.customTeam && SR.customTeam();
+    return id === 'custom' && ct ? ct : team(id) || SR.TEAMS[0];
+  }
+  function renderTeamHub() {
+    var hero = $('tm-hero');
+    if (!hero) return;
+    var sk = data().skills || { owned: [], on: [], slots: 1 }, list = SR.SKILLS ? SR.SKILLS.list : [];
+    var skillsOwned = list.filter(function (k) { return !k.special && sk.owned.indexOf(k.id) >= 0; }).length;
+    var smashOwned = list.filter(function (k) { return k.special && sk.owned.indexOf(k.id) >= 0; }).length;
+    // The team card shows only the custom team: unlock it, or edit it.
+    var ct = SR.customTeam && SR.customTeam(), back = function () { openTeam(); };
+    if (ct) {
+      var lv = SR.customCaps(data().custom.lvl).lvl + 1, mine = data().settings.team === 'custom';
+      hero.className = 'tm-hero';
+      hero.innerHTML = '<span class="tm-kit">' + (SR.daily ? SR.daily.jersey(ct, 'tm-jersey') : '') + '</span>' +
+        '<span class="tm-id"><small>Custom team</small><b>' + esc(ct.name) + '</b>' +
+        '<span class="tm-chips"><i>Lv. ' + lv + '</i>' + (mine ? '<i class="tm-on">Playing</i>' : '') + '</span>' +
+        '<span class="tm-stats">ATK ' + ct.r.attack + ' · BLK ' + ct.r.block + ' · PASS ' + ct.r.pass + ' · SRV ' + ct.r.serve + ' · SPD ' + ct.r.speed + '</span></span>' +
+        '<button type="button" class="tm-act">Edit team</button>';
+    } else {
+      hero.className = 'tm-hero locked';
+      hero.innerHTML = '<span class="tm-kit">' + (SR.custom ? SR.custom.blank() : '') + '</span>' +
+        '<span class="tm-id"><small>Custom team</small><b>Your own club</b>' +
+        '<span class="tm-stats">Pick the name, colours and skill points, then upgrade it with coins.</span></span>' +
+        '<button type="button" class="tm-act gold">Unlock ' + SR.GEM + ' ' + SR.CUSTOM.price + '</button>';
+    }
+    hero.querySelector('.tm-act').addEventListener('click', function () {
+      if (!SR.custom) return;
+      if (ct) { SR.audio.play('click'); SR.custom.open(back); } else SR.custom.unlock(back);
+    });
+    var counts = { skills: skillsOwned + '/' + list.filter(function (k) { return !k.special; }).length,
+      smashes: smashOwned + '/' + list.filter(function (k) { return k.special; }).length,
+      kits: data().owned.kits.length + '/' + SR.SHOP.kits.length };
+    document.querySelectorAll('#tm-tabs [data-tab]').forEach(function (b) {
+      var k = b.getAttribute('data-tab'), on = k === teamTab;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+      var c = b.querySelector('em'); if (c) c.textContent = counts[k] || '';
+    });
+    ['skills', 'smashes', 'kits'].forEach(function (k) { $('tm-p-' + k).classList.toggle('hidden', k !== teamTab); });
+    if (SR.skills) { SR.skills.shopCard($('team-skills'), 'skills'); SR.skills.shopCard($('team-smashes'), 'smashes'); }
+  }
+  function openTeam(tab) {
+    if (tab) teamTab = tab;
+    renderShop();
+    show('scr-myteam');
   }
 
   // The Shop, opened from the home screen's coin / diamond counters, can
@@ -1444,7 +1498,7 @@
     $('set-diff').value = s.difficulty;
     $('set-sound').checked = !!s.sound;
     $('set-music').checked = s.music !== false;
-    if ($('set-sharp')) $('set-sharp').checked = s.sharp !== false;
+    if ($('set-sharp')) $('set-sharp').checked = s.hd === true;
     if (SR.profile) SR.profile.refresh();
   }
 
@@ -1537,6 +1591,7 @@
     save: save,
     renderShop: renderShop,
     openShop: openShop,
+    openTeam: openTeam,
     // Back to "Choose your team" in the same mode (the custom team builder).
     teams: function () { renderTeams(); show('scr-teams'); },
     // Start a match in a given mode (the daily challenge uses 'daily').
@@ -1562,6 +1617,15 @@
       on('btn-league-back', function () { openWorld('league'); });
       on('btn-cup-back', function () { openWorld('cup'); });
       on('btn-shop', function () { openShop(); });
+      on('btn-shop-team', function () { openTeam(); });
+      document.querySelectorAll('#tm-tabs [data-tab]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          if (teamTab === b.getAttribute('data-tab')) return;
+          SR.audio.play('click'); teamTab = b.getAttribute('data-tab'); renderTeamHub();
+          var p = document.querySelector('#scr-myteam .panel'), tb = $('tm-tabs');
+          if (p && tb && p.scrollTop > tb.offsetTop - 10) p.scrollTop = tb.offsetTop - 10;
+        });
+      });
       on('btn-stats', function () { renderStats(); show('scr-stats'); });
       on('btn-settings', function () { fillSettings(); show('scr-settings'); });
       on('btn-privacy', function () { show('scr-privacy'); var p = document.querySelector('#scr-privacy .panel'); if (p) p.scrollTop = 0; });
@@ -1617,7 +1681,7 @@
       $('set-sound').addEventListener('change', function (e) { data().settings.sound = e.target.checked; save(); });
       $('set-music').addEventListener('change', function (e) { data().settings.music = e.target.checked; save(); if (SR.music) SR.music.refresh(); });
       // Sharp graphics: off lets a slow phone drop to a lower, smoother resolution.
-      if ($('set-sharp')) $('set-sharp').addEventListener('change', function (e) { data().settings.sharp = e.target.checked; save(); SR.resScale = 1; if (SR.resize) SR.resize(); });
+      if ($('set-sharp')) $('set-sharp').addEventListener('change', function (e) { data().settings.hd = e.target.checked; save(); SR.resScale = 1; if (SR.resize) SR.resize(); });
       stopMatch();
       show('scr-menu');
     }
