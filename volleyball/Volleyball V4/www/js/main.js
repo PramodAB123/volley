@@ -169,8 +169,9 @@
     if (SR.net) { try { SR.net.tick(); } catch (e) { SR.oops && SR.oops('net', e); } }
     if ((SR.lowFx && !lowRes) || (SR.resScale || 1) !== lastRes) resize();
     // No match (menus): show the cover art instead of the court.
-    if (!g !== menuBg) { menuBg = !g; document.getElementById('app').classList.toggle('menu-bg', menuBg); }
-    if (SR.music) { try { SR.music.sync(g); } catch (e) { SR.oops && SR.oops('music', e); } }
+    var bench = !!(g && g.cfg.bench);
+    if ((!g || bench) !== menuBg) { menuBg = !g || bench; document.getElementById('app').classList.toggle('menu-bg', menuBg); }
+    if (SR.music) { try { SR.music.sync(bench ? null : g); } catch (e) { SR.oops && SR.oops('music', e); } }
     if (document.hidden || !g || canvas.width < 2 || canvas.height < 2) return;
     var undo = g && !g.paused ? blend(g.rally, acc / STEP) : null;
     try { SR.render.draw(ctx, g); } finally { if (undo) undo(); }
@@ -183,7 +184,7 @@
   function frame(ts) {
     window.requestAnimationFrame(frame);
     var t0 = performance.now();
-    try { step(ts); fails = 0; SR.frameWork = performance.now() - t0; } catch (e) {
+    try { step(ts); fails = 0; SR.frameWork = performance.now() - t0; if (warm) warm(ts); } catch (e) {
       SR.oops('frame', e);
       if (++fails < 30) return;
       fails = 0;
@@ -193,6 +194,58 @@
   }
 
   SR.resize = function () { if (canvas) resize(); };
+
+  // Warm-up behind the start-up loader (2026-11-13).
+  // A new player's first match used to stutter for ~10 s: the court art,
+  // player sprites and text were built on the first frames, the JS engine had
+  // not compiled the drawing code yet, and dynamic resolution only found the
+  // right size for the phone one 1.5 s step at a time (each step rebuilt the
+  // court art: another hitch). Now the loader plays a hidden CPU-vs-CPU rally
+  // for about a second: every cache is built, the code is hot, and the frame
+  // times pick the right resolution before the player sees anything.
+  var warm = null;
+  SR.warmup = function (done) {
+    var over = false, g = null, n = 0, lastTs = 0, times = [], rounds = 0, play = SR.audio && SR.audio.play;
+    function end() {
+      if (over) return;
+      over = true;
+      warm = null;
+      if (SR.audio && play) SR.audio.play = play;
+      if (SR.game === g) SR.game = null;
+      try { if (SR.fx && SR.fx.parts) SR.fx.parts.length = 0; SR.fx.shake = 0; SR.fx.hitStop = 0; } catch (e) { /* ignore */ }
+      try { done(); } catch (e) { SR.oops('warmup done', e); }
+    }
+    try {
+      if (!canvas || SR.game || !SR.TEAMS || SR.TEAMS.length < 2) { end(); return; }
+      if (SR.audio) SR.audio.play = function () {};
+      g = new SR.Game({ home: SR.TEAMS[0], away: SR.TEAMS[1], format: SR.formatId(15, 1), difficulty: 'normal', human: -1, mode: 'bench', bench: true });
+      g.rally.say = function () {};
+      SR.game = g;
+    } catch (e) { SR.oops('warmup', e); end(); return; }
+    warm = function (ts) {
+      if (SR.game !== g) { end(); return; }
+      var dt = lastTs ? ts - lastTs : 0;
+      lastTs = ts;
+      // the first frames build the caches: not a fair measure
+      if (++n <= 8 || !dt) return;
+      times.push(dt);
+      if (times.length < 24) return;
+      times.sort(function (a, b) { return a - b; });
+      var med = times[times.length >> 1];
+      times = [];
+      rounds++;
+      // under ~52 fps: draw fewer pixels (cost goes with the pixel count)
+      if (med > 19.2 && (SR.resScale || 1) > 0.5 && rounds < 3) {
+        var k = Math.sqrt(16.7 / med) * (SR.resScale || 1);
+        SR.resScale = Math.max(0.5, Math.min(1, Math.floor(k * 10) / 10));
+        n = 4; lastTs = 0; // the resize rebuilds the court art: settle again
+        return;
+      }
+      end();
+    };
+    // a slow or stuck start never holds the player
+    setTimeout(end, 3000);
+  };
 
   // When the host's app is in the background (a call, a notification pulled
   // down) animation frames stop. Keep an online match running on a timer so

@@ -158,8 +158,6 @@
           box.className += ' od-out';
           release();
           later(function () { if (box.parentNode) box.parentNode.removeChild(box); }, 520);
-          // trophy pictures are not on the first screen: warm them up afterwards
-          later(function () { for (var j = 1; j <= 21; j++) { var im = new Image(); im.src = 'img/trophies/t' + (j < 10 ? '0' : '') + j + '.webp'; keep.push(im); } }, 900);
         }, 260);
       };
       var check = function () {
@@ -184,11 +182,22 @@
       later(go, 700);
       // what the game needs before it shows: the page itself (all scripts and
       // styles), fonts, and the pictures on the first screens
-      var page = task();
-      if (document.readyState === 'complete') page(); else window.addEventListener('load', page);
+      // Then a hidden warm-up rally (main.js SR.warmup) builds the court art and
+      // sprites and picks the right resolution for this phone, so the first
+      // match is as smooth as every other one.
+      var page = task(), warmed = task();
+      var loaded = function () {
+        page();
+        later(function () { if (window.SR && SR.warmup) SR.warmup(warmed); else warmed(); }, 0);
+      };
+      if (document.readyState === 'complete') loaded(); else window.addEventListener('load', loaded);
       if (document.fonts && document.fonts.ready) { var f = task(); document.fonts.ready.then(f, f); }
+      // every picture in the game (about 1.4 MB, all inside the app), so nothing
+      // pops in or decodes in the middle of play
       var pics = ['img/home/hero-player.webp', 'icons/icon-192.png'], i;
+      ['career', 'cup', 'daily', 'league', 'online'].forEach(function (c) { pics.push('img/home/card-' + c + '.webp'); });
       for (i = 1; i <= 8; i++) pics.push('img/menu/bg-' + i + '-tall.webp');
+      for (i = 1; i <= 21; i++) pics.push('img/trophies/t' + (i < 10 ? '0' : '') + i + '.webp');
       pics.forEach(function (src) {
         var end = task(), im = new Image();
         im.onload = function () { if (im.decode) im.decode().then(end, end); else end(); };
