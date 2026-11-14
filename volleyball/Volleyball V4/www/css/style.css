@@ -3164,3 +3164,24 @@ html:is([data-lang="de"], [data-lang="pl"], [data-lang="vi"], [data-lang="fr"], 
 /* Back buttons and screen titles stay on one line in every language. */
 .top-back { white-space: nowrap; flex: 0 0 auto; }
 #scr-shop .panel > h2 { white-space: nowrap; }
+
+/* Walk-on intro (2026-11-14): Skip sits on the right edge of the court, away
+   from the scoreboard, the pause button and the banner ad at the bottom. */
+.skip-intro {
+  position: absolute; z-index: 3;
+  left: calc(var(--cv-l, 0px) + var(--cv-w, 100vw) - 112px);
+  top: calc(var(--cv-t, 0px) + var(--cv-h, 100vh) * 0.42);
+  min-width: 96px; height: 44px; padding: 0 16px; border: 0; border-radius: 22px; cursor: pointer;
+  background: rgba(8, 12, 20, 0.78); color: #fff; font-weight: 800; font-size: 15px; letter-spacing: 0.5px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35) inset;
+}
+.skip-intro:active { transform: scale(0.96); }
+/* Phones held upright: under the scoreboard, over the stands, clear of the court. */
+@media (orientation: portrait) {
+  .skip-intro { top: calc(var(--cv-t, 0px) + 74px); }
+}
+/* No Pause button during the walk-on (Skip is there instead), so nothing
+   moves or sits next to the walk-on banner ad. */
+html.walk-on #hud { display: none; }
+/* The pause menu shows a banner at the bottom: keep its buttons clear of it. */
+html.has-banner #scr-pause { padding-bottom: calc(var(--banner-h, 0px) + 16px); }

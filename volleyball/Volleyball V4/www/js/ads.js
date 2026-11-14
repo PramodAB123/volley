@@ -115,14 +115,17 @@
   }
 
   // ---- result-screen banner ------------------------------------------------
-  var bannerOn = false, bannerWant = false, bannerSeq = 0;
+  // introWant: the walk-on before a match also shows the banner (main.js).
+  // pauseWant: the pause menu during your own match also shows it (not online,
+  // where the match keeps running behind the menu).
+  var bannerOn = false, bannerWant = false, introWant = false, pauseWant = false, bannerSeq = 0;
   function bannerSize(h) {
     var root = document.documentElement;
     root.style.setProperty('--banner-h', (h > 0 ? Math.ceil(h) : 0) + 'px');
     root.classList.toggle('has-banner', h > 0);
   }
   function bannerSync(A) {
-    var want = bannerWant && !busy && !itShowing;
+    var want = (bannerWant || introWant || pauseWant) && !busy && !itShowing;
     if (want === bannerOn) return;
     bannerOn = want;
     var seq = ++bannerSeq;
@@ -206,6 +209,11 @@
       bannerWant = !scr.classList.contains('hidden');
       bannerSync(A);
     }).observe(scr, { attributes: true, attributeFilter: ['class'] });
+    var ps = document.getElementById('scr-pause');
+    if (ps) new MutationObserver(function () {
+      pauseWant = !ps.classList.contains('hidden') && !!(SR.game && !SR.game.cfg.online);
+      bannerSync(A);
+    }).observe(ps, { attributes: true, attributeFilter: ['class'] });
   }
 
   function showPrivacyRow() {
@@ -231,6 +239,12 @@
           return false;
         })
         .then(function (ok) { busy = false; lastFull = Date.now(); bannerSync(A); return ok; });
+    },
+    // The banner during the walk-on before a match; off again as play starts.
+    introBanner: function (on) {
+      introWant = !!on;
+      var A = plugin();
+      if (A && A.showBanner) bannerSync(A);
     },
     // Settings > Ad privacy choices (only shown where the law asks for it).
     privacy: function () { var A = plugin(); if (A) A.showPrivacyOptionsForm().catch(function () {}); }

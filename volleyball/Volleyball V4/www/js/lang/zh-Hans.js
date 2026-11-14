@@ -706,5 +706,6 @@ SR.LANG_DATA["zh-Hans"] = {
 "· # XP in total": "· 累计 # XP",
 "· #v# volleyball coaching": "· #v# 排球执教",
 "· Claim your daily reward": "· 领取每日奖励",
-"· Come back to keep your streak": "· 回来保持你的连续纪录"
+"· Come back to keep your streak": "· 回来保持你的连续纪录",
+"MATCH DAY": "比赛日"
 };

@@ -873,6 +873,11 @@
       if (this.timer.t <= 0) { var fn = this.timer.fn; this.timer = null; fn(); }
     }
     this.movePlayers(dt);
+    // Walk-on: the first server carries the ball under their arm.
+    if (this.walkOn && this.walkOnBall) {
+      var wb = this.walkOnBall, wc = Math.cos(wb.yaw), ws = Math.sin(wb.yaw);
+      this.ball = { x: wb.x + wc * 0.12 - ws * 0.3, y: wb.y + ws * 0.12 + wc * 0.3, z: 1.0 };
+    }
     // The aim ring stays up while the spike is on its way, and goes once the
     // ball crosses into the other court, so it never lingers into the next play.
     var bx = this.ball.x;
@@ -951,6 +956,8 @@
       // Accelerate into a run and ease off on arrival instead of starting and
       // stopping at full speed.
       var vmax = p.speed * (p.lock ? 1.7 : hurry), acc = p.lock ? 24 : 12, dec = p.lock ? 16 : 7;
+      // Walk-on before the match: an easy walk, not a sprint.
+      if (self.walkOn) { vmax = 2.1; acc = 5; dec = 4; }
       // A receiver hustles hard enough to be set before the ball arrives.
       if (p.lock && p.contactAt > t + 0.02) { vmax = Math.min(11, Math.max(vmax, d / (p.contactAt - t - 0.02) * 1.2)); acc = 40; dec = 30; }
       // Airborne players can't push off the floor: they carry their run-up
@@ -986,6 +993,10 @@
         var off = Math.atan2(bdy, bdx) - base;
         off = Math.atan2(Math.sin(off), Math.cos(off));
         want = base + clamp(off, -1.2, 1.2);
+      }
+      if (self.walkOn) {
+        // Walking out: face the way they walk, then turn to the net on arrival.
+        want = spd > 0.5 && d > 0.3 ? Math.atan2(p.vy, p.vx) : base;
       }
       // Turn on a critically damped spring with a top turn rate, so the body
       // winds into a turn and settles out of it instead of snapping round.

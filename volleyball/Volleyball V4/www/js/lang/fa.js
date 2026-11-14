@@ -706,5 +706,6 @@ SR.LANG_DATA["fa"] = {
 "· # XP in total": "· مجموع # XP",
 "· #v# volleyball coaching": "· مربیگری والیبال #v#",
 "· Claim your daily reward": "· جایزه روزانه‌ات را بگیر",
-"· Come back to keep your streak": "· برگرد تا رکورد پیاپی‌ات حفظ شود"
+"· Come back to keep your streak": "· برگرد تا رکورد پیاپی‌ات حفظ شود",
+"MATCH DAY": "روز مسابقه"
 };

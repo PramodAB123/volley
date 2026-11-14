@@ -706,5 +706,6 @@ SR.LANG_DATA["it"] = {
 "· # XP in total": "· # XP in totale",
 "· #v# volleyball coaching": "· allenatore di pallavolo #c#",
 "· Claim your daily reward": "· Riscatta la ricompensa del giorno",
-"· Come back to keep your streak": "· Torna per mantenere la serie"
+"· Come back to keep your streak": "· Torna per mantenere la serie",
+"MATCH DAY": "GIORNO DI PARTITA"
 };

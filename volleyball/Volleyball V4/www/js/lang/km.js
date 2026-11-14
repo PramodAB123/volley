@@ -706,5 +706,6 @@ SR.LANG_DATA["km"] = {
 "· # XP in total": "· សរុប # XP",
 "· #v# volleyball coaching": "· ការបង្វឹកបាល់ទះ #v#",
 "· Claim your daily reward": "· ទទួលរង្វាន់ប្រចាំថ្ងៃ",
-"· Come back to keep your streak": "· ត្រឡប់មកវិញ ដើម្បីរក្សាការជាប់គ្នា"
+"· Come back to keep your streak": "· ត្រឡប់មកវិញ ដើម្បីរក្សាការជាប់គ្នា",
+"MATCH DAY": "ថ្ងៃប្រកួត"
 };

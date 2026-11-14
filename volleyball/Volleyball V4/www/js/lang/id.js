@@ -706,5 +706,6 @@ SR.LANG_DATA["id"] = {
 "· # XP in total": "· total # XP",
 "· #v# volleyball coaching": "· melatih voli #v#",
 "· Claim your daily reward": "· Klaim hadiah harianmu",
-"· Come back to keep your streak": "· Kembali untuk menjaga rekor beruntunmu"
+"· Come back to keep your streak": "· Kembali untuk menjaga rekor beruntunmu",
+"MATCH DAY": "HARI PERTANDINGAN"
 };

@@ -39,6 +39,8 @@
 
   // Menus sit on the cover art (see #app.menu-bg in style.css), not a match.
   function stopMatch() {
+    // Closing during the walk-on: hide Skip and its banner ad.
+    if (SR.game && SR.game.endIntro) SR.game.endIntro(false);
     SR.game = null;
   }
 

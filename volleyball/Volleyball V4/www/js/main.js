@@ -16,10 +16,83 @@
     rally.formation(1, 'base');
     rally.snap();
     if (cfg.demo) return; // the How to play demo stages its own rallies (demo.js)
+    // Your own matches open with the teams walking out onto the court.
+    // (Not online: both phones would have to stay in step.)
+    if (cfg.human === 0 && !cfg.online) { this.intro(); return; }
     // League, tournament and Career matches open by naming the venue.
     var venue = cfg.venue && SR.courtById(cfg.venue);
     if (cfg.human !== -1) rally.say('SET 1', venue ? venue.name : cfg.home.name + ' vs ' + cfg.away.name, venue ? venue.accent || venue.line : '#ffffff', 2);
     rally.wait(cfg.human !== -1 ? 1.4 : 0.4, function () { rally.startServe({ snap: true }); });
+  };
+
+  // ---- walk-on intro (2026-11-14) ------------------------------------------
+  // Both teams walk out in single file from the side of the court by the
+  // net, spread to their spots for the first serve, wave to the crowd, and
+  // the match starts after about 10 seconds. "Skip" starts it at once. A
+  // banner ad shows only during the walk-on (never during play).
+  var INTRO_S = 10;
+  SR.Game.prototype.intro = function () {
+    var self = this, rally = this.rally, m = this.match, C = SR.COURT, cfg = this.cfg;
+    var s = m.server;
+    // Where everybody ends up: their spots for the first serve.
+    rally.formation(s, 'serve');
+    rally.formation(1 - s, 'receive');
+    // The two teams come out from opposite sides: yours from the left of the
+    // screen (the far sideline, y > W), the opponents from the right (y < 0).
+    [0, 1].forEach(function (team) {
+      var side = team === 0 ? -1 : 1, from = team === 0 ? 1 : -1;
+      rally.players[team].forEach(function (p, i) {
+        p.x = C.NET_X + side * 1.1; p.y = team === 0 ? C.W + 1.4 + i * 0.85 : -1.4 - i * 0.85; p.z = 0;
+        p.yaw = -from * Math.PI / 2; p.yawV = 0; p.mvx = p.mvy = p.vx = p.vy = 0;
+        p.act = null; p.nextAct = null; p.lock = false;
+        // One after another, like a team coming out of the tunnel.
+        p.delayUntil = rally.t + 0.4 + i * 0.32;
+      });
+    });
+    rally.walkOn = true;
+    rally.walkOnBall = rally.players[s].filter(function (p) { return rally.pos(p) === 1; })[0] || null;
+    this.introOn = true;
+    var venue = cfg.venue && SR.courtById(cfg.venue);
+    var vs = m.teams[0].short + ' vs ' + m.teams[1].short;
+    rally.say('MATCH DAY', vs, m.teams[0].color, 3.2);
+    var at = function (sec, fn) { return { t: sec, fn: fn, done: false }; };
+    this.introSteps = [
+      at(3.6, function () { if (venue) rally.say(venue.name, vs, venue.accent || venue.line || '#ffffff', 2.6); }),
+      // On their spots: a wave and a clap for the crowd.
+      at(7.2, function () { rally.all().forEach(function (p) { p.act = { type: 'cheer', t: rally.t + Math.random() * 0.3, dur: 1.2 }; }); }),
+      at(8.6, function () { rally.say('SET 1', 'to ' + m.target(), '#ffffff', 1.6); }),
+      at(INTRO_S, function () { self.endIntro(false); })
+    ];
+    this.introT0 = rally.t;
+    // The runner below checks the steps each frame (rally.wait holds only one).
+    rally.wait(0.05, function tick() {
+      if (!self.introOn) return;
+      var k = rally.t - self.introT0;
+      self.introSteps.forEach(function (st) { if (!st.done && k >= st.t) { st.done = true; st.fn(); } });
+      if (self.introOn) rally.wait(0.05, tick);
+    });
+    var b = document.getElementById('btn-skip-intro');
+    if (b) { b.classList.remove('hidden'); b.onclick = function () { self.endIntro(true); }; }
+    document.documentElement.classList.add('walk-on'); // hides Pause (style.css)
+    if (SR.ads && SR.ads.introBanner) SR.ads.introBanner(true);
+  };
+
+  // skipped: the player tapped Skip (everyone takes their spot at once).
+  SR.Game.prototype.endIntro = function (skipped) {
+    if (!this.introOn) return;
+    this.introOn = false;
+    var rally = this.rally;
+    rally.walkOn = false;
+    rally.walkOnBall = null;
+    rally.timer = null;
+    var b = document.getElementById('btn-skip-intro');
+    if (b) { b.classList.add('hidden'); b.onclick = null; }
+    document.documentElement.classList.remove('walk-on');
+    if (SR.ads && SR.ads.introBanner) SR.ads.introBanner(false);
+    if (SR.game !== this) return; // the match was closed
+    if (skipped) rally.say('SET 1', 'to ' + this.match.target(), '#ffffff', 1.4);
+    rally.all().forEach(function (p) { p.delayUntil = 0; });
+    rally.startServe({ snap: !!skipped });
   };
 
   SR.Game.prototype.onPoint = function (winner, info) {

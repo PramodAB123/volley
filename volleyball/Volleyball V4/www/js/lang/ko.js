@@ -706,5 +706,6 @@ SR.LANG_DATA["ko"] = {
 "· # XP in total": "· 총 # XP",
 "· #v# volleyball coaching": "· #v# 배구 감독 게임",
 "· Claim your daily reward": "· 일일 보상 받기",
-"· Come back to keep your streak": "· 연속 기록을 이어가려면 다시 오세요"
+"· Come back to keep your streak": "· 연속 기록을 이어가려면 다시 오세요",
+"MATCH DAY": "경기 날"
 };

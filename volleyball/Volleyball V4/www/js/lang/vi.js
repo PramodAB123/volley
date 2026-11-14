@@ -706,5 +706,6 @@ SR.LANG_DATA["vi"] = {
 "· # XP in total": "· Tổng # XP",
 "· #v# volleyball coaching": "· Huấn luyện bóng chuyền #v#",
 "· Claim your daily reward": "· Nhận phần thưởng hằng ngày",
-"· Come back to keep your streak": "· Quay lại để giữ chuỗi ngày"
+"· Come back to keep your streak": "· Quay lại để giữ chuỗi ngày",
+"MATCH DAY": "NGÀY THI ĐẤU"
 };
