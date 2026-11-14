@@ -344,13 +344,16 @@
         if (cur && cur.relay && cur.gid === gid && cur.open) return;
         var link = new SR.relay.Link(client, topic('g/' + gid), 'h', { token: m.token || null });
         link.gid = gid;
+        // A friend on this version takes every message through all the backup
+        // servers at once and keeps whichever copy arrives first.
+        if (m.multi) { link.hub = h; link.multi = true; }
         N.links[gid] = link;
         onHostConnection(link);
         link.start();
         return;
       }
       var l = N.links[gid];
-      if (l && N.conn === l) l.deliver(m);
+      if (l && N.conn === l) l.take(w);
     };
   }
 
@@ -403,7 +406,7 @@
       }
       if (!w || w.f !== 'h' || !w.m || !l || !l.relay) return;
       if (!l.open) { l.client = client; l.start(); }
-      if (l.client === client) l.deliver(w.m);
+      if (l.client === client || l.multi || typeof w.s === 'number') { if (typeof w.s === 'number' && !l.multi) { l.multi = true; l.hub = h; } l.take(w); }
     };
   }
 
@@ -418,7 +421,7 @@
       attach(new SR.relay.Link(null, topic('h'), h.id, {}));
     }
     N.helloAt = now();
-    var msg = JSON.stringify({ f: h.id, m: { t: 'hello', token: N.token } });
+    var msg = JSON.stringify({ f: h.id, m: { t: 'hello', token: N.token, multi: 1 } });
     h.live().forEach(function (c) { c.publish(topic('h'), msg); });
     return true;
   }
@@ -469,6 +472,8 @@
     N.links = {};
     N.via = null;
     N.rtt = 0;
+    if (N.up) { try { N.up.close(); } catch (e) { /* ignore */ } }
+    N.up = null; N.upNext = 0; N.upTries = 0;
     N.shown = false;
     N.role = null;
     N.phase = 'idle';
@@ -525,6 +530,9 @@
       if (!c.relay) openFast(c);
       onOpen(c);
     });
+    wire(c);
+  }
+  function wire(c) {
     c.on('data', function (msg) {
       if (N.conn !== c || !msg || typeof msg !== 'object') return;
       N.lastRecv = now();
@@ -534,11 +542,75 @@
     c.on('error', function () { if (N.conn === c) lost(); });
   }
 
+  // ---- back from the backup server to the direct link -----------------------
+  // The backup server adds about half a second each way, and a match that once
+  // fell back to it used to stay there. While on it, the guest keeps knocking
+  // on the direct (WebRTC) door in the background; the moment a direct link
+  // opens, both phones move the match onto it without a pause, and the backup
+  // link is closed quietly (the backup servers stay connected in case the
+  // direct link drops later).
+  var UP_FIRST_MS = 4000, UP_GAP_MS = 10000, UP_MAX_GAP_MS = 60000, UP_TIMEOUT_MS = 15000;
+  function canUpgrade() {
+    return (N.phase === 'playing' || N.phase === 'lobby') && N.via === 'relay' && N.conn && N.conn.relay && N.conn.open;
+  }
+  function upgradeTo(c) {
+    if (!canUpgrade() || c.relay) { try { c.close(); } catch (e) { /* ignore */ } return false; }
+    var old = N.conn;
+    N.conn = c;
+    N.up = null; N.upTries = 0;
+    // Silence the old backup link before closing it, so closing it isn't taken
+    // for a lost connection.
+    if (old) { old.handlers = {}; try { old.close(); } catch (e) { /* ignore */ } }
+    if (old && old.gid && N.links[old.gid] === old) delete N.links[old.gid];
+    wire(c);
+    N.lastRecv = now();
+    N.via = 'p2p';
+    N.rtt = 0; N.path = null; N.netRtt = 0; N.pathBusy = false;
+    openFast(c);
+    showLink();
+    return true;
+  }
+  // Guest: one background attempt at a direct link, spaced out over time.
+  function tryUpgrade() {
+    if (N.role !== 'guest' || !canUpgrade() || !N.token || document.hidden) return;
+    var t = now();
+    if (N.up) {
+      if (t - N.upAt < UP_TIMEOUT_MS) return;
+      try { N.up.close(); } catch (e) { /* ignore */ }
+      N.up = null;
+    }
+    if (!N.upNext) { N.upNext = t + UP_FIRST_MS; return; }
+    if (t < N.upNext) return;
+    N.upTries = (N.upTries || 0) + 1;
+    N.upNext = t + Math.min(UP_MAX_GAP_MS, UP_GAP_MS * N.upTries);
+    N.upAt = t;
+    var go = function () {
+      if (!N.peer || N.peer.destroyed || !N.peer.open || !canUpgrade() || N.up) return;
+      var c;
+      try { c = N.peer.connect(PREFIX + N.code, { reliable: true, serialization: 'json', metadata: { token: N.token, v: 1, up: 1 } }); } catch (e) { c = null; }
+      if (!c) return;
+      N.up = c;
+      c.on('open', function () { if (N.up === c) upgradeTo(c); else { try { c.close(); } catch (e) { /* ignore */ } } });
+      c.on('error', function () { if (N.up === c) N.up = null; });
+      c.on('close', function () { if (N.up === c) N.up = null; });
+    };
+    try {
+      if (N.peer && !N.peer.destroyed && N.peer.open && !N.peer.disconnected) { go(); return; }
+      // No working signalling connection: start a fresh one for this attempt.
+      if (N.peer) { try { N.peer.destroy(); } catch (e) { /* ignore */ } }
+      N.peer = makePeer();
+      N.peer.on('open', go);
+      // Errors here only mean this attempt failed; the match carries on.
+      N.peer.on('error', function () { /* next attempt later */ });
+    } catch (e) { /* next attempt later */ }
+  }
+
   function heartbeat() {
     clearTimer('beat');
     N.timers.beat = setInterval(function () {
       if (N.conn && N.conn.open) send({ t: 'ping', s: now() });
       if (N.phase === 'playing' && ++N.beats % 2 === 0) checkPath();
+      tryUpgrade();
       showLink();
       if (N.conn && N.conn.open && (N.phase === 'lobby' || N.phase === 'playing') && now() - N.lastRecv > (N.via === 'relay' ? RELAY_LOST_MS : LOST_MS)) lost();
       if (N.phase === 'rejoining') {
@@ -650,6 +722,8 @@
     // Host on the relay: remember the friend's inbox so we can tell them to reconnect.
     if (N.role === 'host' && N.conn && N.conn.relay) N.relink = N.conn.out;
     dropConn();
+    // A fresh spell on the backup server starts its direct-link attempts afresh.
+    N.upNext = 0; N.upTries = 0;
     if (N.role === 'host') {
       if (N.phase === 'lobby' || N.phase === 'waiting') {
         N.phase = 'waiting';
@@ -836,6 +910,14 @@
 
   function onHostConnection(c) {
     var meta = c.metadata || {};
+    // The friend found a direct path while we play over the backup server:
+    // move the match onto it once it opens.
+    if (meta.up && meta.token && meta.token === N.token && !c.relay) {
+      if (!canUpgrade()) { try { c.close(); } catch (e) { /* ignore */ } return; }
+      c.on('open', function () { upgradeTo(c); });
+      c.on('error', function () { /* the backup link carries on */ });
+      return;
+    }
     var busy = N.conn && N.conn.open;
     // The friend coming back with their match token. Their side may have noticed
     // the drop before ours did, so accept it while we still think we're playing

@@ -264,6 +264,7 @@
 
   // A link to the other player over one broker, shaped like a PeerJS
   // DataConnection (open, send, close, on) so the game code treats both alike.
+  var SEQ = 0;
   function Link(client, outTopic, me, metadata) {
     this.client = client;
     this.out = outTopic;
@@ -275,12 +276,29 @@
   }
   Link.prototype.on = function (ev, fn) { this.handlers[ev] = fn; };
   Link.prototype.emit = function (ev, a) { if (this.handlers[ev]) this.handlers[ev](a); };
+  // With link.multi (both phones on this version) every message is numbered and
+  // goes out through all the live brokers at once; the other side keeps the
+  // first copy and drops the rest. The fastest broker wins each message, so
+  // one slow or stalling broker no longer holds the match up.
   Link.prototype.send = function (msg) {
-    if (!this.open || !this.client.open) throw new Error('closed');
-    this.client.publish(this.out, JSON.stringify({ f: this.me, m: msg }));
+    var live = this.multi && this.hub ? this.hub.live() : null;
+    if (!this.open || !(live && live.length ? true : this.client && this.client.open)) throw new Error('closed');
+    // One counter for the whole page, so a link made after a reconnect keeps
+    // counting up and the other side never mistakes it for old copies.
+    var text = JSON.stringify(this.multi ? { f: this.me, s: ++SEQ, m: msg } : { f: this.me, m: msg });
+    if (live && live.length) { var out = this.out; live.forEach(function (c) { c.publish(out, text); }); }
+    else this.client.publish(this.out, text);
   };
   Link.prototype.start = function () { if (!this.open) { this.open = true; this.emit('open'); } };
   Link.prototype.deliver = function (msg) { if (this.open) this.emit('data', msg); };
+  // A wrapped message {f, s?, m}: numbered copies are delivered once, in order.
+  Link.prototype.take = function (w) {
+    if (typeof w.s === 'number') {
+      if (w.s <= (this.last || 0)) return;
+      this.last = w.s;
+    }
+    this.deliver(w.m);
+  };
   Link.prototype.close = function () {
     if (!this.open) return;
     this.open = false;
