@@ -604,7 +604,7 @@
     if (typeof document === 'undefined') { drawArena(ctx, style, t, cheer); return; }
     if (SR.lowFx) cheer = 0;
     var sc = SR.render.scale, key = style.id + '|' + sc + '|' + W + 'x' + H, PAD = 70;
-    var redraw = cache.key !== key || (cheer > 0 ? t - cache.at > 0.05 : !cache.calm);
+    var redraw = cache.key !== key || (cheer > 0 ? t - cache.at > 0.1 : !cache.calm);
     if (redraw) {
       if (cache.key !== key) {
         var cw = Math.max(1, Math.ceil((W + PAD * 2) * sc)), ch = Math.max(1, Math.ceil(H * sc));
@@ -769,9 +769,15 @@
       ctx.globalAlpha = k * (fast ? 0.7 : 0.4) * sp;
       ctx.strokeStyle = fast ? (k > 0.7 ? '#fff1b8' : '#ff9a3c') : style.main;
       ctx.lineWidth = Math.max(1.5, 0.21 * q1.s * 2) * (0.15 + k * 0.85) * (fast ? 1 : 0.7);
-      if (fast && k > 0.5 && !SR.lowFx) { ctx.shadowColor = '#ff8a2b'; ctx.shadowBlur = 12; }
+      if (fast && k > 0.5 && !SR.lowFx) {
+        // Glow: a wide faint stroke under the line (shadowBlur here was a
+        // per-frame blur during every spike).
+        var lw0 = ctx.lineWidth, ga = ctx.globalAlpha, ss = ctx.strokeStyle;
+        ctx.globalAlpha = ga * 0.35; ctx.strokeStyle = '#ff8a2b'; ctx.lineWidth = lw0 + 9;
+        ctx.beginPath(); ctx.moveTo(q0.x, q0.y); ctx.lineTo(q1.x, q1.y); ctx.stroke();
+        ctx.globalAlpha = ga; ctx.strokeStyle = ss; ctx.lineWidth = lw0;
+      }
       ctx.beginPath(); ctx.moveTo(q0.x, q0.y); ctx.lineTo(q1.x, q1.y); ctx.stroke();
-      ctx.shadowBlur = 0;
     }
     ctx.globalAlpha = 1;
   }
@@ -1150,19 +1156,69 @@
       var yy = y0 + h - 8 - (i + 1) * segH - i * gap;
       roundRect(ctx, x + 6, yy, w - 12, segH, 3);
       ctx.fillStyle = i < lit ? 'hsl(' + hue + ',85%,52%)' : 'hsla(' + hue + ',40%,30%,0.45)';
-      if (i < lit && i === lit - 1) { ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 12; }
-      ctx.fill(); ctx.shadowBlur = 0;
+      if (i < lit && i === lit - 1) {
+        // Glow without shadowBlur: a larger, faint copy behind the segment.
+        var fs = ctx.fillStyle;
+        ctx.globalAlpha = 0.35; roundRect(ctx, x + 2, yy - 4, w - 4, segH + 8, 6); ctx.fill();
+        ctx.globalAlpha = 1; roundRect(ctx, x + 6, yy, w - 12, segH, 3); ctx.fillStyle = fs;
+      }
+      ctx.fill();
     }
     ctx.fillStyle = '#fff'; ctx.font = '800 11px system-ui, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('POWER', x + w / 2, y0 - 12);
   }
 
+  // Performance (2026-11-14): the banner's glow (shadowBlur 28 on 72 px text)
+  // used to be redrawn every frame for ~1.5 s after every point, a regular
+  // stutter on phones. It is now drawn once into a canvas at the screen's
+  // resolution and each frame is a single drawImage.
+  var bannerCache = { key: null, cv: null };
   function drawBanner(ctx, b) {
     var k = b.t / b.dur, a = k < 0.1 ? k / 0.1 : k > 0.78 ? (1 - k) / 0.22 : 1;
     var sc = k < 0.12 ? 0.5 + (k / 0.12) * 0.65 : k < 0.2 ? 1.15 - ((k - 0.12) / 0.08) * 0.15 : 1;
+    if (typeof document === 'undefined') return drawBannerRaw(ctx, b, a, sc);
+    // Cached at the canvas's own pixel scale with the tilt baked in, cropped
+    // to the text, so once the pop-in is over each frame is a 1:1 copy.
+    var rs = SR.render.scale || 1, OY = 78, BH = 168;
+    var key = b.text + '|' + b.sub + '|' + b.color + '|' + rs + '|' + (SR.t ? SR.t(b.text) : '');
+    if (bannerCache.key !== key) {
+      var cv = bannerCache.cv || document.createElement('canvas'), c = cv.getContext('2d');
+      c.font = 'italic 900 72px system-ui, sans-serif';
+      // (i18n.js translates inside measureText / fillText.)
+      var tw = c.measureText(b.text).width;
+      c.font = '800 22px system-ui, sans-serif';
+      var sw = b.sub ? c.measureText(b.sub).width : 0;
+      var BW = Math.ceil(Math.max(tw, sw) + 110);
+      cv.width = Math.ceil(BW * rs); cv.height = Math.ceil(BH * rs);
+      c = cv.getContext('2d');
+      c.setTransform(rs, 0, 0, rs, BW / 2 * rs, OY * rs);
+      c.rotate(-0.04);
+      drawBannerText(c, b);
+      bannerCache.cv = cv; bannerCache.key = key; bannerCache.w = BW;
+    }
+    var cw = bannerCache.w;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, a);
+    if (sc === 1) {
+      // Straight copy on whole device pixels: no resampling.
+      var m = ctx.getTransform(), px = m.a * (W / 2) + m.c * (CY - 85) + m.e, py = m.b * (W / 2) + m.d * (CY - 85) + m.f;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(bannerCache.cv, Math.round(px - cw / 2 * rs), Math.round(py - OY * rs));
+    } else {
+      ctx.translate(W / 2, CY - 85); ctx.scale(sc, sc);
+      ctx.drawImage(bannerCache.cv, -cw / 2, -OY, cw, BH);
+    }
+    ctx.restore();
+  }
+  function drawBannerRaw(ctx, b, a, sc) {
     ctx.save();
     ctx.globalAlpha = Math.max(0, a);
     ctx.translate(W / 2, CY - 85); ctx.scale(sc, sc); ctx.rotate(-0.04);
+    drawBannerText(ctx, b);
+    ctx.restore();
+  }
+  // The banner's text at its origin (main line centred on 0, 0).
+  function drawBannerText(ctx, b) {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'italic 900 72px system-ui, sans-serif';
     ctx.shadowColor = b.color; ctx.shadowBlur = 28;
@@ -1176,7 +1232,6 @@
       ctx.strokeStyle = 'rgba(0,0,0,0.65)'; ctx.lineWidth = 5;
       ctx.strokeText(b.sub, 0, 50); ctx.fillStyle = b.color; ctx.fillText(b.sub, 0, 50);
     }
-    ctx.restore();
   }
 
   // The vignette gradient is made once per screen size and reused. It is
@@ -1269,7 +1324,12 @@
         // phone), so the players
         // stay sharp. Effects stay.
         dropFor = game && game.rally && !game.paused && frameAvg > 0.0192 ? dropFor + dt : 0;
-        if (dropFor > 1.5 && (SR.resScale || 1) > 0.5) { SR.resScale = Math.max(0.5, Math.round(((SR.resScale || 1) - 0.1) * 100) / 100); dropFor = 0; frameAvg = 0.017; }
+        if (dropFor > 1.5 && (SR.resScale || 1) > 0.5) {
+          // Pixel cost goes with the area, so scale by sqrt(target / actual).
+          var cur = SR.resScale || 1, want = Math.floor(Math.sqrt(0.0167 / frameAvg) * cur * 10) / 10;
+          SR.resScale = Math.max(0.5, Math.min(cur - 0.1, want));
+          dropFor = 0; frameAvg = 0.017;
+        }
       }
       var rally = game && game.rally, paused = game && game.paused;
       var simDt = paused ? 0 : dt * (rally ? rally.timeScale : 1) * (SR.speed || 1);

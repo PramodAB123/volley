@@ -240,7 +240,10 @@
     }
     // Online: send/receive snapshots, keep the link alive.
     if (SR.net) { try { SR.net.tick(); } catch (e) { SR.oops && SR.oops('net', e); } }
-    if ((SR.lowFx && !lowRes) || (SR.resScale || 1) !== lastRes) resize();
+    // A resolution change rebuilds the canvas and the court art: a visible
+    // hitch. Mid-rally it waits for the ball to be dead (a few seconds at most).
+    var midRally = g && !g.paused && g.rally && g.rally.state === 'rally';
+    if (((SR.lowFx && !lowRes) || (SR.resScale || 1) !== lastRes) && !midRally) resize();
     // No match (menus): show the cover art instead of the court.
     var bench = !!(g && g.cfg.bench);
     if ((!g || bench) !== menuBg) { menuBg = !g || bench; document.getElementById('app').classList.toggle('menu-bg', menuBg); }
