@@ -149,7 +149,7 @@
   };
 
   R.snap = function () {
-    this.all().forEach(function (p) { p.x = p.tx; p.y = p.ty; p.z = 0; p.dive = 0; p.mvx = 0; p.mvy = 0; p.yawV = 0; });
+    this.all().forEach(function (p) { p.x = p.tx; p.y = p.ty; p.z = 0; p.dive = 0; p.nextAct = null; p.mvx = 0; p.mvy = 0; p.yawV = 0; });
   };
 
   // ---- serve --------------------------------------------------------------
@@ -765,12 +765,18 @@
     this.players[winner].forEach(function (p, i) {
       var a = i / 6 * Math.PI * 2, w = world(winner, 5.2 + Math.cos(a) * 0.95, 4.5 + Math.sin(a) * 0.95);
       p.tx = w.x; p.ty = w.y;
-      p.act = { type: 'cheer', t: t0 + 0.35 + Math.random() * 0.15, dur: 1.0 };
+      setAct(p, { type: 'cheer', t: t0 + 0.35 + Math.random() * 0.15, dur: 1.0 });
     });
+    // A player still in the middle of a dive finishes it (lands, slides and
+    // gets up) first: the next reaction waits in p.nextAct until it ends.
+    function setAct(p, a) {
+      var de = p.act && p.act.type === 'dive' ? p.act.t + p.act.dur : 0;
+      if (de > t0) { a.t = Math.max(a.t, de); p.nextAct = a; } else p.act = a;
+    }
     this.players[1 - winner].forEach(function (p) {
       // A player who just dove for an ace stays down a moment before the head drops.
-      if (p.missDive && t0 - p.missDive < 0.4) { p.act = { type: 'sad', t: t0 + 0.75, dur: 1.0 }; p.delayUntil = t0 + 0.7; }
-      else me.act(p, 'sad', 1.0 + Math.random() * 0.4);
+      if (p.missDive && t0 - p.missDive < 0.4) { setAct(p, { type: 'sad', t: t0 + 0.75, dur: 1.0 }); p.delayUntil = t0 + 0.7; }
+      else setAct(p, { type: 'sad', t: t0, dur: 1.0 + Math.random() * 0.4 });
       p.missDive = 0; p.contactAt = 0;
     });
 
@@ -924,6 +930,21 @@
   R.movePlayers = function (dt) {
     var t = this.t, self = this, ball = this.ball;
     this.all().forEach(function (p) {
+      if (p.nextAct && (t >= p.nextAct.t || !(p.act && p.act.type === 'dive'))) { p.act = p.nextAct; p.nextAct = null; }
+      // Diving: the body keeps flying forward after the touch, lands on the
+      // chest and slides to a stop along the way it faces, then gets up.
+      // No running or turning until the player is back on their feet.
+      var dvA = p.act && p.act.type === 'dive' && t >= p.act.t && t - p.act.t < p.act.dur ? (t - p.act.t) / p.act.dur : -1;
+      if (dvA >= 0) {
+        var sv = dvA < 0.5 ? 3.6 * (1 - dvA / 0.5) * (1 - dvA / 0.5) : 0;
+        var nx2 = p.x + Math.cos(p.yaw) * sv * dt, ny2 = p.y + Math.sin(p.yaw) * sv * dt;
+        // Never slide under the net onto the other side.
+        if (p.team === 0) nx2 = Math.min(nx2, C.NET_X - 0.35); else nx2 = Math.max(nx2, C.NET_X + 0.35);
+        p.x = nx2; p.y = ny2;
+        p.vx = 0; p.vy = 0; p.mvx = 0; p.mvy = 0; p.ax = 0; p.ay = 0; p.yawV = 0; p.z = 0;
+        if (p.dive > 0) p.dive = Math.max(0, p.dive - dt * 1.2);
+        return;
+      }
       var dx = p.tx - p.x, dy = p.ty - p.y, d = Math.sqrt(dx * dx + dy * dy);
       var hurry = (self.state === 'serve' || self.state === 'dead') ? 1.45 : 1;
       var ox = p.x, oy = p.y;

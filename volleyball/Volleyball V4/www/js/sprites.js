@@ -68,7 +68,7 @@
     var footL = v(0.05, 0.24, 0), footR = v(-0.02, -0.24, 0);
     var handL = v(0.32, 0.2, 1.0), handR = v(0.32, -0.2, 1.0);
     var elbowDir = v(-0.2, 1, -1), kneeDir = v(1, 0, 0.1);
-    var plantFeet = false, handW = 0;
+    var plantFeet = false, handW = 0, diving = false;
     var act = p.act && t >= p.act.t && t - p.act.t < p.act.dur ? p.act : null;
     var a = act ? (t - act.t) / act.dur : 0;
     var jt = clamp((t - p.jumpAt) / 0.75, 0, 1);
@@ -95,17 +95,22 @@
     }
 
     if (act && act.type === 'dive') {
-      // Lunge with arms out, slide on the floor, then push back up.
-      var reach = platform(p, 0.25);
+      // After the touch: still flying flat out with the arms following the
+      // ball up, then a chest-first landing that slides along the floor
+      // (the body itself travels forward in rally.js), a push-up, a knee
+      // under the hips and back on the feet.
       K = keys([
-        { t: 0, hip: 0.5, lean: 0.48, fL: v(-0.45, 0.28, 0), fR: v(-0.3, -0.24, 0), h: reach },
-        { t: 0.3, hip: 0.32, lean: 0.53, fL: v(-0.7, 0.26, 0.05), fR: v(-0.62, -0.2, 0.08), h: v(1.0, 0, 0.3) },
-        { t: 0.7, hip: 0.35, lean: 0.4, fL: v(-0.5, 0.3, 0), fR: v(-0.4, -0.26, 0), h: v(0.7, 0, 0.18) },
-        { t: 1, hip: 0.72, lean: 0.2, fL: v(0.05, 0.26, 0), fR: v(-0.05, -0.26, 0), h: v(0.4, 0, 0.8) }
+        { t: 0, hip: 0.4, lean: 0.55, fL: v(-0.9, 0.15, 0.5), fR: v(-0.88, -0.15, 0.58), h: v(1.04, 0.06, 0.32), hs: 0.06, kn: v(0.2, 0, -1), el: v(0, 1, -0.3) },
+        { t: 0.13, hip: 0.3, lean: 0.55, fL: v(-0.9, 0.17, 0.42), fR: v(-0.9, -0.17, 0.48), h: v(1.02, 0, 0.42), hs: 0.07, kn: v(0.2, 0, -1), el: v(0, 1, -0.3) },
+        { t: 0.27, hip: 0.19, lean: 0.55, fL: v(-0.86, 0.2, 0.26), fR: v(-0.84, -0.2, 0.32), h: v(1.06, 0, 0.12), hs: 0.14, kn: v(0.2, 0, -1), el: v(0, 1, -0.2) },
+        { t: 0.5, hip: 0.19, lean: 0.55, fL: v(-0.84, 0.22, 0.3), fR: v(-0.84, -0.22, 0.22), h: v(1.02, 0, 0.09), hs: 0.2, kn: v(0.2, 0, -1), el: v(0, 1, -0.2) },
+        { t: 0.64, hip: 0.22, lean: 0.5, fL: v(-0.86, 0.22, 0.04), fR: v(-0.86, -0.22, 0.04), h: v(0.52, 0, 0.03), hs: 0.24, kn: v(0.2, 0, -1), el: v(-0.6, 1, 0.2) },
+        { t: 0.8, hip: 0.46, lean: 0.4, fL: v(0.08, 0.24, 0), fR: v(-0.62, -0.22, 0.02), h: v(0.5, 0, 0.06), hs: 0.24, kn: v(1, 0, 0.1), el: v(-0.6, 1, 0.2) },
+        { t: 1, hip: 0.84, lean: 0.08, fL: v(0.06, 0.24, 0), fR: v(-0.04, -0.24, 0), h: v(0.3, 0, 0.95), hs: 0.22, kn: v(1, 0, 0.1), el: v(-0.2, 1, -1) }
       ], a);
-      hipZ = K.hip; lean = K.lean; footL = K.fL; footR = K.fR;
-      handL = v(K.h.f, K.h.s + 0.05, K.h.z); handR = v(K.h.f, K.h.s - 0.05, K.h.z);
-      elbowDir = v(0, 1, -0.3);
+      hipZ = K.hip; lean = K.lean; footL = K.fL; footR = K.fR; kneeDir = K.kn; elbowDir = K.el;
+      handL = v(K.h.f, K.h.s + K.hs, K.h.z); handR = v(K.h.f, K.h.s - K.hs, K.h.z);
+      diving = true;
     } else if (act && act.type === 'pass') {
       // Forearms meet the ball, legs extend to lift it, arms hold the angle, then relax.
       var cpt = platform(p, 0.5), lift = ease(a / 0.35), relax = ease((a - 0.55) / 0.45);
@@ -166,11 +171,31 @@
       var kk = ease(1 - toContact / 0.65), dig = clamp((incoming - 9) / 8, 0, 1);
       legsRun = toContact > 0.3;
       if (p.contactKind === 'dive') {
-        var rd = platform(p, 0.3);
-        hipZ = 0.8 - kk * 0.3; lean = 0.15 + kk * 0.33;
-        footL = v(-0.3 * kk, 0.28, 0); footR = v(0.1 - 0.35 * kk, -0.22, 0);
-        handL = lv(v(0.4, 0.14, 0.9), v(rd.f, rd.s + 0.05, rd.z), kk); handR = lv(v(0.4, -0.14, 0.9), v(rd.f, rd.s - 0.05, rd.z), kk);
-        elbowDir = v(0, 1, -0.3);
+        // The dive itself: a low last stride, a push off the front foot, then
+        // the whole body launches forward flat out, legs trailing straight
+        // behind, so the ball meets the outstretched forearms just before
+        // the chest hits the floor.
+        var rc = p.contactPt ? toLocal(p, p.contactPt) : v(1, 0, 0.3);
+        var rd = v(clamp(rc.f, 0.7, 1.06), clamp(rc.s, -0.3, 0.3), clamp(rc.z, 0.2, 0.6));
+        var L = clamp(1 - toContact / 0.3, 0, 1);
+        K = keys([
+          { t: 0, hip: 0.7, lean: 0.26, fL: v(0.2, 0.22, 0), fR: v(-0.22, -0.22, 0.02), h: v(0.3, 0, 0.8), hs: 0.16, kn: v(1, 0, 0.1) },
+          { t: 0.35, hip: 0.6, lean: 0.38, fL: v(0.28, 0.2, 0), fR: v(-0.45, -0.22, 0.1), h: v(0.5, 0, 0.62), hs: 0.12, kn: v(1, 0, 0.1) },
+          { t: 0.6, hip: 0.56, lean: 0.5, fL: v(-0.38, 0.18, 0), fR: v(-0.7, -0.18, 0.32), h: v(0.82, 0, 0.5), hs: 0.08, kn: v(1, 0, 0.1) },
+          { t: 1, hip: 0.4, lean: 0.55, fL: v(-0.9, 0.15, 0.5), fR: v(-0.88, -0.15, 0.58), h: rd, hs: 0.06, kn: v(0.2, 0, -1) }
+        ], L);
+        legsRun = toContact > 0.3;
+        if (legsRun) {
+          // Still on the run in: low and leaning, arms ready.
+          hipZ = 0.86 - kk * 0.16; lean = 0.1 + kk * 0.16;
+          handL = v(0.3, 0.16, 0.85); handR = v(0.3, -0.16, 0.85);
+          elbowDir = v(-0.3, 1, -0.4);
+        } else {
+          hipZ = K.hip; lean = K.lean; footL = K.fL; footR = K.fR; kneeDir = K.kn;
+          handL = v(K.h.f, K.h.s + K.hs, K.h.z); handR = v(K.h.f, K.h.s - K.hs, K.h.z);
+          elbowDir = v(0, 1, -0.3);
+          diving = true;
+        }
       } else {
         var pp = platform(p, 0.5);
         hipZ = 0.82 - kk * (0.13 + dig * 0.1 + Math.max(0, 0.85 - pp.z) * 0.4); lean = 0.1 + kk * (0.18 + dig * 0.08);
@@ -316,7 +341,8 @@
     }
 
     // Keep the torso a fixed length however far the player leans.
-    lean = clamp(lean, -0.3, 0.53);
+    // (A dive lays the body out flat.)
+    lean = clamp(lean, -0.3, diving ? 0.549 : 0.53);
     var TORSO = 0.55, shZ = hipZ + Math.sqrt(TORSO * TORSO - lean * lean);
     var ct = Math.cos(twist), st = Math.sin(twist);
     var j = {};
@@ -337,6 +363,14 @@
     }
     j.neck = v(lean * 1.05, 0, shZ + 0.07);
     j.head = v(lean * 1.12 + headF, 0, shZ + 0.255 - headF);
+    // Laid out flat, the head carries on along the spine with the chin up,
+    // eyes on the ball, instead of sitting straight above the shoulders.
+    var flat = diving ? clamp((lean - 0.3) / 0.25, 0, 1) : 0;
+    if (flat > 0) {
+      var sz = shZ - hipZ, tf = lean / TORSO, tz = sz / TORSO;
+      j.neck = lv(j.neck, v(lean + tf * 0.08, 0, shZ + tz * 0.08 + 0.02), flat);
+      j.head = lv(j.head, v(lean + tf * 0.22, 0, shZ + tz * 0.2 + 0.1), flat);
+    }
     var lL = ik(j.hipL, footL, THIGH, SHIN, v(kneeDir.f, 0.15, kneeDir.z)), lR = ik(j.hipR, footR, THIGH, SHIN, v(kneeDir.f, -0.15, kneeDir.z));
     j.kneeL = lL.joint; j.footL = lL.end; j.kneeR = lR.joint; j.footR = lR.end;
     var eL = ik(j.shL, handL, UPPER, FORE, elbowDir), eR = ik(j.shR, handR, UPPER, FORE, v(elbowDir.f, -elbowDir.s, elbowDir.z));
